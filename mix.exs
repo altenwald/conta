@@ -30,7 +30,13 @@ defmodule Conta.MixProject do
       {:jason, "~> 1.4"},
       {:commanded_eventstore_adapter, "~> 1.4"},
       {:commanded_ecto_projections, "~> 1.3"},
-      {:money, "~> 1.12"}
+      {:money, "~> 1.12"},
+      {:doctor, "~> 0.21", only: [:dev, :test], runtime: false},
+      {:dialyxir, "~> 1.4", only: [:dev, :test], runtime: false},
+      {:ex_doc, "~> 0.31", only: [:dev, :test], runtime: false},
+      {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
+      {:mix_audit, "~> 2.1", only: [:dev, :test], runtime: false},
+      {:ex_check, "~> 0.15", only: [:dev, :test], runtime: false}
     ]
   end
 

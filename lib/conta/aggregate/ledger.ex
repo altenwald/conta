@@ -11,7 +11,8 @@ defmodule Conta.Aggregate.Ledger do
 
   @valid_currencies ~w[EUR USD SEK GBP]a
 
-  def execute(_ledger, %CreateAccount{currency: currency}) when currency not in @valid_currencies do
+  def execute(_ledger, %CreateAccount{currency: currency})
+      when currency not in @valid_currencies do
     {:error, :invalid_currency}
   end
 
@@ -38,7 +39,10 @@ defmodule Conta.Aggregate.Ledger do
     {:error, :not_enough_entries}
   end
 
-  def execute(%__MODULE__{accounts: accounts}, %AccountTransaction{entries: entries} = transaction) do
+  def execute(
+        %__MODULE__{accounts: accounts},
+        %AccountTransaction{entries: entries} = transaction
+      ) do
     cond do
       not valid_date?(transaction.on_date) ->
         {:error, :invalid_date}
@@ -52,20 +56,15 @@ defmodule Conta.Aggregate.Ledger do
       :else ->
         {entries, _accounts} =
           Enum.map_reduce(transaction.entries, accounts, fn entry, acc ->
-            accounts =
-              Map.update!(acc, entry.account_name, fn account ->
-                Map.update!(account, :balances, fn balances ->
-                  amount = get_amount(to_string(account.type), entry.debit, entry.credit)
-                  Map.update(balances, account.currency, amount, &(&1 + amount))
-                end)
-              end)
-
+            accounts = update_accounts(acc, entry)
             account = accounts[entry.account_name]
             currency = account.currency
 
             entry =
               entry
-              |> Map.take(~w[description account_name credit debit change_currency change_credit change_debit change_price]a)
+              |> Map.take(
+                ~w[description account_name credit debit change_currency change_credit change_debit change_price]a
+              )
               |> Map.put(:balance, account.balances[currency])
               |> Map.put(:currency, currency)
               |> then(&struct!(TransactionCreated.Entry, &1))
@@ -79,6 +78,15 @@ defmodule Conta.Aggregate.Ledger do
           entries: entries
         }
     end
+  end
+
+  defp update_accounts(accounts, entry) do
+    Map.update!(accounts, entry.account_name, fn account ->
+      Map.update!(account, :balances, fn balances ->
+        amount = get_amount(to_string(account.type), entry.debit, entry.credit)
+        Map.update(balances, account.currency, amount, &(&1 + amount))
+      end)
+    end)
   end
 
   defp to_date(date) when is_struct(date, Date), do: date
@@ -103,11 +111,11 @@ defmodule Conta.Aggregate.Ledger do
       change_balance = entry.change_debit - entry.change_credit
 
       acc
-      |> Map.update(account.currency, balance, & &1 + balance)
-      |> Map.update(entry.change_currency, change_balance, & &1 + change_balance)
+      |> Map.update(account.currency, balance, &(&1 + balance))
+      |> Map.update(entry.change_currency, change_balance, &(&1 + change_balance))
     end)
     |> Map.values()
-    |> Enum.all?(& &1 == 0)
+    |> Enum.all?(&(&1 == 0))
   end
 
   defp valid_accounts?(entries, accounts) when is_list(entries) do

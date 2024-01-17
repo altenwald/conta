@@ -56,9 +56,9 @@ defmodule Conta.Projector.Stats.Account do
   @foreign_key_type :binary_id
 
   schema "stats_accounts" do
-    field :name, {:array, :string}
-    field :ledger, :string, default: "default"
-    field :type, Ecto.Enum, values: @account_types
+    field(:name, {:array, :string})
+    field(:ledger, :string, default: "default")
+    field(:type, Ecto.Enum, values: @account_types)
 
     timestamps(type: :utc_datetime_usec)
   end

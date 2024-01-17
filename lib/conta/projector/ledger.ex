@@ -12,11 +12,14 @@ defmodule Conta.Projector.Ledger do
   alias Conta.Projector.Ledger.Account
   alias Conta.Projector.Ledger.Entry
 
-  project %AccountCreated{} = account, _metadata, fn multi ->
+  project(%AccountCreated{} = account, _metadata, fn multi ->
     parent_id =
       case Enum.split(account.name, -1) do
-        {[], _} -> nil
-        {parent_name, _} -> Conta.Repo.get_by!(Account, name: parent_name, ledger: account.ledger).id
+        {[], _} ->
+          nil
+
+        {parent_name, _} ->
+          Conta.Repo.get_by!(Account, name: parent_name, ledger: account.ledger).id
       end
 
     account =
@@ -31,9 +34,9 @@ defmodule Conta.Projector.Ledger do
       })
 
     Ecto.Multi.insert(multi, :create_account, account)
-  end
+  end)
 
-  project %TransactionCreated{} = transaction, _metadata, fn multi ->
+  project(%TransactionCreated{} = transaction, _metadata, fn multi ->
     entries_len = length(transaction.entries)
 
     transaction.entries
@@ -61,22 +64,26 @@ defmodule Conta.Projector.Ledger do
         }
 
       account_name = entry.account_name
+
       base_query =
         from(
           a in Account,
           where: a.name == ^account_name,
-          update: [set: [balances:
-            fragment(
-              "COALESCE(?, '{}')::jsonb || ('{\"' || ? || '\":' || (COALESCE( ?::jsonb -> ?, '0' )::integer + (CASE WHEN ? IN ('assets', 'expenses') THEN 1 ELSE -1 END * (?::integer - ?::integer)) )::text || '}')::jsonb",
-              a.balances,
-              ^trans_entry.currency,
-              a.balances,
-              ^trans_entry.currency,
-              a.type,
-              ^entry.debit,
-              ^entry.credit
-            )
-          ]]
+          update: [
+            set: [
+              balances:
+                fragment(
+                  "COALESCE(?, '{}')::jsonb || ('{\"' || ? || '\":' || (COALESCE( ?::jsonb -> ?, '0' )::integer + (CASE WHEN ? IN ('assets', 'expenses') THEN 1 ELSE -1 END * (?::integer - ?::integer)) )::text || '}')::jsonb",
+                  a.balances,
+                  ^trans_entry.currency,
+                  a.balances,
+                  ^trans_entry.currency,
+                  a.type,
+                  ^entry.debit,
+                  ^entry.credit
+                )
+            ]
+          ]
         )
 
       query =
@@ -89,7 +96,7 @@ defmodule Conta.Projector.Ledger do
       |> Ecto.Multi.insert({:entry, idx}, entry)
       |> Ecto.Multi.update_all({:account, idx}, query, [])
     end)
-  end
+  end)
 
   defp to_date(date) when is_struct(date, Date), do: date
 

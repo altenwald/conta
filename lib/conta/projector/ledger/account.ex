@@ -56,13 +56,13 @@ defmodule Conta.Projector.Ledger.Account do
   @foreign_key_type :binary_id
 
   schema "ledger_accounts" do
-    field :name, {:array, :string}
-    field :ledger, :string
-    field :type, Ecto.Enum, values: @account_types
-    field :currency, Money.Ecto.Currency.Type, default: :EUR
-    field :notes, :string
-    field :balances, :map, default: %{:EUR => 0}
-    belongs_to :parent, __MODULE__, foreign_key: :parent_id
+    field(:name, {:array, :string})
+    field(:ledger, :string)
+    field(:type, Ecto.Enum, values: @account_types)
+    field(:currency, Money.Ecto.Currency.Type, default: :EUR)
+    field(:notes, :string)
+    field(:balances, :map, default: %{:EUR => 0})
+    belongs_to(:parent, __MODULE__, foreign_key: :parent_id)
 
     timestamps(type: :utc_datetime_usec)
   end

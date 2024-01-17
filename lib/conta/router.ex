@@ -5,8 +5,8 @@ defmodule Conta.Router do
   alias Conta.Command.AccountTransaction
   alias Conta.Command.CreateAccount
 
-  identify Ledger, by: :ledger
+  identify(Ledger, by: :ledger)
 
-  dispatch AccountTransaction, to: Ledger
-  dispatch CreateAccount, to: Ledger
+  dispatch(AccountTransaction, to: Ledger)
+  dispatch(CreateAccount, to: Ledger)
 end

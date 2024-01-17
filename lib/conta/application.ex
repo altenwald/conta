@@ -6,5 +6,5 @@ defmodule Conta.Application do
       event_store: Conta.EventStore
     ]
 
-  router Conta.Router
+  router(Conta.Router)
 end

@@ -9,6 +9,7 @@ defmodule Conta do
       Conta.Projector.Ledger,
       Conta.Projector.Stats
     ]
+
     options = [strategy: :one_for_one, name: Conta.Supervisor]
     Supervisor.start_link(children, options)
   end

@@ -17,7 +17,7 @@ defmodule Conta.Projector.Stats do
 
   alias Conta.Repo
 
-  project %AccountCreated{} = account, _metadata, fn multi ->
+  project(%AccountCreated{} = account, _metadata, fn multi ->
     account =
       Account.changeset(%{
         name: account.name,
@@ -26,9 +26,9 @@ defmodule Conta.Projector.Stats do
       })
 
     Ecto.Multi.insert(multi, :create_account, account)
-  end
+  end)
 
-  project %TransactionCreated{} = transaction, _metadata, fn multi ->
+  project(%TransactionCreated{} = transaction, _metadata, fn multi ->
     accounts =
       transaction.entries
       |> Enum.map(& &1.account_name)
@@ -50,7 +50,7 @@ defmodule Conta.Projector.Stats do
       |> maybe_update_patrimony(account.type, on_date, idx, entry)
       |> maybe_update_pnl(account.type, on_date, idx, entry)
     end)
-  end
+  end)
 
   defp maybe_update_income(multi, :revenue, on_date, idx, entry) do
     income =
@@ -86,19 +86,24 @@ defmodule Conta.Projector.Stats do
 
   defp maybe_update_outcome(multi, _type, _on_date, _idx, _entry), do: multi
 
-  defp maybe_update_patrimony(multi, type, on_date, idx, entry) when type in [:liabilities, :assets] do
+  defp maybe_update_patrimony(multi, type, on_date, idx, entry)
+       when type in [:liabilities, :assets] do
     opts = [year: on_date.year, month: on_date.month, currency: entry.currency]
     # even when liabilities and assets are increased in a different way, we need to
     # compound the data as (assets - liabilities) so if we keep the amount changing
     # the symbol (same for liabilities and assets) we could get the correct value
     # for the patrimony.
     amount = entry.debit - entry.credit
+
     if Repo.get_by(Patrimony, opts) do
       query =
         from(
           p in Patrimony,
-          where: p.year == ^on_date.year and p.month == ^on_date.month and p.currency == ^entry.currency
+          where:
+            p.year == ^on_date.year and p.month == ^on_date.month and
+              p.currency == ^entry.currency
         )
+
       updates = [inc: [balance: amount, amount: amount]]
       Ecto.Multi.update_all(multi, {:patrimony, idx}, query, updates)
     else
@@ -119,6 +124,7 @@ defmodule Conta.Projector.Stats do
               amount: amount,
               balance: amount
             }
+
           update = [inc: [balance: amount, amount: amount]]
           opts = [on_conflict: update, conflict_target: ~w[year month currency]a]
           Ecto.Multi.insert(multi, {:patrimony, idx}, patrimony, opts)
@@ -132,6 +138,7 @@ defmodule Conta.Projector.Stats do
               amount: amount,
               balance: patrimony.balance.amount + amount
             }
+
           update = [inc: [balance: amount, amount: amount]]
           opts = [on_conflict: update, conflict_target: ~w[year month currency]a]
           Ecto.Multi.insert(multi, {:patrimony, idx}, patrimony, opts)
