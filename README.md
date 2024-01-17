@@ -31,7 +31,7 @@ The goal of this project is to accomplish:
 
 These goals could be increased or changed, but I'm completely open to discussing each item.
 
-## Contributing
+## Contributing
 
 It's a very ambitious project because it's something I'm using and I want to get it as easy as possible for automating as much as possible the arduous task of accounting. My principles are:
 
