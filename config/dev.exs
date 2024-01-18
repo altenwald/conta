@@ -33,7 +33,12 @@ config :conta_web, ContaWeb.Endpoint,
   secret_key_base: "WeMdDDXgiQvRkC23rk8y5cvMJaipjR6qJNWqe3t/2Ebvg2rtWNuW/y9IbXJGrIMX",
   watchers: [
     esbuild: {Esbuild, :install_and_run, [:default, ~w(--sourcemap=inline --watch)]},
-    tailwind: {Tailwind, :install_and_run, [:default, ~w(--watch)]}
+    # tailwind: {Tailwind, :install_and_run, [:default, ~w(--watch)]},
+    sass: {
+      DartSass,
+      :install_and_run,
+      [:default, ~w(--embed-source-map --source-map-urls=absolute --watch)]
+    }
   ]
 
 # Watch static and templates for browser reloading.

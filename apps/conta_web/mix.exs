@@ -39,6 +39,8 @@ defmodule ContaWeb.MixProject do
       {:phoenix_live_dashboard, "~> 0.8"},
       {:esbuild, "~> 0.8", runtime: Mix.env() == :dev},
       {:tailwind, "~> 0.2", runtime: Mix.env() == :dev},
+      {:dart_sass, "~> 0.1", runtime: Mix.env() == :dev},
+      {:bulma, "~> 0.9"},
       {:telemetry_metrics, "~> 0.6"},
       {:telemetry_poller, "~> 1.0"},
       {:gettext, "~> 0.24"},
@@ -54,7 +56,7 @@ defmodule ContaWeb.MixProject do
       test: ["ecto.create --quiet", "ecto.migrate --quiet", "test"],
       "assets.setup": ["tailwind.install --if-missing", "esbuild.install --if-missing"],
       "assets.build": ["tailwind default", "esbuild default"],
-      "assets.deploy": ["tailwind default --minify", "esbuild default --minify", "phx.digest"]
+      "assets.deploy": ["sass default --no-source-map --style=compressed", "tailwind default --minify", "esbuild default --minify", "phx.digest"]
     ]
   end
 end
