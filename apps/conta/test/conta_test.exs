@@ -12,9 +12,9 @@ defmodule ContaTest do
         ledger: "default"
       }
 
-    assert :ok = Conta.Application.dispatch(command)
+    assert :ok = Conta.Commanded.Application.dispatch(command)
 
-    assert_receive_event(Conta.Application, Conta.Event.AccountCreated, fn event ->
+    assert_receive_event(Conta.Commanded.Application, Conta.Event.AccountCreated, fn event ->
       assert event.name == ["Assets"]
       assert event.type == "assets"
       assert event.currency == "EUR"
@@ -33,6 +33,6 @@ defmodule ContaTest do
         ledger: "default"
       }
 
-    assert {:error, :invalid_parent_account} = Conta.Application.dispatch(command)
+    assert {:error, :invalid_parent_account} = Conta.Commanded.Application.dispatch(command)
   end
 end

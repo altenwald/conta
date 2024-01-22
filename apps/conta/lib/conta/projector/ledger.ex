@@ -1,6 +1,6 @@
 defmodule Conta.Projector.Ledger do
   use Commanded.Projections.Ecto,
-    application: Conta.Application,
+    application: Conta.Commanded.Application,
     repo: Conta.Repo,
     name: __MODULE__
 

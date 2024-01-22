@@ -138,7 +138,8 @@ defmodule ContaWeb.CoreComponents do
         phx-connected={hide("#client-error")}
         hidden
       >
-        <%= gettext "Attempting to reconnect" %> <.icon name="hero-arrow-path" class="ml-1 h-3 w-3 animate-spin" />
+        <%= gettext("Attempting to reconnect") %>
+        <.icon name="hero-arrow-path" class="ml-1 h-3 w-3 animate-spin" />
       </.flash>
 
       <.flash
@@ -149,7 +150,7 @@ defmodule ContaWeb.CoreComponents do
         phx-connected={hide("#server-error")}
         hidden
       >
-        <%= gettext "Hang in there while we get back on track" %>
+        <%= gettext("Hang in there while we get back on track") %>
         <.icon name="hero-arrow-path" class="ml-1 h-3 w-3 animate-spin" />
       </.flash>
     </div>

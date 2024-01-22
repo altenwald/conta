@@ -19,7 +19,7 @@ defmodule Conta.MixProject do
 
   def application do
     [
-      mod: {Conta, []},
+      mod: {Conta.Application, []},
       extra_applications: [:logger, :runtime_tools]
     ]
   end

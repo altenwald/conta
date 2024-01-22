@@ -1,4 +1,4 @@
-defmodule Conta.Router do
+defmodule Conta.Commanded.Router do
   use Commanded.Commands.Router
 
   alias Conta.Aggregate.Ledger

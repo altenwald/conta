@@ -81,6 +81,12 @@ config :dart_sass,
     cd: Path.expand("../apps/conta_web/assets", __DIR__)
   ]
 
+config :tesla, adapter: {Tesla.Adapter.Finch, name: ContaBot.Finch}
+
+config :ex_gram, adapter: ExGram.Adapter.Tesla
+
+config :ex_gram, json_engine: Jason
+
 # Import environment specific config. This must remain at the bottom
 # of this file so it overrides the configuration defined above.
 import_config("#{config_env()}.exs")

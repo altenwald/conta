@@ -75,3 +75,7 @@ if config_env() == :prod do
 
   config :conta, :dns_cluster_query, System.get_env("DNS_CLUSTER_QUERY")
 end
+
+config :ex_gram, token: System.get_env("EXGRAM_TOKEN")
+
+config :conta_bot, :granted_users, String.split(System.get_env("GRANTED_USERS"), ",")
