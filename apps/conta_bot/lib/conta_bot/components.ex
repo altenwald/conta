@@ -14,7 +14,7 @@ defmodule ContaBot.Components do
     end
   end
 
-  def answer_select(context, prompt, options, extra_options) do
+  def answer_select(context, prompt, options, extra_options \\ [], opts \\ []) do
     extra_buttons =
       for {label, value} <- extra_options do
         %InlineKeyboardButton{text: label, callback_data: value}
@@ -26,7 +26,7 @@ defmodule ContaBot.Components do
       end ++ [extra_buttons]
 
     markup = %InlineKeyboardMarkup{inline_keyboard: buttons}
-    answer(context, prompt, reply_markup: markup)
+    answer(context, prompt, [{:reply_markup, markup} | opts])
   end
 
   def escape_markdown(text) do

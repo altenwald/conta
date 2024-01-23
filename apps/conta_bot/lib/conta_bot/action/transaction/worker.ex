@@ -8,12 +8,15 @@ defmodule ContaBot.Action.Transaction.Worker do
   @supervisor ContaBot.Action.Transaction.Workers
   @registry ContaBot.Action.Transaction.Registry
 
+  @fields_to_take ~w[chat_id on_date description account_name relative_account_name amount]a
+
   defstruct chat_id: nil,
             on_date: nil,
             description: nil,
             account_name: nil,
             relative_account_name: nil,
-            amount: nil
+            amount: nil,
+            goto_confirm: false
 
   def start(opts) do
     DynamicSupervisor.start_child(@supervisor, {__MODULE__, opts})
@@ -65,7 +68,7 @@ defmodule ContaBot.Action.Transaction.Worker do
   end
 
   def handle_event({:call, from}, :get_data, state, data) do
-    actions = [{:reply, from, {:ok, state, Map.from_struct(data)}}]
+    actions = [{:reply, from, {:ok, state, Map.take(data, @fields_to_take)}}]
     {:keep_state_and_data, actions}
   end
 
@@ -82,20 +85,37 @@ defmodule ContaBot.Action.Transaction.Worker do
         %__MODULE__{state_data | account_name: get_sticky(state_data.chat_id, :account_name)}
       end
 
-    actions = [{:reply, from, {:ok, :description}}]
-    {:next_state, :description, state_data, actions}
+    if state_data.goto_confirm do
+      actions = [{:reply, from, {:ok, {:confirm, Map.take(state_data, @fields_to_take)}}}]
+      {:next_state, :confirm, %__MODULE__{state_data | goto_confirm: false}, actions}
+    else
+      actions = [{:reply, from, {:ok, :description}}]
+      {:next_state, :description, state_data, actions}
+    end
   end
 
   def handle_event({:call, from}, {:event_sticky, "description"}, :account_name, state_data) do
     put_sticky(state_data.chat_id, :account_name, state_data.account_name)
-    actions = [{:reply, from, {:ok, :description}}]
-    {:next_state, :description, state_data, actions}
+
+    if state_data.goto_confirm do
+      actions = [{:reply, from, {:ok, {:confirm, Map.take(state_data, @fields_to_take)}}}]
+      {:next_state, :confirm, %__MODULE__{state_data | goto_confirm: false}, actions}
+    else
+      actions = [{:reply, from, {:ok, :description}}]
+      {:next_state, :description, state_data, actions}
+    end
   end
 
   def handle_event({:call, from}, {:text, description}, :description, state_data) do
     state_data = %__MODULE__{state_data | description: String.trim(description)}
-    actions = [{:reply, from, {:ok, :relative_account_name}}]
-    {:next_state, :relative_account_name, state_data, actions}
+
+    if state_data.goto_confirm do
+      actions = [{:reply, from, {:ok, {:confirm, Map.take(state_data, @fields_to_take)}}}]
+      {:next_state, :confirm, %__MODULE__{state_data | goto_confirm: false}, actions}
+    else
+      actions = [{:reply, from, {:ok, :relative_account_name}}]
+      {:next_state, :relative_account_name, state_data, actions}
+    end
   end
 
   def handle_event({:call, from}, {:callback, account}, :relative_account_name, state_data) do
@@ -114,23 +134,53 @@ defmodule ContaBot.Action.Transaction.Worker do
         }
       end
 
-    actions = [{:reply, from, {:ok, :amount}}]
-    {:next_state, :amount, state_data, actions}
+    if state_data.goto_confirm do
+      actions = [{:reply, from, {:ok, {:confirm, Map.take(state_data, @fields_to_take)}}}]
+      {:next_state, :confirm, %__MODULE__{state_data | goto_confirm: false}, actions}
+    else
+      actions = [{:reply, from, {:ok, :amount}}]
+      {:next_state, :amount, state_data, actions}
+    end
   end
 
   def handle_event({:call, from}, {:event_sticky, "amount"}, :relative_account_name, state_data) do
     put_sticky(state_data.chat_id, :relative_account_name, state_data.relative_account_name)
-    actions = [{:reply, from, {:ok, :amount}}]
-    {:next_state, :amount, state_data, actions}
+
+    if state_data.goto_confirm do
+      actions = [{:reply, from, {:ok, {:confirm, Map.take(state_data, @fields_to_take)}}}]
+      {:next_state, :confirm, %__MODULE__{state_data | goto_confirm: false}, actions}
+    else
+      actions = [{:reply, from, {:ok, :amount}}]
+      {:next_state, :amount, state_data, actions}
+    end
   end
 
   def handle_event({:call, from}, {:text, amount}, :amount, state_data) do
-    case Regex.run(~r/(^-?[0-9]+)\.([0-9]{2})$/, amount, capture: :all_but_first) do
-      [int, decimal] ->
-        amount = String.to_integer(int) * 100 + String.to_integer(decimal)
-        state_data = %__MODULE__{state_data | amount: amount}
-        actions = [{:reply, from, {:ok, :on_date}}]
-        {:next_state, :on_date, state_data, actions}
+    case Regex.run(~r/^(-?)([0-9]+)(?:\.([0-9]{1,2}))?$/, amount, capture: :all_but_first) do
+      [sign, int | decimal] ->
+        decimal =
+          case decimal do
+            [] ->
+              0
+
+            [decimal] when byte_size(decimal) == 1 ->
+              String.to_integer(decimal) * 10
+
+            [decimal] when byte_size(decimal) == 2 ->
+              String.to_integer(decimal)
+          end
+
+        amount = String.to_integer(int) * 100 + decimal
+        sign = if(sign == "-", do: -1, else: 1)
+        state_data = %__MODULE__{state_data | amount: amount * sign}
+
+        if state_data.goto_confirm do
+          actions = [{:reply, from, {:ok, {:confirm, Map.take(state_data, @fields_to_take)}}}]
+          {:next_state, :confirm, %__MODULE__{state_data | goto_confirm: false}, actions}
+        else
+          actions = [{:reply, from, {:ok, :on_date}}]
+          {:next_state, :on_date, state_data, actions}
+        end
 
       nil ->
         {:keep_state_and_data, [{:reply, from, {:error, :invalid_amount}}]}
@@ -146,17 +196,51 @@ defmodule ContaBot.Action.Transaction.Worker do
       {:ok, on_date} ->
         put_sticky(state_data.chat_id, :on_date, on_date)
         state_data = %__MODULE__{state_data | on_date: on_date}
-
-        actions = [
-          {:reply, from, {:ok, Map.from_struct(state_data)}},
-          {:state_timeout, 10_000, :stop}
-        ]
-
-        {:next_state, :done, state_data, actions}
+        actions = [{:reply, from, {:ok, {:confirm, Map.take(state_data, @fields_to_take)}}}]
+        {:next_state, :confirm, state_data, actions}
 
       {:error, _} ->
         {:keep_state_and_data, [{:reply, from, {:error, :invalid_date}}]}
     end
+  end
+
+  def handle_event({:call, from}, {:callback, "account_name"}, :confirm, state_data) do
+    actions = [{:reply, from, {:ok, :account_name}}]
+    state_data = %__MODULE__{state_data | goto_confirm: true}
+    {:next_state, :account_name, state_data, actions}
+  end
+
+  def handle_event({:call, from}, {:callback, "description"}, :confirm, state_data) do
+    actions = [{:reply, from, {:ok, :description}}]
+    state_data = %__MODULE__{state_data | goto_confirm: true}
+    {:next_state, :description, state_data, actions}
+  end
+
+  def handle_event({:call, from}, {:callback, "relative_account_name"}, :confirm, state_data) do
+    actions = [{:reply, from, {:ok, :relative_account_name}}]
+    state_data = %__MODULE__{state_data | goto_confirm: true}
+    {:next_state, :relative_account_name, state_data, actions}
+  end
+
+  def handle_event({:call, from}, {:callback, "amount"}, :confirm, state_data) do
+    actions = [{:reply, from, {:ok, :amount}}]
+    state_data = %__MODULE__{state_data | goto_confirm: true}
+    {:next_state, :amount, state_data, actions}
+  end
+
+  def handle_event({:call, from}, {:callback, "on_date"}, :confirm, state_data) do
+    actions = [{:reply, from, {:ok, :on_date}}]
+    state_data = %__MODULE__{state_data | goto_confirm: true}
+    {:next_state, :on_date, state_data, actions}
+  end
+
+  def handle_event({:call, from}, {:callback, "confirm"}, :confirm, state_data) do
+    actions = [
+      {:reply, from, {:ok, Map.take(state_data, @fields_to_take)}},
+      {:state_timeout, 10_000, :stop}
+    ]
+
+    {:next_state, :done, state_data, actions}
   end
 
   def handle_event({:call, from}, event, state, _data) do

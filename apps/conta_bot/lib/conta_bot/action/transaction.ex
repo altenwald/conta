@@ -94,6 +94,33 @@ defmodule ContaBot.Action.Transaction do
     )
   end
 
+  defp response({:ok, {:confirm, data}}, context) do
+    case format_data(data) do
+      {:ok, data} ->
+        answer_select(
+          context,
+          """
+          Check the following data
+
+          *#{escape_markdown(to_string(data.on_date))}*
+          """ <> entries_to_string(data.entries),
+          [
+            {"Confirm", "transaction confirm"},
+            {"Change account name", "transaction account_name"},
+            {"Change description", "transaction description"},
+            {"Change relative account name", "transaction relative_account_name"},
+            {"Change amount", "transaction amount"},
+            {"Change date", "transaction on_date"}
+          ],
+          [],
+          parse_mode: "MarkdownV2"
+        )
+
+      {:error, message} ->
+        answer(context, message)
+    end
+  end
+
   defp response({:ok, data}, context) when is_map(data) do
     chat_id = get_chat_id(context)
     {:ok, :done, data} = Worker.call(chat_id, :get_data)
@@ -127,7 +154,21 @@ defmodule ContaBot.Action.Transaction do
     answer(context, "Invalid event")
   end
 
-  defp transaction_create(data) do
+  defp entries_to_string(entries) do
+    Enum.reduce(entries, "", fn entry, acc ->
+      """
+      #{acc}
+      ```
+      credit : #{escape_markdown(String.pad_leading(to_string(entry.credit / 100.0), 15))}
+      debit  : #{escape_markdown(String.pad_leading(to_string(entry.debit / 100.0), 15))}
+      ```
+      *Account* #{escape_markdown(Enum.join(entry.account_name, "."))}
+      *Description* #{escape_markdown(entry.description)}
+      """
+    end)
+  end
+
+  defp format_data(data) do
     Logger.debug("creating transaction for data: #{inspect(data)}")
     account_name = String.split(data.account_name, ".")
     relative_account_name = String.split(data.relative_account_name, ".")
@@ -136,40 +177,58 @@ defmodule ContaBot.Action.Transaction do
          {:ok, relative_account} <- Conta.Ledger.get_account_by_name(relative_account_name),
          {:currency, true} <- {:currency, account.currency == relative_account.currency} do
       {add_account, add_relative_account} =
-        if (account.type in ~w[assets expenses]a and data.amount > 0) or data.amount < 0 do
+        if data.amount > 0 do
           {
-            &Map.merge(&1, %{debit: data.amount, credit: 0}),
-            &Map.merge(&1, %{credit: data.amount, debit: 0})
+            &Map.merge(&1, %{debit: abs(data.amount), credit: 0}),
+            &Map.merge(&1, %{credit: abs(data.amount), debit: 0})
           }
         else
           {
-            &Map.merge(&1, %{credit: -data.amount, debit: 0}),
-            &Map.merge(&1, %{debit: -data.amount, credit: 0})
+            &Map.merge(&1, %{credit: abs(data.amount), debit: 0}),
+            &Map.merge(&1, %{debit: abs(data.amount), credit: 0})
           }
         end
 
       entries = [
-        add_account.(%Conta.Command.AccountTransaction.Entry{
+        add_account.(%{
           description: data.description,
           account_name: account_name,
           change_currency: relative_account.currency
         }),
-        add_relative_account.(%Conta.Command.AccountTransaction.Entry{
+        add_relative_account.(%{
           description: data.description,
           account_name: relative_account_name,
           change_currency: account.currency
         })
       ]
 
-      if :ok == Conta.create_transaction(data.on_date, entries) do
-        "Transaction created successfully"
-      else
-        "Error executing the commands"
-      end
+      {:ok, %{on_date: data.on_date, entries: entries}}
     else
-      {:error, _} -> "Account doesn't exist"
+      {:error, _} ->
+        {:error, "Account doesn't exist"}
+
       ##  TODO
-      {:currency, false} -> "Cannot still create transaction multi-currency"
+      {:currency, false} ->
+        {:error, "Cannot still create transaction multi-currency"}
+    end
+  end
+
+  defp transaction_create(data) do
+    case format_data(data) do
+      {:ok, data} ->
+        entries =
+          for entry <- data.entries do
+            struct!(Conta.Command.AccountTransaction.Entry, entry)
+          end
+
+        if :ok == Conta.create_transaction(data.on_date, entries) do
+          "Transaction created successfully"
+        else
+          "Error executing the commands"
+        end
+
+      {:error, message} ->
+        message
     end
   end
 end

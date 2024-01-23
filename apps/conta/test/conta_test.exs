@@ -1,38 +1,56 @@
 defmodule ContaTest do
   use ExUnit.Case
-  import Commanded.Assertions.EventAssertions
 
-  test "ensure a create account event is published" do
-    command =
-      %Conta.Command.CreateAccount{
+  describe "ledger create account execute" do
+    test "create account successful" do
+      command =
+        %Conta.Command.CreateAccount{
+          name: ["Assets"],
+          type: :assets,
+          currency: :EUR,
+          notes: nil,
+          ledger: "default"
+        }
+
+      ledger = %Conta.Aggregate.Ledger{name: "default"}
+      event = Conta.Aggregate.Ledger.execute(ledger, command)
+
+      assert %Conta.Event.AccountCreated{
         name: ["Assets"],
         type: :assets,
         currency: :EUR,
         notes: nil,
         ledger: "default"
-      }
+      } = event
 
-    assert :ok = Conta.Commanded.Application.dispatch(command)
+      ledger = Conta.Aggregate.Ledger.apply(ledger, event)
 
-    assert_receive_event(Conta.Commanded.Application, Conta.Event.AccountCreated, fn event ->
-      assert event.name == ["Assets"]
-      assert event.type == "assets"
-      assert event.currency == "EUR"
-      assert is_nil(event.notes)
-      assert event.ledger == "default"
-    end)
-  end
+      assert %Conta.Aggregate.Ledger{
+        name: "default",
+        accounts: %{
+          ["Assets"] => %Conta.Aggregate.Ledger.Account{
+            name: ["Assets"],
+            type: :assets,
+            currency: :EUR,
+            notes: nil,
+            balances: %{}
+          }
+        }
+      } = ledger
+    end
 
-  test "fail if the parent doesn't exist" do
-    command =
-      %Conta.Command.CreateAccount{
-        name: ["NonExist", "Child"],
-        type: :assets,
-        currency: :EUR,
-        notes: nil,
-        ledger: "default"
-      }
+    test "create account failure" do
+      command =
+        %Conta.Command.CreateAccount{
+          name: ["NonExist", "Child"],
+          type: :assets,
+          currency: :EUR,
+          notes: nil,
+          ledger: "default"
+        }
 
-    assert {:error, :invalid_parent_account} = Conta.Commanded.Application.dispatch(command)
+      ledger = %Conta.Aggregate.Ledger{name: "default"}
+      assert {:error, :invalid_parent_account} = Conta.Aggregate.Ledger.execute(ledger, command)
+    end
   end
 end
