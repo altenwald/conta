@@ -15,14 +15,15 @@ defmodule Conta.Ledger do
   def list_accounts(type, depth \\ nil)
 
   def list_accounts(type, nil) do
-    from(a in Account, where: a.type == ^type)
+    from(a in Account, where: a.type == ^type, preload: :balances)
     |> Repo.all()
   end
 
   def list_accounts(type, depth) when is_integer(depth) and depth > 0 do
     from(
       a in Account,
-      where: a.type == ^type and fragment("array_length(?, 1)", a.name) == ^depth
+      where: a.type == ^type and fragment("array_length(?, 1)", a.name) == ^depth,
+      preload: :balances
     )
     |> Repo.all()
   end
@@ -36,7 +37,8 @@ defmodule Conta.Ledger do
     from(
       a in Account,
       where: is_nil(a.parent_id),
-      order_by: a.name
+      order_by: a.name,
+      preload: :balances
     )
     |> Repo.all()
   end
@@ -47,7 +49,8 @@ defmodule Conta.Ledger do
       join: p in Account,
       on: a.parent_id == p.id,
       where: p.name == ^parent,
-      order_by: a.name
+      order_by: a.name,
+      preload: :balances
     )
     |> Repo.all()
   end

@@ -1,5 +1,8 @@
 defmodule ContaTest do
   use ExUnit.Case
+  alias Conta.Aggregate.Ledger
+  alias Conta.Command.CreateAccount
+  alias Conta.Event.AccountCreated
 
   describe "ledger create account execute" do
     test "create account successful" do
@@ -12,10 +15,10 @@ defmodule ContaTest do
           ledger: "default"
         }
 
-      ledger = %Conta.Aggregate.Ledger{name: "default"}
-      event = Conta.Aggregate.Ledger.execute(ledger, command)
+      ledger = %Ledger{name: "default"}
+      event = Ledger.execute(ledger, command)
 
-      assert %Conta.Event.AccountCreated{
+      assert %AccountCreated{
         name: ["Assets"],
         type: :assets,
         currency: :EUR,
@@ -23,12 +26,12 @@ defmodule ContaTest do
         ledger: "default"
       } = event
 
-      ledger = Conta.Aggregate.Ledger.apply(ledger, event)
+      ledger = Ledger.apply(ledger, event)
 
-      assert %Conta.Aggregate.Ledger{
+      assert %Ledger{
         name: "default",
         accounts: %{
-          ["Assets"] => %Conta.Aggregate.Ledger.Account{
+          ["Assets"] => %Ledger.Account{
             name: ["Assets"],
             type: :assets,
             currency: :EUR,
@@ -41,7 +44,7 @@ defmodule ContaTest do
 
     test "create account failure" do
       command =
-        %Conta.Command.CreateAccount{
+        %CreateAccount{
           name: ["NonExist", "Child"],
           type: :assets,
           currency: :EUR,
@@ -49,8 +52,8 @@ defmodule ContaTest do
           ledger: "default"
         }
 
-      ledger = %Conta.Aggregate.Ledger{name: "default"}
-      assert {:error, :invalid_parent_account} = Conta.Aggregate.Ledger.execute(ledger, command)
+      ledger = %Ledger{name: "default"}
+      assert {:error, :invalid_parent_account} = Ledger.execute(ledger, command)
     end
   end
 end

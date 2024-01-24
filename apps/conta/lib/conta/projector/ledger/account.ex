@@ -1,6 +1,7 @@
 defmodule Conta.Projector.Ledger.Account do
   use Ecto.Schema
   import Ecto.Changeset
+  alias Conta.Projector.Ledger.Balance
 
   @typedoc """
   The account types represent the typical financial accounts that exist:
@@ -61,19 +62,20 @@ defmodule Conta.Projector.Ledger.Account do
     field(:type, Ecto.Enum, values: @account_types)
     field(:currency, Money.Ecto.Currency.Type, default: :EUR)
     field(:notes, :string)
-    field(:balances, :map, default: %{:EUR => 0})
     belongs_to(:parent, __MODULE__, foreign_key: :parent_id)
+    has_many(:balances, Balance)
 
     timestamps(type: :utc_datetime_usec)
   end
 
   @required_fields ~w[name]a
-  @optional_fields ~w[ledger type currency notes balances parent_id]a
+  @optional_fields ~w[ledger type currency notes parent_id]a
 
   @doc false
   def changeset(model \\ %__MODULE__{}, params) do
     model
     |> cast(params, @required_fields ++ @optional_fields)
+    |> cast_assoc(:balances)
     |> validate_required(@required_fields)
   end
 end

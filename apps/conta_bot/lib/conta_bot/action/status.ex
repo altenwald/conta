@@ -13,17 +13,17 @@ defmodule ContaBot.Action.Status do
   def status_output(text) do
     Conta.Ledger.list_accounts("assets", get_depth(text))
     |> Enum.map(fn account ->
-      balances = Enum.reject(account.balances, fn {_, amount} -> amount == 0 end)
-      Map.put(account, :balances, Map.new(balances))
+      balances = Enum.reject(account.balances, &Money.zero?(&1.amount))
+      Map.put(account, :balances, balances)
     end)
-    |> Enum.reject(&(&1.balances == %{}))
+    |> Enum.reject(&Enum.empty?(&1.balances))
     |> Enum.map(&{Enum.join(&1.name, "."), &1.balances})
-    |> Enum.map(fn {name, balances} ->
-      Enum.reduce(balances, "*#{name}*  \n```\n", fn {currency, amount}, acc ->
-        acc <> String.pad_leading(to_string(Money.new(amount, currency)), 15) <> "  \n"
+    |> Enum.map_join(fn {name, balances} ->
+      Enum.reduce(balances, "*#{name}*  \n```\n", fn balance, acc ->
+        money = Money.new(balance.amount.amount, balance.currency)
+        acc <> String.pad_leading(to_string(money), 15) <> "  \n"
       end) <> "```\n"
     end)
-    |> Enum.join()
     |> then(&Regex.replace(~r/\./, &1, "\\.", global: true))
   end
 

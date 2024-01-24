@@ -10,7 +10,10 @@ defmodule Conta.Projector.Ledger do
   alias Conta.Event.TransactionCreated
 
   alias Conta.Projector.Ledger.Account
+  alias Conta.Projector.Ledger.Balance
   alias Conta.Projector.Ledger.Entry
+
+  alias Conta.Repo
 
   project(%AccountCreated{} = account, _metadata, fn multi ->
     parent_id =
@@ -29,7 +32,6 @@ defmodule Conta.Projector.Ledger do
         name: account.name,
         type: account.type,
         ledger: account.ledger,
-        balances: %{account.currency => 0},
         currency: account.currency
       })
 
@@ -38,6 +40,10 @@ defmodule Conta.Projector.Ledger do
 
   project(%TransactionCreated{} = transaction, _metadata, fn multi ->
     entries_len = length(transaction.entries)
+    accounts =
+      from(a in Account, select: {a.name, %{id: a.id, type: a.type}})
+      |> Repo.all()
+      |> Map.new()
 
     transaction.entries
     |> Enum.with_index(1)
@@ -63,40 +69,46 @@ defmodule Conta.Projector.Ledger do
           related_account_name: related_account_id
         }
 
-      account_name = entry.account_name
-
-      base_query =
-        from(
-          a in Account,
-          where: a.name == ^account_name,
-          update: [
-            set: [
-              balances:
-                fragment(
-                  "COALESCE(?, '{}')::jsonb || ('{\"' || ? || '\":' || (COALESCE( ?::jsonb -> ?, '0' )::integer + (CASE WHEN ? IN ('assets', 'expenses') THEN 1 ELSE -1 END * (?::integer - ?::integer)) )::text || '}')::jsonb",
-                  a.balances,
-                  ^trans_entry.currency,
-                  a.balances,
-                  ^trans_entry.currency,
-                  a.type,
-                  ^entry.debit,
-                  ^entry.credit
-                )
-            ]
-          ]
-        )
-
-      query =
-        Enum.reduce(1..(length(account_name) - 1)//1, base_query, fn idx, acc ->
-          {parent, _} = Enum.split(account_name, -idx)
-          from(a in acc, or_where: a.name == ^parent)
-        end)
-
       multi
+      |> upsert_account_balances(idx, accounts, trans_entry)
       |> Ecto.Multi.insert({:entry, idx}, entry)
-      |> Ecto.Multi.update_all({:account, idx}, query, [])
     end)
   end)
+
+  defp account_names(account_name) do
+    Enum.reduce((1..(length(account_name) - 1)//1), [account_name], fn idx, acc ->
+      {parent, _} = Enum.split(account_name, -idx)
+      [parent | acc]
+    end)
+  end
+
+  defp upsert_account_balances(multi, idx, accounts, trans_entry) do
+    trans_entry.account_name
+    |> account_names()
+    |> Enum.reduce(multi, fn account_name, multi ->
+      account = accounts[account_name]
+      amount =
+        if account.type in ~w[assets expenses]a do
+          trans_entry.debit - trans_entry.credit
+        else
+          trans_entry.credit - trans_entry.debit
+        end
+
+      balance = %Balance{
+        account_id: account.id,
+        currency: trans_entry.currency,
+        amount: amount
+      }
+
+      Ecto.Multi.insert(
+        multi,
+        {:account, idx, account_name},
+        balance,
+        on_conflict: [inc: [amount: amount]],
+        conflict_target: ~w[account_id currency]
+      )
+    end)
+  end
 
   defp to_date(date) when is_struct(date, Date), do: date
 

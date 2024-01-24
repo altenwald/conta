@@ -9,7 +9,6 @@ defmodule Conta.Repo.Migrations.CreateAccountsTable do
       add :ledger, :string
       add :currency, :string
       add :notes, :string
-      add :balances, :json
       add :parent_id, references(:ledger_accounts, on_delete: :nothing, type: :binary_id)
 
       timestamps(type: :utc_datetime_usec)

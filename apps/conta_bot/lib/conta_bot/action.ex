@@ -85,9 +85,11 @@ defmodule ContaBot.Action do
 
   defp handle(event, following, context) do
     module = Module.concat(__MODULE__, Macro.camelize(following))
+    Code.ensure_loaded(module)
+    Logger.debug("requested command #{inspect(following)} - trying #{module}")
 
     if function_exported?(module, :handle, 2) do
-      apply(module, :handle, [event, context])
+      module.handle(event, context)
     else
       answer(context, "Command not found. Sorry.")
     end
