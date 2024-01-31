@@ -74,6 +74,7 @@ defmodule Conta.Aggregate.Ledger do
 
         %TransactionCreated{
           id: Ecto.UUID.generate(),
+          ledger: transaction.ledger,
           on_date: to_date(transaction.on_date),
           entries: entries
         }

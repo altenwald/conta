@@ -68,6 +68,16 @@ defmodule Conta.Ledger do
     end
   end
 
+  def list_entries_by(text, limit) when is_integer(limit) do
+    from(
+      e in Entry,
+      where: fragment("? ~ ?", e.description, ^text),
+      or_where: fragment("ARRAY_TO_STRING(?, '.') ~ ?", e.account_name, ^text),
+      limit: ^limit
+    )
+    |> Repo.all()
+  end
+
   defp adjust_currency(%Entry{} = entry, currency) do
     %Entry{entry |
       credit: Money.new(entry.credit.amount, currency),

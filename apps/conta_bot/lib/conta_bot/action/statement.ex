@@ -26,19 +26,6 @@ defmodule ContaBot.Action.Statement do
     |> to_string()
   end
 
-  defp account_fmt(account_name) do
-    (account_name || "-- Breakdown")
-    |> Enum.join(".")
-    |> escape_markdown()
-  end
-
-  defp currency_fmt(value) do
-    value
-    |> to_string()
-    |> String.pad_leading(15)
-    |> escape_markdown()
-  end
-
   @impl ContaBot.Action
   def handle(:init, context) do
     choose_account(context, "statement", "Choose an account", false, "")
@@ -56,6 +43,8 @@ defmodule ContaBot.Action.Statement do
   end
 
   def handle({:event, account}, context) do
-    answer(context, statement_output(String.split(account, ".")), parse_mode: "MarkdownV2")
+    context
+    |> delete_callback()
+    |> answer(statement_output(String.split(account, ".")), parse_mode: "MarkdownV2")
   end
 end

@@ -4,8 +4,12 @@ defmodule ContaBot.Action do
 
   command("status", description: "Status of the assets")
   command("patrimony", description: "Get Patrimony for last 6 months")
+  command("pnl", description: "Get Profits & Losses for last 6 months")
+  command("income", description: "Get income for last 6 months")
+  command("outcome", description: "Get outcome for last 6 months")
   command("transaction", description: "Add account transaction")
   command("statement", description: "Last entries for a selected account")
+  command("graph", description: "Receive a graph for specific data")
 
   defmacro __using__(_opts) do
     quote do

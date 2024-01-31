@@ -19,12 +19,11 @@ defmodule ContaBot.Action.Status do
     |> Enum.reject(&Enum.empty?(&1.balances))
     |> Enum.map(&{Enum.join(&1.name, "."), &1.balances})
     |> Enum.map_join(fn {name, balances} ->
-      Enum.reduce(balances, "*#{name}*  \n```\n", fn balance, acc ->
+      Enum.reduce(balances, "*#{escape_markdown(name)}*  \n```\n", fn balance, acc ->
         money = Money.new(balance.amount.amount, balance.currency)
-        acc <> String.pad_leading(to_string(money), 15) <> "  \n"
+        acc <> currency_fmt(money) <> "  \n"
       end) <> "```\n"
     end)
-    |> then(&Regex.replace(~r/\./, &1, "\\.", global: true))
   end
 
   @impl ContaBot.Action
@@ -38,6 +37,8 @@ defmodule ContaBot.Action.Status do
   end
 
   def handle({:callback, depth}, context) do
-    answer(context, status_output(depth), parse_mode: "MarkdownV2")
+    context
+    |> delete_callback()
+    |> answer(status_output(depth), parse_mode: "MarkdownV2")
   end
 end

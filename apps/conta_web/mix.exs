@@ -46,7 +46,9 @@ defmodule ContaWeb.MixProject do
       {:gettext, "~> 0.24"},
       {:conta, in_umbrella: true},
       {:jason, "~> 1.4"},
-      {:plug_cowboy, "~> 2.6"}
+      {:plug_cowboy, "~> 2.6"},
+      {:doctor, ">= 0.0.0", only: [:dev, :test], runtime: false},
+      {:sobelow, ">= 0.0.0", only: [:dev, :test], rutnime: false}
     ]
   end
 
