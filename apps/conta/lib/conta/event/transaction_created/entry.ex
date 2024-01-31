@@ -1,13 +1,21 @@
 defmodule Conta.Event.TransactionCreated.Entry do
+  use TypedEctoSchema
+
+  @primary_key false
+
+  @typep currency() :: atom()
+
   @derive Jason.Encoder
-  defstruct description: nil,
-            account_name: nil,
-            credit: 0,
-            debit: 0,
-            balance: 0,
-            currency: :EUR,
-            change_currency: :EUR,
-            change_credit: 0,
-            change_debit: 0,
-            change_price: 1.0
+  typed_embedded_schema do
+    field :description, :string
+    field :account_name, {:array, :string}
+    field :credit, :integer, default: 0
+    field :debit, :integer, default: 0
+    field :balance, :integer, default: 0
+    field(:currency, Money.Ecto.Currency.Type, default: :EUR) :: currency()
+    field(:change_currency, Money.Ecto.Currency.Type, default: :EUR) :: currency()
+    field :change_credit, :integer, default: 0
+    field :change_debit, :integer, default: 0
+    field :change_price, :decimal, default: 1.0
+  end
 end

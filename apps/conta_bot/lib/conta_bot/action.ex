@@ -1,6 +1,7 @@
 defmodule ContaBot.Action do
   use ExGram.Bot, name: :conta_bot, setup_commands: true
   require Logger
+  alias ContaBot.Action.Users
 
   command("status", description: "Status of the assets")
   command("patrimony", description: "Get Patrimony for last 6 months")
@@ -43,12 +44,8 @@ defmodule ContaBot.Action do
 
   @callback handle(event(), ExGram.Cnt.t()) :: ExGram.Cnt.t()
 
-  defp granted_user?(username) do
-    username in Application.get_env(:conta_bot, :granted_users, [])
-  end
-
   def handle({:command, command, params}, context) do
-    if granted_user?(params.from.username) do
+    if Users.granted_user?(params.from.username) do
       handle(:init, to_string(command), context)
     else
       answer(context, "You're not allowed to ask me anything. Sorry.")

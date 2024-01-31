@@ -28,6 +28,7 @@ defmodule ContaBot.Action.Patrimony do
       ```
       """
     end)
+    |> Enum.reverse()
     |> then(&Enum.join(&1, "  \n\n"))
   end
 

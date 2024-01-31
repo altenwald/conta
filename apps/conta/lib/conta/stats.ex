@@ -76,8 +76,8 @@ defmodule Conta.Stats do
   end
 
   defp get_months(month, year, 1), do: {month, year}
-  defp get_months(1, year, i), do: get_months(12, year-1, i-1)
-  defp get_months(month, year, i), do: get_months(month-1, year, i-1)
+  defp get_months(1, year, i), do: get_months(12, year - 1, i - 1)
+  defp get_months(month, year, i), do: get_months(month - 1, year, i - 1)
 
   defp top_accounts(table, groups, months) do
     {month, year} = get_months(months)

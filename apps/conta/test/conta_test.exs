@@ -1,8 +1,8 @@
 defmodule ContaTest do
   use ExUnit.Case
   alias Conta.Aggregate.Ledger
-  alias Conta.Command.CreateAccount
   alias Conta.Command.AccountTransaction
+  alias Conta.Command.CreateAccount
   alias Conta.Event.AccountCreated
   alias Conta.Event.TransactionCreated
 

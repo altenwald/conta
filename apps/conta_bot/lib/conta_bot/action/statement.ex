@@ -6,7 +6,7 @@ defmodule ContaBot.Action.Statement do
   def statement_output(account_name) when is_list(account_name) do
     Conta.Ledger.list_entries(account_name, @num_entries)
     |> Enum.reverse()
-    |> Enum.group_by(& &1.on_date)
+    |> Enum.group_by(&to_string(&1.on_date))
     |> Enum.map(fn {on_date, entries} ->
       entries
       |> Enum.sort_by(& &1.inserted_at, {:asc, DateTime})
