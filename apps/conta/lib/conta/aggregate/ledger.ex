@@ -1,29 +1,35 @@
 defmodule Conta.Aggregate.Ledger do
+  require Logger
+
   alias Conta.Aggregate.Ledger.Account
 
   alias Conta.Command.AccountTransaction
-  alias Conta.Command.CreateAccount
+  alias Conta.Command.SetAccount
 
-  alias Conta.Event.AccountCreated
+  alias Conta.Event.AccountSet
   alias Conta.Event.TransactionCreated
 
   defstruct name: nil, accounts: %{}
 
   @valid_currencies ~w[EUR USD SEK GBP]a
 
-  def execute(_ledger, %CreateAccount{currency: currency})
+  def execute(_ledger, %SetAccount{currency: currency})
       when currency not in @valid_currencies do
     {:error, :invalid_currency}
   end
 
-  def execute(_ledger, %CreateAccount{ledger: nil}) do
+  def execute(_ledger, %SetAccount{ledger: nil}) do
     {:error, :missing_ledger}
   end
 
-  def execute(%__MODULE__{accounts: accounts}, %CreateAccount{} = command) do
+  def execute(%__MODULE__{accounts: accounts}, %SetAccount{} = command) do
     cond do
       accounts[command.name] != nil ->
-        {:error, :duplicate_account_name}
+        Logger.info("update existing account #{command.name}")
+
+        command
+        |> Map.take(~w[name type currency notes ledger]a)
+        |> then(&struct!(AccountSet, &1))
 
       not valid_parent?(command.name, accounts) ->
         {:error, :invalid_parent_account}
@@ -31,7 +37,7 @@ defmodule Conta.Aggregate.Ledger do
       :else ->
         command
         |> Map.take(~w[name type currency notes ledger]a)
-        |> then(&struct!(AccountCreated, &1))
+        |> then(&struct!(AccountSet, &1))
     end
   end
 
@@ -130,7 +136,7 @@ defmodule Conta.Aggregate.Ledger do
     end
   end
 
-  def apply(%__MODULE__{} = ledger, %AccountCreated{} = event) do
+  def apply(%__MODULE__{} = ledger, %AccountSet{} = event) do
     account =
       event
       |> Map.take(~w[name type currency notes]a)

@@ -221,7 +221,7 @@ defmodule ContaBot.Action.Transaction do
             struct!(Conta.Command.AccountTransaction.Entry, entry)
           end
 
-        if :ok == Conta.create_transaction(data.on_date, entries) do
+        if :ok == Conta.Ledger.create_transaction(data.on_date, entries) do
           "Transaction created successfully"
         else
           "Error executing the commands"

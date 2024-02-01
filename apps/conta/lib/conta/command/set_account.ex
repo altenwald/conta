@@ -1,4 +1,4 @@
-defmodule Conta.Command.CreateAccount do
+defmodule Conta.Command.SetAccount do
   use TypedEctoSchema
 
   @primary_key false
@@ -6,10 +6,10 @@ defmodule Conta.Command.CreateAccount do
   @typep currency() :: atom()
 
   typed_embedded_schema do
+    field :ledger, :string
     field :name, :string
     field :type, :string
     field(:currency, Money.Ecto.Currency.Type) :: currency()
     field :notes, :string
-    field :ledger, :string
   end
 end

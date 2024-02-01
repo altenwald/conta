@@ -50,7 +50,7 @@ defmodule Conta.MixProject do
     [
       reset_es: ~w[event_store.drop event_store.create event_store.init],
       reset_db: ~w[ecto.drop ecto.create ecto.migrate],
-      test: ["reset_es", "reset_db", "test --cover"]
+      # test: ["reset_es", "reset_db", "test --cover"]
     ]
   end
 end

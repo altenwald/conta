@@ -6,7 +6,7 @@ defmodule Conta.Projector.Stats do
 
   import Ecto.Query, only: [from: 2]
 
-  alias Conta.Event.AccountCreated
+  alias Conta.Event.AccountSet
   alias Conta.Event.TransactionCreated
 
   alias Conta.Projector.Stats.Account
@@ -17,7 +17,7 @@ defmodule Conta.Projector.Stats do
 
   alias Conta.Repo
 
-  project(%AccountCreated{} = account, _metadata, fn multi ->
+  project(%AccountSet{} = account, _metadata, fn multi ->
     account =
       Account.changeset(%{
         name: account.name,

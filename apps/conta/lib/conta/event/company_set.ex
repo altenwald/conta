@@ -1,26 +1,28 @@
-defmodule Conta.Event.TransactionCreated do
+defmodule Conta.Event.CompanySet do
   use TypedEctoSchema
   import Conta.Event
   import Ecto.Changeset
-  alias Conta.Event.TransactionCreated.Entry
 
-  @primary_key {:id, :binary_id, autogenerate: false}
+  @primary_key false
 
   @derive Jason.Encoder
   typed_embedded_schema do
-    field :ledger, :string
-    field :on_date, :date
-    embeds_many :entries, Entry
+    field :nif, :string
+    field :name, :string
+    field :address, :string
+    field :postcode, :string
+    field :city, :string
+    field :state, :string
+    field :country, :string
   end
 
-  @required_fields ~w[ledger on_date]a
+  @required_fields ~w[nif name address postcode city state country]a
   @optional_fields ~w[]a
 
   @doc false
   def changeset(model \\ %__MODULE__{}, params) do
     model
     |> cast(params, @required_fields ++ @optional_fields)
-    |> cast_assoc(:entries)
     |> validate_required(@required_fields)
     |> traverse_errors()
   end

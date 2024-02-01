@@ -6,7 +6,7 @@ defmodule Conta.Projector.Ledger do
 
   import Ecto.Query, only: [from: 2]
 
-  alias Conta.Event.AccountCreated
+  alias Conta.Event.AccountSet
   alias Conta.Event.TransactionCreated
 
   alias Conta.Projector.Ledger.Account
@@ -15,7 +15,7 @@ defmodule Conta.Projector.Ledger do
 
   alias Conta.Repo
 
-  project(%AccountCreated{} = account, _metadata, fn multi ->
+  project(%AccountSet{} = account, _metadata, fn multi ->
     parent_id =
       case Enum.split(account.name, -1) do
         {[], _} ->

@@ -1,15 +1,15 @@
-defmodule ContaTest do
+defmodule Conta.Aggregate.LedgerTest do
   use ExUnit.Case
   alias Conta.Aggregate.Ledger
   alias Conta.Command.AccountTransaction
-  alias Conta.Command.CreateAccount
-  alias Conta.Event.AccountCreated
+  alias Conta.Command.SetAccount
+  alias Conta.Event.AccountSet
   alias Conta.Event.TransactionCreated
 
   describe "ledger create account execute" do
     test "create account successful" do
       command =
-        %CreateAccount{
+        %SetAccount{
           name: ["Assets"],
           type: :assets,
           currency: :EUR,
@@ -20,7 +20,7 @@ defmodule ContaTest do
       ledger = %Ledger{name: "default"}
       event = Ledger.execute(ledger, command)
 
-      assert %AccountCreated{
+      assert %AccountSet{
         name: ["Assets"],
         type: :assets,
         currency: :EUR,
@@ -46,7 +46,7 @@ defmodule ContaTest do
 
     test "create account failure" do
       command =
-        %CreateAccount{
+        %SetAccount{
           name: ["NonExist", "Child"],
           type: :assets,
           currency: :EUR,
