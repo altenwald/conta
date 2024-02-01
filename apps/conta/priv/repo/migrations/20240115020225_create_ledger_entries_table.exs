@@ -16,5 +16,8 @@ defmodule Conta.Repo.Migrations.CreateEntriesTable do
 
       timestamps(type: :utc_datetime_usec)
     end
+
+    create index(:ledger_entries, [:transaction_id])
+    create index(:ledger_entries, [:account_name])
   end
 end

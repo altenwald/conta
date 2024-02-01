@@ -25,7 +25,7 @@ defmodule Conta.Projector.Ledger do
           Conta.Repo.get_by!(Account, name: parent_name, ledger: account.ledger).id
       end
 
-    account =
+    changeset =
       Account.changeset(%{
         notes: account.notes,
         parent_id: parent_id,
@@ -35,7 +35,19 @@ defmodule Conta.Projector.Ledger do
         currency: account.currency
       })
 
-    Ecto.Multi.insert(multi, :create_account, account)
+    update = [set: [
+      notes: account.notes,
+      parent_id: parent_id,
+      type: account.type,
+      currency: account.currency
+    ]]
+
+    opts = [
+      on_conflict: update,
+      conflict_target: [:name, :ledger]
+    ]
+
+    Ecto.Multi.insert(multi, :create_account, changeset, opts)
   end)
 
   project(%TransactionCreated{} = transaction, _metadata, fn multi ->
