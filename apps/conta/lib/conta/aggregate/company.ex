@@ -39,9 +39,15 @@ defmodule Conta.Aggregate.Company do
         {:error, :too_low_invoice_number}
 
       :else ->
+        invoice_number =
+          (last_invoice_number + 1)
+          |> to_string()
+          |> String.pad_leading(5, "0")
+          |> then(&"#{invoice_year}-#{&1}")
+
         command
         |> Map.from_struct()
-        |> Map.put(:invoice_number, last_invoice_number + 1)
+        |> Map.put(:invoice_number, invoice_number)
         |> Map.put(:client, process_client(command))
         |> Map.put(:details, process_details(command))
         |> Map.put(:payment_method, process_payment(command))

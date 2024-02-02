@@ -1,5 +1,5 @@
 defmodule Conta.Projector.Ledger.Account do
-  use Ecto.Schema
+  use TypedEctoSchema
   import Ecto.Changeset
   alias Conta.Projector.Ledger.Balance
 
@@ -56,7 +56,7 @@ defmodule Conta.Projector.Ledger.Account do
   @primary_key {:id, :binary_id, autogenerate: true}
   @foreign_key_type :binary_id
 
-  schema "ledger_accounts" do
+  typed_schema "ledger_accounts" do
     field(:name, {:array, :string})
     field(:ledger, :string)
     field(:type, Ecto.Enum, values: @account_types)

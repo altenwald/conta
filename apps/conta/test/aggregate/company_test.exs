@@ -192,6 +192,48 @@ defmodule Conta.Aggregate.CompanyTest do
 
       event = Conta.Aggregate.Company.execute(company, command)
 
+      assert %Conta.Event.InvoiceCreated{
+        invoice_number: 1,
+        invoice_date: Date.new!(2023, 12, 20),
+        type: :service,
+        subtotal_price: 100_00,
+        tax_price: 21_00,
+        total_price: 121_00,
+        destination_country: "ES",
+        payment_method: %Conta.Event.InvoiceCreated.PaymentMethod{
+          method: :gateway,
+          details: "myaccount@paypal.com"
+        },
+        client: %Conta.Event.InvoiceCreated.Client{
+          name: "My client",
+          nif: "B123456789",
+          address: "My client's address",
+          postcode: "14000",
+          city: "Cordoba",
+          state: "Cordoba",
+          country: "ES"
+        },
+        details: [
+          %Conta.Event.InvoiceCreated.Detail{
+            description: "Consultancy",
+            tax: 21,
+            base_price: 100_00,
+            tax_price: 21_00,
+            total_price: 121_00
+          }
+        ],
+        company: %Conta.Event.InvoiceCreated.Company{
+          nif: "A55666777",
+          name: "Great Company SA",
+          address: "My Full Address",
+          postcode: "28000",
+          city: "Madrid",
+          state: "Madrid",
+          country: "ES"
+        },
+        template: "default"
+      } == event
+
       assert %Conta.Aggregate.Company{
         nif: "A55666777",
         name: "Great Company SA",
