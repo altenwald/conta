@@ -2,7 +2,7 @@ defmodule Conta.Repo.Migrations.CreateInvoices do
   use Ecto.Migration
 
   def change do
-    create table(:invoices, primary_key: false) do
+    create table(:book_invoices, primary_key: false) do
       add :id, :binary_id, primary_key: true
       add :template, :string
       add :invoice_number, :string
@@ -24,6 +24,6 @@ defmodule Conta.Repo.Migrations.CreateInvoices do
       timestamps(type: :utc_datetime_usec)
     end
 
-    create unique_index(:invoices, [:invoice_number])
+    create unique_index(:book_invoices, [:invoice_number])
   end
 end

@@ -82,9 +82,12 @@ defmodule Conta.Aggregate.Company do
   end
 
   def apply(%__MODULE__{} = company, %InvoiceCreated{} = event) do
-    year = event.invoice_date.year
+    year = to_date(event.invoice_date).year
     invoice_number = event.invoice_number
     invoice_numbers = Map.put(company.invoice_numbers, year, invoice_number)
     %__MODULE__{company | invoice_numbers: invoice_numbers}
   end
+
+  defp to_date(date) when is_struct(date, Date), do: date
+  defp to_date(date) when is_binary(date), do: Date.from_iso8601!(date)
 end

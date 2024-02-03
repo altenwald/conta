@@ -13,7 +13,8 @@ defmodule Conta.Application do
       # Start a worker by calling: Conta.Worker.start_link(arg)
       # {Conta.Worker, arg}
       Conta.Projector.Ledger,
-      Conta.Projector.Stats
+      Conta.Projector.Stats,
+      Conta.Projector.Book
     ]
 
     options = [strategy: :one_for_one, name: Conta.Supervisor]
