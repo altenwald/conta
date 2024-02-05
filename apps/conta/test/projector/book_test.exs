@@ -24,7 +24,7 @@ defmodule Conta.Projector.BookTest do
     test "create successfully", metadata do
       event =
         %Conta.Event.InvoiceCreated{
-          invoice_number: "2023-00001",
+          invoice_number: 1,
           invoice_date: ~D[2023-12-30],
           type: :service,
           subtotal_price: 100_00,

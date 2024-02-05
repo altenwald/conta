@@ -1,0 +1,22 @@
+defmodule Conta.Projector.Ledger.ShortcutParam do
+  use TypedEctoSchema
+  import Ecto.Changeset
+
+  @primary_key false
+
+  typed_embedded_schema do
+    field :name, :string, primary_key: true
+    field :type, Ecto.Enum, values: ~w[string date integer money currency options account_name]a
+    field :options, {:array, :string}
+  end
+
+  @required_fields ~w[name type]a
+  @optional_fields ~w[options]a
+
+  @doc false
+  def changeset(model \\ %__MODULE__{}, params) do
+    model
+    |> cast(params, @required_fields ++ @optional_fields)
+    |> validate_required(@required_fields)
+  end
+end

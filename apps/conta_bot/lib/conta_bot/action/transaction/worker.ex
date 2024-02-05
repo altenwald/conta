@@ -156,23 +156,9 @@ defmodule ContaBot.Action.Transaction.Worker do
   end
 
   def handle_event({:call, from}, {:text, amount}, :amount, state_data) do
-    case Regex.run(~r/^(-?)([0-9]+)(?:\.([0-9]{1,2}))?$/, amount, capture: :all_but_first) do
-      [sign, int | decimal] ->
-        decimal =
-          case decimal do
-            [] ->
-              0
-
-            [decimal] when byte_size(decimal) == 1 ->
-              String.to_integer(decimal) * 10
-
-            [decimal] when byte_size(decimal) == 2 ->
-              String.to_integer(decimal)
-          end
-
-        amount = String.to_integer(int) * 100 + decimal
-        sign = if(sign == "-", do: -1, else: 1)
-        state_data = %__MODULE__{state_data | amount: amount * sign}
+    case ContaBot.Components.get_money(amount) do
+      {:ok, amount} ->
+        state_data = %__MODULE__{state_data | amount: amount}
 
         if state_data.goto_confirm do
           actions = [{:reply, from, {:ok, {:confirm, Map.take(state_data, @fields_to_take)}}}]
@@ -182,8 +168,8 @@ defmodule ContaBot.Action.Transaction.Worker do
           {:next_state, :on_date, state_data, actions}
         end
 
-      nil ->
-        {:keep_state_and_data, [{:reply, from, {:error, :invalid_amount}}]}
+      {:error, _} = error ->
+        {:keep_state_and_data, [{:reply, from, error}]}
     end
   end
 

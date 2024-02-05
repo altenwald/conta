@@ -40,8 +40,10 @@ defmodule Conta.MixProject do
       {:phoenix_pubsub, "~> 2.1"},
       {:swoosh, "~> 1.14"},
       {:finch, "~> 0.17"},
+      # https://github.com/mindok/contex/pull/93
       {:contex, "~> 0.5", github: "manuel-rubio/contex"},
       {:resvg, "~> 0.3"},
+      {:luerl, "~> 1.1"},
       {:doctor, "~> 0.21", only: [:dev, :test], runtime: false}
     ]
   end

@@ -9,8 +9,22 @@ defmodule Conta.Projector.Book do
   alias Conta.Projector.Book.Invoice
   alias Conta.Projector.Book.Template
 
-  project(%InvoiceCreated{} = account, _metadata, fn multi ->
-    params = Map.from_struct(account)
+  project(%InvoiceCreated{} = invoice, _metadata, fn multi ->
+    invoice_number =
+      invoice.invoice_number
+      |> to_string()
+      |> String.pad_leading(5, "0")
+      |> then(&"#{invoice.invoice_date.year}-#{&1}")
+
+    params =
+      invoice
+      |> Map.from_struct()
+      |> Map.put(:invoice_number, invoice_number)
+      |> Map.put(:payment_method, Map.from_struct(invoice.payment_method))
+      |> Map.put(:client, Map.from_struct(invoice.client))
+      |> Map.put(:company, Map.from_struct(invoice.company))
+      |> Map.update!(:details, fn details -> Enum.map(details, &Map.from_struct/1) end)
+
     changeset = Invoice.changeset(params)
     Ecto.Multi.insert(multi, :invoice, changeset)
   end)

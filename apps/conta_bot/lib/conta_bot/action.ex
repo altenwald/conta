@@ -11,6 +11,8 @@ defmodule ContaBot.Action do
   command("transaction", description: "Add account transaction")
   command("statement", description: "Last entries for a selected account")
   command("graph", description: "Receive a graph for specific data")
+  command("search", description: "Search entries based on description and account name")
+  command("shortcut", description: "Run a shortcut code written in Lua/PHP")
 
   defmacro __using__(_opts) do
     quote do

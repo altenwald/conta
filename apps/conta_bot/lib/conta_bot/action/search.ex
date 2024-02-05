@@ -5,23 +5,29 @@ defmodule ContaBot.Action.Search do
 
   def statement_output(search) do
     Conta.Ledger.list_entries_by(search, @num_entries)
-    |> Enum.reverse()
     |> Enum.group_by(& &1.transaction_id)
-    |> Enum.map(fn {_transaction_id, entries} ->
-      entries
-      |> Enum.sort_by(& &1.inserted_at, {:asc, DateTime})
-      |> Enum.map(fn entry ->
+    |> Enum.sort_by(fn {_transaction_id, [entry | _]} -> entry.on_date end, {:asc, Date})
+    |> Enum.map(fn {_transaction_id, [entry | _] = entries} ->
+      header =
         """
+        \\-\\-\\-\\-\\-
         *#{escape_markdown(to_string(entry.on_date))}*
+        _#{escape_markdown(entry.description)}_
 
-        *#{escape_markdown(entry.description)}*
-        _#{account_fmt(entry.account_name)}_
-        ```
-        #{currency_fmt(entry.credit)} credit
-        #{currency_fmt(entry.debit)} debit
         ```
         """
-      end)
+
+      body =
+        entries
+        |> Enum.sort_by(& &1.inserted_at, {:asc, DateTime})
+        |> Enum.map(fn entry ->
+          """
+          #{account_fmt(entry.account_name)}
+          #{currency_fmt(entry.debit)} #{currency_fmt(entry.credit)}
+          """
+        end)
+
+      [header | body] ++ ["```"]
     end)
     |> to_string()
   end

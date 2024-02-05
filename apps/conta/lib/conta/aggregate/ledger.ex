@@ -5,11 +5,13 @@ defmodule Conta.Aggregate.Ledger do
 
   alias Conta.Command.AccountTransaction
   alias Conta.Command.SetAccount
+  alias Conta.Command.SetShortcut
 
   alias Conta.Event.AccountSet
+  alias Conta.Event.ShortcutSet
   alias Conta.Event.TransactionCreated
 
-  defstruct name: nil, accounts: %{}
+  defstruct name: nil, accounts: %{}, shortcuts: MapSet.new()
 
   @valid_currencies ~w[EUR USD SEK GBP]a
 
@@ -87,6 +89,15 @@ defmodule Conta.Aggregate.Ledger do
     end
   end
 
+  def execute(_ledger, %SetShortcut{} = command) do
+    command
+    |> Map.from_struct()
+    |> Map.update!(:params, fn params ->
+      Enum.map(params, &Map.from_struct/1)
+    end)
+    |> ShortcutSet.changeset()
+  end
+
   defp update_accounts(accounts, entry) do
     Map.update!(accounts, entry.account_name, fn account ->
       Map.update!(account, :balances, fn balances ->
@@ -151,6 +162,10 @@ defmodule Conta.Aggregate.Ledger do
   def apply(%__MODULE__{accounts: accounts} = ledger, %TransactionCreated{entries: entries}) do
     accounts = Enum.reduce(entries, accounts, &update_account_balance(&2, &1.account_name, &1))
     %__MODULE__{ledger | accounts: accounts}
+  end
+
+  def apply(%__MODULE__{shortcuts: shortcuts} = ledger, %ShortcutSet{name: name}) do
+    %__MODULE__{ledger | shortcuts: MapSet.put(shortcuts, name)}
   end
 
   defp update_account_balance(accounts, [], _entry), do: accounts

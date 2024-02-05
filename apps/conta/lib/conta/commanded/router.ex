@@ -7,12 +7,14 @@ defmodule Conta.Commanded.Router do
   alias Conta.Command.SetAccount
   alias Conta.Command.CreateInvoice
   alias Conta.Command.SetCompany
+  alias Conta.Command.SetShortcut
   alias Conta.Command.SetTemplate
 
   identify(Ledger, by: :ledger)
 
   dispatch(AccountTransaction, to: Ledger)
   dispatch(SetAccount, to: Ledger)
+  dispatch(SetShortcut, to: Ledger)
 
   identify(Company, by: :nif)
 

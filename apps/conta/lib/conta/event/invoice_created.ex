@@ -12,7 +12,7 @@ defmodule Conta.Event.InvoiceCreated do
   @derive Jason.Encoder
   typed_embedded_schema do
     field :template, :string, default: "default"
-    field :invoice_number, :string
+    field :invoice_number, :integer
     field :invoice_date, :date
     field :due_date, :date
     field :type, Ecto.Enum, values: ~w[product service]a

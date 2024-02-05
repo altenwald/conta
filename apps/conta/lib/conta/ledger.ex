@@ -6,6 +6,8 @@ defmodule Conta.Ledger do
   alias Conta.Command.SetAccount
   alias Conta.Projector.Ledger.Account
   alias Conta.Projector.Ledger.Entry
+  alias Conta.Projector.Ledger.Shortcut
+  alias Conta.Projector.Ledger.ShortcutParam
   alias Conta.Repo
 
   def set_account(name, type, currency \\ :EUR, notes \\ nil, ledger \\ "default") do
@@ -100,6 +102,7 @@ defmodule Conta.Ledger do
       e in Entry,
       where: fragment("? ~ ?", e.description, ^text),
       or_where: fragment("ARRAY_TO_STRING(?, '.') ~ ?", e.account_name, ^text),
+      order_by: [desc: e.on_date],
       limit: ^limit
     )
     |> Repo.all()
@@ -111,5 +114,129 @@ defmodule Conta.Ledger do
       debit: Money.new(entry.debit.amount, currency),
       balance: Money.new(entry.balance.amount, currency)
     }
+  end
+
+  def list_shortcuts(ledger \\ "default") do
+    from(
+      s in Shortcut,
+      where: s.ledger == ^ledger,
+      order_by: s.name
+    )
+    |> Repo.all()
+  end
+
+  def get_shortcut(ledger \\ "default", name) do
+    Repo.get_by(Shortcut, name: name, ledger: ledger)
+  end
+
+  def run_shortcut(ledger \\ "default", name, params) do
+    with {:shortcut, %Shortcut{} = shortcut} <- {:shortcut, get_shortcut(ledger, name)},
+         :ok <- validate_params(shortcut.params, params),
+         {:ok, [result]} when is_list(result) <- run(shortcut.code, params),
+         %{"status" => "ok", "data" => data} = return <- Map.new(result) do
+      data = process_data(data)
+      case return["type"] || "transaction" do
+        "transaction" ->
+          data
+          |> Conta.Command.AccountTransaction.changeset()
+          |> Conta.Event.traverse_errors()
+          |> case do
+            %Conta.Command.AccountTransaction{} = command ->
+              Conta.Commanded.Application.dispatch(command)
+
+            {:error, _} = error ->
+              error
+          end
+
+        ## TODO: add shortcut types for invoices
+      end
+    else
+      {:shortcut, nil} -> {:error, :shortcut_not_found}
+      {:error, _} = error -> error
+      {:ok, return} -> {:error, {:invalid_code_return, return}}
+      {:error, compile, _stacktrace} -> {:error, compile}
+      %{} = return -> {:error, {:invalid_code_return, return}}
+    end
+  end
+
+  defp process_data(data) do
+    cond do
+      not is_list(data) ->
+        data
+
+      Enum.all?(data, fn {k, _} -> is_integer(k) end) ->
+        Enum.map(data, fn {_, value} -> process_data(value) end)
+
+      :else ->
+        Map.new(data, fn {k, v} -> {k, process_data(v)} end)
+    end
+  end
+
+  defp run(code, params) do
+    params
+    |> Enum.reduce(:luerl.init(), fn {name, value}, state ->
+      :luerl.set_table([name], value, state)
+    end)
+    ### XXX: we have to use here charlist because binary breaks the collation.
+    |> then(&:luerl.eval(to_charlist(code), &1))
+  end
+
+  defp validate_params([], _params), do: :ok
+
+  defp validate_params([%ShortcutParam{name: name}|_], params) when not is_map_key(params, name) do
+    {:error, {:missing, name}}
+  end
+
+  defp validate_params([%ShortcutParam{type: :account_name} = param|short_params], params) do
+    param_value = params[param.name]
+    if is_list(param_value) and Enum.all?(param_value, &is_binary/1) do
+      validate_params(short_params, params)
+    else
+      {:error, {:invalid, param.name, param_value}}
+    end
+  end
+
+  defp validate_params([%ShortcutParam{type: :string} = param|short_params], params) do
+    if is_binary(params[param.name]) do
+      validate_params(short_params, params)
+    else
+      {:error, {:invalid, param.name, params[param.name]}}
+    end
+  end
+
+  defp validate_params([%ShortcutParam{type: type} = param|short_params], params) when type in [:money, :integer] do
+    if is_integer(params[param.name]) do
+      validate_params(short_params, params)
+    else
+      {:error, {:invalid, param.name, params[param.name]}}
+    end
+  end
+
+  defp validate_params([%ShortcutParam{type: :currency} = param|short_params], params) do
+    currencies =
+      Money.Currency.all()
+      |> Map.keys()
+      |> Enum.map(&to_string/1)
+
+    if params[param.name] in currencies do
+      validate_params(short_params, params)
+    else
+      {:error, {:invalid, param.name, params[param.name]}}
+    end
+  end
+
+  defp validate_params([%ShortcutParam{type: :options} = param|short_params], params) do
+    if params[param.name] in param.options do
+      validate_params(short_params, params)
+    else
+      {:error, {:invalid, param.name, params[param.name]}}
+    end
+  end
+
+  defp validate_params([%ShortcutParam{type: :date} = param|short_params], params) do
+    case Date.from_iso8601(params[param.name]) do
+      {:ok, _} -> validate_params(short_params, params)
+      {:error, _} -> {:error, {:invalid, param.name, params[param.name]}}
+    end
   end
 end

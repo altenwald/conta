@@ -7,11 +7,13 @@ defmodule Conta.Projector.Ledger do
   import Ecto.Query, only: [from: 2]
 
   alias Conta.Event.AccountSet
+  alias Conta.Event.ShortcutSet
   alias Conta.Event.TransactionCreated
 
   alias Conta.Projector.Ledger.Account
   alias Conta.Projector.Ledger.Balance
   alias Conta.Projector.Ledger.Entry
+  alias Conta.Projector.Ledger.Shortcut
 
   alias Conta.Repo
 
@@ -85,6 +87,16 @@ defmodule Conta.Projector.Ledger do
       |> upsert_account_balances(idx, accounts, trans_entry)
       |> Ecto.Multi.insert({:entry, idx}, entry)
     end)
+  end)
+
+  project(%ShortcutSet{} = event, _metadata, fn multi ->
+    if shortcut = Repo.get_by(Shortcut, name: event.name, ledger: event.ledger) do
+      changeset = Shortcut.changeset(shortcut, Map.from_struct(event))
+      Ecto.Multi.update(multi, :shortcut_update, changeset)
+    else
+      data = Shortcut.changeset(Map.from_struct(event))
+      Ecto.Multi.insert(multi, :shortcut_create, data)
+    end
   end)
 
   defp account_names(account_name) do

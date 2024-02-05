@@ -1,10 +1,11 @@
 defmodule Conta.Command.AccountTransaction do
   use TypedEctoSchema
+  import Ecto.Changeset
 
   @primary_key false
 
   typed_embedded_schema do
-    field :ledger, :string
+    field :ledger, :string, default: "default"
     field :on_date, :date
     embeds_many :entries, Entry do
       @typep currency() :: atom()
@@ -18,5 +19,26 @@ defmodule Conta.Command.AccountTransaction do
       field :change_debit, :integer, default: 0
       field :change_price, :decimal, default: 1.0
     end
+  end
+
+  @required_fields ~w[on_date]a
+  @optional_fields ~w[ledger]a
+
+  @doc false
+  def changeset(model \\ %__MODULE__{}, params) do
+    model
+    |> cast(params, @required_fields ++ @optional_fields)
+    |> cast_embed(:entries, with: &changeset_entries/2)
+    |> validate_required(@required_fields)
+  end
+
+  @required_fields ~w[description account_name]a
+  @optional_fields ~w[credit debit change_currency change_credit change_debit change_price]a
+
+  @doc false
+  def changeset_entries(model, params) do
+    model
+    |> cast(params, @required_fields ++ @optional_fields)
+    |> validate_required(@required_fields)
   end
 end
