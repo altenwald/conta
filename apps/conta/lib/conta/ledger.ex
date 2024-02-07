@@ -148,7 +148,17 @@ defmodule Conta.Ledger do
               error
           end
 
-        ## TODO: add shortcut types for invoices
+        "invoice" ->
+          data
+          |> Conta.Command.CreateInvoice.changeset()
+          |> Conta.Event.traverse_errors()
+          |> case do
+            %Conta.Command.CreateInvoice{} = command ->
+              Conta.Commanded.Application.dispatch(command)
+
+            {:error, _} = error ->
+              error
+          end
       end
     else
       {:shortcut, nil} -> {:error, :shortcut_not_found}

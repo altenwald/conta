@@ -1,5 +1,6 @@
 defmodule Conta.Command.CreateInvoice do
   use TypedEctoSchema
+  import Ecto.Changeset
 
   @primary_key false
 
@@ -42,5 +43,48 @@ defmodule Conta.Command.CreateInvoice do
       field :tax_price, :integer
       field :total_price, :integer
     end
+  end
+
+  @required_fields ~w[nif invoice_date type subtotal_price tax_price total_price destination_country]a
+  @optional_fields ~w[invoice_number template due_date comments]a
+
+  @doc false
+  def changeset(model \\ %__MODULE__{}, params) do
+    model
+    |> cast(params, @required_fields ++ @optional_fields)
+    |> cast_embed(:payment_method, with: &changeset_payment/2)
+    |> cast_embed(:client, with: &changeset_client/2)
+    |> cast_embed(:details, required: true, with: &changeset_details/2)
+    |> validate_required(@required_fields)
+  end
+
+  @required_fields ~w[method details]a
+  @optional_fields ~w[]a
+
+  @doc false
+  def changeset_payment(model, params) do
+    model
+    |> cast(params, @required_fields ++ @optional_fields)
+    |> validate_required(@required_fields)
+  end
+
+  @required_fields ~w[name nif country]a
+  @optional_fields ~w[intracommunity address postcode city state]a
+
+  @doc false
+  def changeset_client(model, params) do
+    model
+    |> cast(params, @required_fields ++ @optional_fields)
+    |> validate_required(@required_fields)
+  end
+
+  @required_fields ~w[description tax base_price tax_price total_price]a
+  @optional_fields ~w[sku units]a
+
+  @doc false
+  def changeset_details(model, params) do
+    model
+    |> cast(params, @required_fields ++ @optional_fields)
+    |> validate_required(@required_fields)
   end
 end

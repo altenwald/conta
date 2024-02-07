@@ -34,13 +34,12 @@ defmodule Conta.Aggregate.Company do
   def execute(%__MODULE__{} = company, %CreateInvoice{} = command) do
     invoice_year = command.invoice_date.year
     last_invoice_number = company.invoice_numbers[invoice_year] || 0
+    invoice_number = command.invoice_number || last_invoice_number + 1
     cond do
-      command.invoice_number <= last_invoice_number ->
+      invoice_number <= last_invoice_number ->
         {:error, :too_low_invoice_number}
 
       :else ->
-        invoice_number = last_invoice_number + 1
-
         command
         |> Map.from_struct()
         |> Map.put(:invoice_number, invoice_number)
