@@ -1,4 +1,4 @@
-# Conta
+![](art/conta.png)
 
 Accounting system.
 
@@ -15,6 +15,14 @@ We could say we built the system based on CQRS/ES.
 
 And reply to an old question I received at an Elixir conference in Madrid, in 2015: _Would you do an accounting system using Elixir?_ **Of course!** Here is the sample.
 
+In addition, it's also a demonstration that we could create Telegram bots to help us to perform the activities in a chat system so, the accounting system could be managed and used by the following interfaces:
+
+- LiveView or HTTP + WebSocket.
+- Telegram.
+- Web service API.
+
+The use cases I want to cover are the use of the accounting system using chat systems (i.e. Telegram), performing integrations for getting moves and generating invoices (via API), and checking everything even when it's changing via the website.
+
 ## Goal
 
 To be honest, this is in a very initial version. I could say it's experimental, but I'm using this system for my accounting (personal and professional).
@@ -27,7 +35,7 @@ The goal of this project is to accomplish:
 - Client, provider, and bank management (contacts).
 - Product, service, shipping, and discount management (items for invoices).
 - Web services (API) for integrating with other systems.
-- Extensions made in Lua for reports and other transformations.
+- Extensions made in Lua for reports and other transformations. Initially for launching scripts as shortcuts from Telegram.
 
 These goals could be increased or changed, but I'm completely open to discussing each item.
 
