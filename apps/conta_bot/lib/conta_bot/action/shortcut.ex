@@ -42,10 +42,6 @@ defmodule ContaBot.Action.Shortcut do
       |> store_init(shortcut.name, shortcut.params)
       |> delete_callback()
       |> show_next_input()
-      |> case do
-        nil -> run_shortcut(context)
-        context -> context
-      end
     else
       context
       |> delete_callback()
@@ -215,7 +211,7 @@ defmodule ContaBot.Action.Shortcut do
         choose_date(context, "shortcut")
 
       %_{type: :currency, name: name} ->
-        options = Enum.map(Conta.Ledger.currencies(), &{&1, "shortcut option #{&1}"})
+        options = Enum.map(Conta.Ledger.list_used_currencies(), &{&1, "shortcut option #{&1}"})
         extra = [{"Cancel", "shortcut cancel"}]
         answer_select(context, "choose a currency for #{name}", options, extra)
 

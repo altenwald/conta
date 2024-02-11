@@ -53,7 +53,7 @@ defmodule Conta.Projector.Ledger.Account do
 
   @account_types ~w[assets liabilities equity revenue expenses]a
 
-  @primary_key {:id, :binary_id, autogenerate: true}
+  @primary_key {:id, :binary_id, autogenerate: false}
   @foreign_key_type :binary_id
 
   typed_schema "ledger_accounts" do
@@ -68,8 +68,8 @@ defmodule Conta.Projector.Ledger.Account do
     timestamps(type: :utc_datetime_usec)
   end
 
-  @required_fields ~w[name]a
-  @optional_fields ~w[ledger type currency notes parent_id]a
+  @required_fields ~w[id name ledger type]a
+  @optional_fields ~w[currency notes parent_id]a
 
   @doc false
   def changeset(model \\ %__MODULE__{}, params) do

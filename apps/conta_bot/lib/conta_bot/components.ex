@@ -6,7 +6,7 @@ defmodule ContaBot.Components do
   require Logger
 
   def get_currency(text) do
-    currencies = Conta.Ledger.currencies()
+    currencies = Conta.Ledger.list_used_currencies()
 
     if match = Regex.run(~r/([A-Z]{3})/, text, capture: :all_but_first) do
       try do

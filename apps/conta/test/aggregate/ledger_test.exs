@@ -3,11 +3,13 @@ defmodule Conta.Aggregate.LedgerTest do
   alias Conta.Aggregate.Ledger
   alias Conta.Command.AccountTransaction
   alias Conta.Command.SetAccount
-  alias Conta.Event.AccountSet
+  alias Conta.Event.AccountCreated
+  alias Conta.Event.AccountModified
+  alias Conta.Event.AccountRenamed
   alias Conta.Event.TransactionCreated
 
   describe "ledger create account execute" do
-    test "create account successful" do
+    test "create account successfully" do
       command =
         %SetAccount{
           name: ["Assets"],
@@ -20,7 +22,8 @@ defmodule Conta.Aggregate.LedgerTest do
       ledger = %Ledger{name: "default"}
       event = Ledger.execute(ledger, command)
 
-      assert %AccountSet{
+      assert %AccountCreated{
+        id: account_id,
         name: ["Assets"],
         type: :assets,
         currency: :EUR,
@@ -28,17 +31,164 @@ defmodule Conta.Aggregate.LedgerTest do
         ledger: "default"
       } = event
 
+      refute is_nil(account_id)
+
       ledger = Ledger.apply(ledger, event)
 
       assert %Ledger{
         name: "default",
+        account_names: %{["Assets"] => ^account_id},
         accounts: %{
-          ["Assets"] => %Ledger.Account{
+          ^account_id => %Ledger.Account{
             name: ["Assets"],
             type: :assets,
             currency: :EUR,
             notes: nil,
             balances: %{}
+          }
+        }
+      } = ledger
+    end
+
+    test "modify account data successfully" do
+      command =
+        %SetAccount{
+          name: ["Assets"],
+          type: :expenses,
+          currency: :EUR,
+          notes: "these are our assets",
+          ledger: "default"
+        }
+
+      ledger = %Ledger{
+        name: "default",
+        account_names: %{["Assets"] => "83dfbfb4-c7f0-4403-b656-b8ed4228f7bc"},
+        accounts: %{
+          "83dfbfb4-c7f0-4403-b656-b8ed4228f7bc" => %Ledger.Account{
+            id: "83dfbfb4-c7f0-4403-b656-b8ed4228f7bc",
+            name: ["Assets"],
+            type: :assets,
+            currency: :EUR,
+            notes: nil,
+            balances: %{}
+          }
+        }
+      }
+
+      assert [event] = Ledger.execute(ledger, command)
+
+      assert %AccountModified{
+        id: "83dfbfb4-c7f0-4403-b656-b8ed4228f7bc",
+        type: :expenses,
+        currency: :EUR,
+        notes: "these are our assets"
+      } = event
+
+      ledger = Ledger.apply(ledger, event)
+
+      assert %Ledger{
+        name: "default",
+        account_names: %{["Assets"] => "83dfbfb4-c7f0-4403-b656-b8ed4228f7bc"},
+        accounts: %{
+          "83dfbfb4-c7f0-4403-b656-b8ed4228f7bc" => %Ledger.Account{
+            id: "83dfbfb4-c7f0-4403-b656-b8ed4228f7bc",
+            name: ["Assets"],
+            type: :expenses,
+            currency: :EUR,
+            notes: "these are our assets",
+            balances: %{}
+          }
+        }
+      } = ledger
+    end
+
+    test "rename account successfully" do
+      command =
+        %SetAccount{
+          id: "83dfbfb4-c7f0-4403-b656-b8ed4228f7bc",
+          name: ["Assets", "MyBank", "MyAccount"],
+          type: :assets,
+          currency: :EUR,
+          ledger: "default"
+        }
+
+      ledger = %Ledger{
+        name: "default",
+        account_names: %{
+          ["Assets"] => "e4d7e008-356e-45a0-83d3-9b25a235550a",
+          ["Assets", "MyAcc"] => "83dfbfb4-c7f0-4403-b656-b8ed4228f7bc",
+          ["Assets", "MyBank"] => "82f8cbf4-a1f2-4c3b-9d7e-6898a5841829"
+        },
+        accounts: %{
+          "e4d7e008-356e-45a0-83d3-9b25a235550a" => %Ledger.Account{
+            id: "e4d7e008-356e-45a0-83d3-9b25a235550a",
+            name: ["Assets"],
+            type: :assets,
+            currency: :EUR,
+            notes: nil,
+            balances: %{EUR: 100}
+          },
+          "83dfbfb4-c7f0-4403-b656-b8ed4228f7bc" => %Ledger.Account{
+            id: "83dfbfb4-c7f0-4403-b656-b8ed4228f7bc",
+            name: ["Assets", "MyAcc"],
+            type: :assets,
+            currency: :EUR,
+            notes: nil,
+            balances: %{EUR: 90}
+          },
+          "82f8cbf4-a1f2-4c3b-9d7e-6898a5841829" => %Ledger.Account{
+            id: "82f8cbf4-a1f2-4c3b-9d7e-6898a5841829",
+            name: ["Assets", "MyBank"],
+            type: :assets,
+            currency: :EUR,
+            notes: nil,
+            balances: %{EUR: 10}
+          }
+        }
+      }
+
+      assert [event] = Enum.sort(Ledger.execute(ledger, command))
+
+      assert %AccountRenamed{
+        id: "83dfbfb4-c7f0-4403-b656-b8ed4228f7bc",
+        prev_name: ["Assets", "MyAcc"],
+        new_name: ["Assets", "MyBank", "MyAccount"],
+        ledger: "default"
+      } = event
+
+      ledger = Ledger.apply(ledger, event)
+
+      assert %Ledger{
+        name: "default",
+        account_names: %{
+          ["Assets"] => "e4d7e008-356e-45a0-83d3-9b25a235550a",
+          ["Assets", "MyBank"] => "82f8cbf4-a1f2-4c3b-9d7e-6898a5841829",
+          ["Assets", "MyBank", "MyAccount"] => "83dfbfb4-c7f0-4403-b656-b8ed4228f7bc"
+        },
+        accounts: %{
+          "e4d7e008-356e-45a0-83d3-9b25a235550a" => %Ledger.Account{
+            id: "e4d7e008-356e-45a0-83d3-9b25a235550a",
+            name: ["Assets"],
+            type: :assets,
+            currency: :EUR,
+            notes: nil,
+            balances: %{EUR: 100}
+          },
+          "82f8cbf4-a1f2-4c3b-9d7e-6898a5841829" => %Ledger.Account{
+            id: "82f8cbf4-a1f2-4c3b-9d7e-6898a5841829",
+            name: ["Assets", "MyBank"],
+            type: :assets,
+            currency: :EUR,
+            notes: nil,
+            balances: %{EUR: 100}
+          },
+          "83dfbfb4-c7f0-4403-b656-b8ed4228f7bc" => %Ledger.Account{
+            id: "83dfbfb4-c7f0-4403-b656-b8ed4228f7bc",
+            name: ["Assets", "MyBank", "MyAccount"],
+            type: :assets,
+            currency: :EUR,
+            notes: nil,
+            balances: %{EUR: 90}
           }
         }
       } = ledger
@@ -84,32 +234,39 @@ defmodule Conta.Aggregate.LedgerTest do
       ledger =
         %Ledger{
           name: "default",
+          account_names: %{
+            ["Assets"] => "bd625868-3bd3-4f2c-9cab-8d8b73018ed1",
+            ["Assets", "Cash"] => "ab0c9ece-4aa5-48d5-ae08-7e89bd104fde",
+            ["Assets", "PayPal"] => "569eb02b-da2c-42c8-ad89-c7ba1618c451",
+            ["Expenses"] => "7c708316-43ed-4130-9c66-a1e063d10374",
+            ["Expenses", "Supermarket"] => "4151bcd1-de24-48fc-a8de-e18d2aae0eb7"
+          },
           accounts: %{
-            ["Assets"] => %Ledger.Account{
+            "bd625868-3bd3-4f2c-9cab-8d8b73018ed1" => %Ledger.Account{
               name: ["Assets"],
               type: :assets,
               currency: :EUR,
               balances: %{EUR: 100_00, USD: 100_00}
             },
-            ["Assets", "Cash"] => %Ledger.Account{
+            "ab0c9ece-4aa5-48d5-ae08-7e89bd104fde" => %Ledger.Account{
               name: ["Assets", "Cash"],
               type: :assets,
               currency: :EUR,
               balances: %{EUR: 100_00}
             },
-            ["Assets", "PayPal"] => %Ledger.Account{
+            "569eb02b-da2c-42c8-ad89-c7ba1618c451" => %Ledger.Account{
               name: ["Assets", "PayPal"],
               type: :assets,
               currency: :USD,
               balances: %{USD: 100_00}
             },
-            ["Expenses"] => %Ledger.Account{
+            "7c708316-43ed-4130-9c66-a1e063d10374" => %Ledger.Account{
               name: ["Expenses"],
               type: :expenses,
               currency: :EUR,
               balances: %{EUR: 50_00}
             },
-            ["Expenses", "Supermarket"] => %Ledger.Account{
+            "4151bcd1-de24-48fc-a8de-e18d2aae0eb7" => %Ledger.Account{
               name: ["Expenses", "Supermarket"],
               type: :expenses,
               currency: :EUR,
@@ -143,32 +300,39 @@ defmodule Conta.Aggregate.LedgerTest do
 
       assert %Ledger{
         name: "default",
+        account_names: %{
+          ["Assets"] => "bd625868-3bd3-4f2c-9cab-8d8b73018ed1",
+          ["Assets", "Cash"] => "ab0c9ece-4aa5-48d5-ae08-7e89bd104fde",
+          ["Assets", "PayPal"] => "569eb02b-da2c-42c8-ad89-c7ba1618c451",
+          ["Expenses"] => "7c708316-43ed-4130-9c66-a1e063d10374",
+          ["Expenses", "Supermarket"] => "4151bcd1-de24-48fc-a8de-e18d2aae0eb7"
+        },
         accounts: %{
-          ["Assets"] => %Ledger.Account{
+          "bd625868-3bd3-4f2c-9cab-8d8b73018ed1" => %Ledger.Account{
             name: ["Assets"],
             type: :assets,
             currency: :EUR,
             balances: %{EUR: 95_00, USD: 100_00}
           },
-          ["Assets", "Cash"] => %Ledger.Account{
+          "ab0c9ece-4aa5-48d5-ae08-7e89bd104fde" => %Ledger.Account{
             name: ["Assets", "Cash"],
             type: :assets,
             currency: :EUR,
             balances: %{EUR: 95_00}
           },
-          ["Assets", "PayPal"] => %Ledger.Account{
+          "569eb02b-da2c-42c8-ad89-c7ba1618c451" => %Ledger.Account{
             name: ["Assets", "PayPal"],
             type: :assets,
             currency: :USD,
             balances: %{USD: 100_00}
           },
-          ["Expenses"] => %Ledger.Account{
+          "7c708316-43ed-4130-9c66-a1e063d10374" => %Ledger.Account{
             name: ["Expenses"],
             type: :expenses,
             currency: :EUR,
             balances: %{EUR: 55_00}
           },
-          ["Expenses", "Supermarket"] => %Ledger.Account{
+          "4151bcd1-de24-48fc-a8de-e18d2aae0eb7" => %Ledger.Account{
             name: ["Expenses", "Supermarket"],
             type: :expenses,
             currency: :EUR,

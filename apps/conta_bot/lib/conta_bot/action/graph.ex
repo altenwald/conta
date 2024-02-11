@@ -16,7 +16,7 @@ defmodule ContaBot.Action.Graph do
 
   def handle({:callback, "patrimony"}, context) do
     options =
-      for currency <- Conta.Ledger.currencies() do
+      for currency <- Conta.Ledger.list_used_currencies() do
         name = Money.Currency.name(currency)
         symbol = Money.Currency.symbol(currency)
         {"#{name} (#{symbol})", "graph patrimony #{currency}"}
@@ -29,7 +29,7 @@ defmodule ContaBot.Action.Graph do
 
   def handle({:callback, "outcome"}, context) do
     options =
-      for currency <- Conta.Ledger.currencies() do
+      for currency <- Conta.Ledger.list_used_currencies() do
         name = Money.Currency.name(currency)
         symbol = Money.Currency.symbol(currency)
         {"#{name} (#{symbol})", "graph outcome #{currency}"}
@@ -42,7 +42,7 @@ defmodule ContaBot.Action.Graph do
 
   def handle({:callback, "income"}, context) do
     options =
-      for currency <- Conta.Ledger.currencies() do
+      for currency <- Conta.Ledger.list_used_currencies() do
         name = Money.Currency.name(currency)
         symbol = Money.Currency.symbol(currency)
         {"#{name} (#{symbol})", "graph income #{currency}"}
@@ -55,7 +55,7 @@ defmodule ContaBot.Action.Graph do
 
   def handle({:callback, "pnl"}, context) do
     options =
-      for currency <- Conta.Ledger.currencies() do
+      for currency <- Conta.Ledger.list_used_currencies() do
         name = Money.Currency.name(currency)
         symbol = Money.Currency.symbol(currency)
         {"#{name} (#{symbol})", "graph pnl #{currency}"}

@@ -20,6 +20,116 @@ defmodule ContaWeb.CoreComponents do
   import ContaWeb.Gettext
 
   @doc """
+  Renders the navigation elements.
+
+  ## Examples
+
+      <.nav/>
+  """
+  attr :logo_url, :string, required: true
+  slot :inner_block, required: true
+
+  def nav(assigns) do
+    ~H"""
+    <nav class="navbar" role="navigation" aria-label="main navigation">
+      <div class="navbar-brand">
+        <a class="navbar-item" href="/">
+          <img src={@logo_url} width="112" height="28">
+        </a>
+
+        <a role="button" class="navbar-burger" aria-label="menu" aria-expanded="false" data-target="navbarMenu">
+          <span aria-hidden="true"></span>
+          <span aria-hidden="true"></span>
+          <span aria-hidden="true"></span>
+        </a>
+      </div>
+
+      <div id="navbarMenu" class="navbar-menu">
+        <%= render_slot(@inner_block) %>
+      </div>
+    </nav>
+    """
+  end
+
+  slot :inner_block, required: true
+
+  def navbar_start(assigns) do
+    ~H"""
+    <div class="navbar-start">
+      <%= render_slot(@inner_block) %>
+    </div>
+    """
+  end
+
+  slot :inner_block, required: true
+
+  def navbar_end(assigns) do
+    ~H"""
+    <div class="navbar-end">
+      <%= render_slot(@inner_block) %>
+    </div>
+    """
+  end
+
+  attr :href, :string, default: "#"
+  slot :inner_block, required: true
+
+  def navbar_item(assigns) do
+    ~H"""
+    <a class="navbar-item" href={@href}>
+      <%= render_slot(@inner_block) %>
+    </a>
+    """
+  end
+
+  attr :name, :string, required: true
+  slot :inner_block, required: true
+
+  def navbar_dropdown(assigns) do
+    ~H"""
+    <div class="navbar-item has-dropdown is-hoverable">
+      <a class="navbar-link"><%= @name %></a>
+
+      <div class="navbar-dropdown">
+        <%= render_slot(@inner_block) %>
+      </div>
+    </div>
+    """
+  end
+
+  def navbar_divider(assigns) do
+    ~H"""
+    <hr class="navbar-divider"/>
+    """
+  end
+
+  slot :inner_block, required: true
+
+  def buttons(assigns) do
+    ~H"""
+    <div class="buttons"><%= render_slot(@inner_block) %></div>
+    """
+  end
+
+  @doc """
+  Renders a button.
+
+  ## Examples
+
+      <.button>Send!</.button>
+      <.button phx-click="go" class="ml-2">Send!</.button>
+  """
+  attr :class, :string, default: ""
+  attr :rest, :global, include: ~w(disabled form name value type)
+  slot :inner_block, required: true
+
+  def button(assigns) do
+    ~H"""
+    <button class={["button", @class]} {@rest}><%= render_slot(@inner_block) %></button>
+    """
+  end
+
+  @doc """
   Renders a modal.
 
   ## Examples
@@ -95,18 +205,18 @@ defmodule ContaWeb.CoreComponents do
     <article
       :if={msg = render_slot(@inner_block) || Phoenix.Flash.get(@flash, @kind)}
       id={@id}
-      phx-click={JS.push("lv:clear-flash", value: %{key: @kind}) |> hide("##{@id}")}
       role="alert"
       class={[
-        "message",
-        @kind == :info && "is-info",
-        @kind == :error && "is-danger"
+        "message toast",
+        @rest[:hidden] && "close",
+        @kind == :info && "is-info is-light",
+        @kind == :error && "is-danger is-light"
       ]}
       {@rest}
     >
       <div :if={@title} class="message-header">
         <p><%= @title %></p>
-        <button class="delete" aria-label="delete"></button>
+        <button phx-click={JS.add_class("close")} class="delete" aria-label="delete"></button>
       </div>
       <div class="message-body">
         <%= msg %>
@@ -138,20 +248,28 @@ defmodule ContaWeb.CoreComponents do
         phx-connected={hide("#client-error")}
         hidden
       >
-        <%= gettext("Attempting to reconnect") %>
-        <.icon name="hero-arrow-path" class="ml-1 h-3 w-3 animate-spin" />
+        <div class="icon-text">
+          <span><%= gettext("Attempting to reconnect") %></span>
+          <span class="icon ml-3">
+            <FontAwesome.spinner class="fa-spin"/>
+          </span>
+        </div>
       </.flash>
 
       <.flash
         id="server-error"
         kind={:error}
         title={gettext("Something went wrong!")}
-        phx-disconnected={show(".phx-server-error #server-error")}
-        phx-connected={hide("#server-error")}
+        phx-disconnected={JS.remove_class("close", to: "#server-error")}
+        phx-connected={JS.add_class("close", to: "#server-error")}
         hidden
       >
-        <%= gettext("Hang in there while we get back on track") %>
-        <.icon name="hero-arrow-path" class="ml-1 h-3 w-3 animate-spin" />
+        <div class="icon-text">
+          <span><%= gettext("Hang in there while we get back on track") %></span>
+          <span class="icon ml-3">
+            <FontAwesome.arrows_rotate class="fa-spin"/>
+          </span>
+        </div>
       </.flash>
     </div>
     """
@@ -183,43 +301,42 @@ defmodule ContaWeb.CoreComponents do
   def simple_form(assigns) do
     ~H"""
     <.form :let={f} for={@for} as={@as} {@rest}>
-      <div class="mt-10 space-y-8 bg-white">
-        <%= render_slot(@inner_block, f) %>
-        <div :for={action <- @actions} class="mt-2 flex items-center justify-between gap-6">
-          <%= render_slot(action, f) %>
-        </div>
+      <%= render_slot(@inner_block, f) %>
+      <div :for={action <- @actions}>
+        <%= render_slot(action, f) %>
       </div>
     </.form>
     """
   end
 
-  @doc """
-  Renders a button.
+  attr :for, :any, required: true, doc: "the datastructure for the form"
+  attr :as, :any, default: nil, doc: "the server side parameter to collect all input under"
 
-  ## Examples
-
-      <.button>Send!</.button>
-      <.button phx-click="go" class="ml-2">Send!</.button>
-  """
-  attr :type, :string, default: nil
-  attr :class, :string, default: nil
-  attr :rest, :global, include: ~w(disabled form name value)
+  attr :rest, :global,
+    include: ~w(autocomplete name rel action enctype method novalidate target multipart),
+    doc: "the arbitrary HTML attributes to apply to the form tag"
 
   slot :inner_block, required: true
+  slot :actions, doc: "the slot for form actions, such as a submit button"
 
-  def button(assigns) do
+  def modal_form(assigns) do
     ~H"""
-    <button
-      type={@type}
-      class={[
-        "phx-submit-loading:opacity-75 rounded-lg bg-zinc-900 hover:bg-zinc-700 py-2 px-3",
-        "text-sm font-semibold leading-6 text-white active:text-white/80",
-        @class
-      ]}
-      {@rest}
-    >
-      <%= render_slot(@inner_block) %>
-    </button>
+    <div class="modal is-active">
+      <div class="modal-background"></div>
+      <div class="modal-card">
+        <header class="modal-card-head">
+          <p class="modal-card-title"><%= @title %></p>
+        </header>
+        <section class="modal-card-body">
+          <.simple_form for={@for} as={@as} {@rest}>
+            <%= render_slot(@inner_block) %>
+          </.simple_form>
+        </section>
+        <footer class="modal-card-footer">
+          <%= render_slot(@actions) %>
+        </footer>
+      </div>
+    </div>
     """
   end
 
@@ -289,83 +406,102 @@ defmodule ContaWeb.CoreComponents do
       end)
 
     ~H"""
-    <div phx-feedback-for={@name}>
-      <label class="flex items-center gap-4 text-sm leading-6 text-zinc-600">
-        <input type="hidden" name={@name} value="false" />
+    <.field id={@id} name={@name} label={@label} class="is-horizontal" errors={@errors}>
+      <label class="checkbox">
+        <input type="hidden" name={@name} value="false"/>
         <input
           type="checkbox"
           id={@id}
           name={@name}
           value="true"
           checked={@checked}
-          class="rounded border-zinc-300 text-zinc-900 focus:ring-0"
+          class={[@errors != [] && "is-danger"]}
           {@rest}
         />
         <%= @label %>
       </label>
-      <.error :for={msg <- @errors}><%= msg %></.error>
-    </div>
+    </.field>
     """
   end
 
   def input(%{type: "select"} = assigns) do
     ~H"""
-    <div phx-feedback-for={@name}>
-      <.label for={@id}><%= @label %></.label>
-      <select
-        id={@id}
-        name={@name}
-        class="mt-2 block w-full rounded-md border border-gray-300 bg-white shadow-sm focus:border-zinc-400 focus:ring-0 sm:text-sm"
-        multiple={@multiple}
-        {@rest}
+    <.field id={@id} name={@name} label={@label} class="is-horizontal" errors={@errors}>
+      <div
+        class={[
+          "select",
+          "is-fullwidth",
+          @multiple && "is-multiple",
+          @errors != [] && "is-danger"
+        ]}
       >
-        <option :if={@prompt} value=""><%= @prompt %></option>
-        <%= Phoenix.HTML.Form.options_for_select(@options, @value) %>
-      </select>
-      <.error :for={msg <- @errors}><%= msg %></.error>
-    </div>
+        <select
+          id={@id}
+          name={@name}
+          multiple={@multiple}
+          {@rest}
+        >
+          <option :if={@prompt} value=""><%= @prompt %></option>
+          <%= Phoenix.HTML.Form.options_for_select(@options, @value) %>
+        </select>
+      </div>
+    </.field>
     """
   end
 
   def input(%{type: "textarea"} = assigns) do
     ~H"""
-    <div phx-feedback-for={@name}>
-      <.label for={@id}><%= @label %></.label>
+    <.field id={@id} name={@name} label={@label} class="is-horizontal" errors={@errors}>
       <textarea
         id={@id}
         name={@name}
-        class={[
-          "mt-2 block w-full rounded-lg text-zinc-900 focus:ring-0 sm:text-sm sm:leading-6",
-          "min-h-[6rem] phx-no-feedback:border-zinc-300 phx-no-feedback:focus:border-zinc-400",
-          @errors == [] && "border-zinc-300 focus:border-zinc-400",
-          @errors != [] && "border-rose-400 focus:border-rose-400"
-        ]}
+        class={["textarea", @errors != [] && "is-danger"]}
         {@rest}
       ><%= Phoenix.HTML.Form.normalize_value("textarea", @value) %></textarea>
-      <.error :for={msg <- @errors}><%= msg %></.error>
-    </div>
+    </.field>
     """
   end
 
   # All other inputs text, datetime-local, url, password, etc. are handled here...
   def input(assigns) do
     ~H"""
-    <div phx-feedback-for={@name}>
-      <.label for={@id}><%= @label %></.label>
+    <.field id={@id} name={@name} label={@label} class="is-horizontal" errors={@errors}>
       <input
         type={@type}
         name={@name}
         id={@id}
         value={Phoenix.HTML.Form.normalize_value(@type, @value)}
         class={[
-          "mt-2 block w-full rounded-lg text-zinc-900 focus:ring-0 sm:text-sm sm:leading-6",
-          "phx-no-feedback:border-zinc-300 phx-no-feedback:focus:border-zinc-400",
-          @errors == [] && "border-zinc-300 focus:border-zinc-400",
-          @errors != [] && "border-rose-400 focus:border-rose-400"
+          "input",
+          @errors != [] && "is-danger"
         ]}
         {@rest}
       />
-      <.error :for={msg <- @errors}><%= msg %></.error>
+    </.field>
+    """
+  end
+
+  attr :id, :string, default: ""
+  attr :name, :string, default: ""
+  attr :label, :string, default: ""
+  attr :class, :string, default: ""
+  attr :errors, :list, default: []
+  slot :inner_block, required: true
+
+  def field(assigns) do
+    ~H"""
+    <div class={["field", @class]}>
+      <div class="field-label is-normal">
+        <.label for={@id}><%= @label %></.label>
+      </div>
+      <div class="field-body">
+        <div class="field">
+          <div class="control" phx-feedback-for={@name}>
+            <%= render_slot(@inner_block) %>
+          </div>
+          <.error :for={msg <- @errors}><%= msg %></.error>
+        </div>
+      </div>
     </div>
     """
   end
@@ -378,7 +514,7 @@ defmodule ContaWeb.CoreComponents do
 
   def label(assigns) do
     ~H"""
-    <label for={@for} class="block text-sm font-semibold leading-6 text-zinc-800">
+    <label for={@for} class="label">
       <%= render_slot(@inner_block) %>
     </label>
     """
@@ -391,35 +527,10 @@ defmodule ContaWeb.CoreComponents do
 
   def error(assigns) do
     ~H"""
-    <p class="mt-3 flex gap-3 text-sm leading-6 text-rose-600 phx-no-feedback:hidden">
-      <.icon name="hero-exclamation-circle-mini" class="mt-0.5 h-5 w-5 flex-none" />
+    <p class="help is-danger">
+      <FontAwesome.exclamation class="mr-3"/>
       <%= render_slot(@inner_block) %>
     </p>
-    """
-  end
-
-  @doc """
-  Renders a header with title.
-  """
-  attr :class, :string, default: nil
-
-  slot :inner_block, required: true
-  slot :subtitle
-  slot :actions
-
-  def header(assigns) do
-    ~H"""
-    <header class={[@actions != [] && "flex items-center justify-between gap-6", @class]}>
-      <div>
-        <h1 class="text-lg font-semibold leading-8 text-zinc-800">
-          <%= render_slot(@inner_block) %>
-        </h1>
-        <p :if={@subtitle != []} class="mt-2 text-sm leading-6 text-zinc-600">
-          <%= render_slot(@subtitle) %>
-        </p>
-      </div>
-      <div class="flex-none"><%= render_slot(@actions) %></div>
-    </header>
     """
   end
 
@@ -443,6 +554,7 @@ defmodule ContaWeb.CoreComponents do
     doc: "the function for mapping each row before calling the :col and :action slots"
 
   slot :col, required: true do
+    attr :class, :string
     attr :label, :string
   end
 
@@ -455,76 +567,31 @@ defmodule ContaWeb.CoreComponents do
       end
 
     ~H"""
-    <div class="overflow-y-auto px-4 sm:overflow-visible sm:px-0">
-      <table class="w-[40rem] mt-11 sm:w-full">
-        <thead class="text-sm text-left leading-6 text-zinc-500">
-          <tr>
-            <th :for={col <- @col} class="p-0 pb-4 pr-6 font-normal"><%= col[:label] %></th>
-            <th :if={@action != []} class="relative p-0 pb-4">
-              <span class="sr-only"><%= gettext("Actions") %></span>
-            </th>
-          </tr>
-        </thead>
-        <tbody
-          id={@id}
-          phx-update={match?(%Phoenix.LiveView.LiveStream{}, @rows) && "stream"}
-          class="relative divide-y divide-zinc-100 border-t border-zinc-200 text-sm leading-6 text-zinc-700"
-        >
-          <tr :for={row <- @rows} id={@row_id && @row_id.(row)} class="group hover:bg-zinc-50">
-            <td
-              :for={{col, i} <- Enum.with_index(@col)}
-              phx-click={@row_click && @row_click.(row)}
-              class={["relative p-0", @row_click && "hover:cursor-pointer"]}
-            >
-              <div class="block py-4 pr-6">
-                <span class="absolute -inset-y-px right-0 -left-4 group-hover:bg-zinc-50 sm:rounded-l-xl" />
-                <span class={["relative", i == 0 && "font-semibold text-zinc-900"]}>
-                  <%= render_slot(col, @row_item.(row)) %>
-                </span>
-              </div>
-            </td>
-            <td :if={@action != []} class="relative w-14 p-0">
-              <div class="relative whitespace-nowrap py-4 text-right text-sm font-medium">
-                <span class="absolute -inset-y-px -right-4 left-0 group-hover:bg-zinc-50 sm:rounded-r-xl" />
-                <span
-                  :for={action <- @action}
-                  class="relative ml-4 font-semibold leading-6 text-zinc-900 hover:text-zinc-700"
-                >
-                  <%= render_slot(action, @row_item.(row)) %>
-                </span>
-              </div>
-            </td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-    """
-  end
-
-  @doc """
-  Renders a data list.
-
-  ## Examples
-
-      <.list>
-        <:item title="Title"><%= @post.title %></:item>
-        <:item title="Views"><%= @post.views %></:item>
-      </.list>
-  """
-  slot :item, required: true do
-    attr :title, :string, required: true
-  end
-
-  def list(assigns) do
-    ~H"""
-    <div class="mt-14">
-      <dl class="-my-4 divide-y divide-zinc-100">
-        <div :for={item <- @item} class="flex gap-4 py-4 text-sm leading-6 sm:gap-8">
-          <dt class="w-1/4 flex-none text-zinc-500"><%= item.title %></dt>
-          <dd class="text-zinc-700"><%= render_slot(item) %></dd>
-        </div>
-      </dl>
-    </div>
+    <table class="table is-fullwidth is-striped is-hoverable">
+      <thead>
+        <tr>
+          <th :for={col <- @col}><%= col[:label] %></th>
+          <th :if={@action != []}>
+            <span class="sr-only"><%= gettext("Actions") %></span>
+          </th>
+        </tr>
+      </thead>
+      <tbody
+        id={@id}
+        phx-update={match?(%Phoenix.LiveView.LiveStream{}, @rows) && "stream"}
+      >
+        <tr :for={row <- @rows} id={@row_id && @row_id.(row)}>
+          <td :for={col <- @col} class={["is-vcentered", col[:class]]}>
+            <%= render_slot(col, @row_item.(row)) %>
+          </td>
+          <td>
+            <%= for action <- @action do %>
+              <%= render_slot(action, @row_item.(row)) %>
+            <% end %>
+          </td>
+        </tr>
+      </tbody>
+    </table>
     """
   end
 
@@ -540,42 +607,12 @@ defmodule ContaWeb.CoreComponents do
 
   def back(assigns) do
     ~H"""
-    <div class="mt-16">
-      <.link
-        navigate={@navigate}
-        class="text-sm font-semibold leading-6 text-zinc-900 hover:text-zinc-700"
-      >
-        <.icon name="hero-arrow-left-solid" class="h-3 w-3" />
+    <div class="mt-3">
+      <.link navigate={@navigate}>
+        <FontAwesome.arrow_left/>
         <%= render_slot(@inner_block) %>
       </.link>
     </div>
-    """
-  end
-
-  @doc """
-  Renders a [Heroicon](https://heroicons.com).
-
-  Heroicons come in three styles – outline, solid, and mini.
-  By default, the outline style is used, but solid and mini may
-  be applied by using the `-solid` and `-mini` suffix.
-
-  You can customize the size and colors of the icons by setting
-  width, height, and background color classes.
-
-  Icons are extracted from your `assets/vendor/heroicons` directory and bundled
-  within your compiled app.css by the plugin in your `assets/tailwind.config.js`.
-
-  ## Examples
-
-      <.icon name="hero-x-mark-solid" />
-      <.icon name="hero-arrow-path" class="ml-1 w-3 h-3 animate-spin" />
-  """
-  attr :name, :string, required: true
-  attr :class, :string, default: nil
-
-  def icon(%{name: "hero-" <> _} = assigns) do
-    ~H"""
-    <span class={[@name, @class]} />
     """
   end
 
@@ -584,10 +621,7 @@ defmodule ContaWeb.CoreComponents do
   def show(js \\ %JS{}, selector) do
     JS.show(js,
       to: selector,
-      transition:
-        {"transition-all transform ease-out duration-300",
-         "opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95",
-         "opacity-100 translate-y-0 sm:scale-100"}
+      transition: ""
     )
   end
 
@@ -595,10 +629,7 @@ defmodule ContaWeb.CoreComponents do
     JS.hide(js,
       to: selector,
       time: 200,
-      transition:
-        {"transition-all transform ease-in duration-200",
-         "opacity-100 translate-y-0 sm:scale-100",
-         "opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"}
+      transition: "is-hidden"
     )
   end
 

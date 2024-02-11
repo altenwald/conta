@@ -28,7 +28,7 @@ defmodule ContaBot.Action.Outcome do
   @impl ContaBot.Action
   def handle(:init, context) do
     options =
-      for currency <- Conta.Ledger.currencies() do
+      for currency <- Conta.Ledger.list_used_currencies() do
         name = Money.Currency.name(currency)
         symbol = Money.Currency.symbol(currency)
         {"#{name} (#{symbol})", "outcome #{currency}"}

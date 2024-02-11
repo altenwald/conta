@@ -7,11 +7,16 @@ defmodule Conta.Aggregate.Ledger do
   alias Conta.Command.SetAccount
   alias Conta.Command.SetShortcut
 
-  alias Conta.Event.AccountSet
+  alias Conta.Event.AccountCreated
+  alias Conta.Event.AccountModified
+  alias Conta.Event.AccountRenamed
   alias Conta.Event.ShortcutSet
   alias Conta.Event.TransactionCreated
 
-  defstruct name: nil, accounts: %{}, shortcuts: MapSet.new()
+  defstruct name: nil,
+            accounts: %{},
+            account_names: %{},
+            shortcuts: MapSet.new()
 
   @valid_currencies ~w[EUR USD SEK GBP]a
 
@@ -24,22 +29,63 @@ defmodule Conta.Aggregate.Ledger do
     {:error, :missing_ledger}
   end
 
-  def execute(%__MODULE__{accounts: accounts}, %SetAccount{} = command) do
+  # new account
+  def execute(%__MODULE__{} = ledger, %SetAccount{id: nil} = command) do
     cond do
-      accounts[command.name] != nil ->
-        Logger.info("update existing account #{command.name}")
+      # account name exists
+      account_id = ledger.account_names[command.name] ->
+        # transform to update
+        execute(ledger, %SetAccount{command | id: account_id})
 
-        command
-        |> Map.take(~w[name type currency notes ledger]a)
-        |> then(&struct!(AccountSet, &1))
-
-      not valid_parent?(command.name, accounts) ->
+      not valid_parent?(command.name, ledger) ->
         {:error, :invalid_parent_account}
 
       :else ->
         command
         |> Map.take(~w[name type currency notes ledger]a)
-        |> then(&struct!(AccountSet, &1))
+        |> Map.put(:id, Ecto.UUID.generate())
+        |> AccountCreated.changeset()
+    end
+  end
+
+  # update account
+  def execute(%__MODULE__{} = ledger, %SetAccount{} = command) do
+    cond do
+      account = ledger.accounts[command.id] ->
+        Logger.info("update existing account #{account.name}")
+        account_modified =
+          account
+          |> Map.from_struct()
+          |> Map.merge(Map.take(account, ~w[id ledger name]a))
+          |> then(&struct(AccountModified, &1))
+        params = Map.from_struct(command)
+
+        [
+          if account.name != command.name do
+            %AccountRenamed{
+              id: command.id,
+              prev_name: account.name,
+              new_name: command.name,
+              ledger: ledger.name
+            }
+          end,
+          if AccountModified.changed_anything?(account_modified, params) do
+            AccountModified.changeset(account_modified, params)
+          end
+        ]
+        |> Enum.reject(&is_nil/1)
+        |> case do
+          [] -> {:error, :no_changes}
+          events -> events
+        end
+
+      not valid_parent?(command.name, ledger) ->
+        {:error, :invalid_parent_account}
+
+      # id wasn't found
+      :else ->
+        # convert to create
+        execute(ledger, %SetAccount{command | id: nil})
     end
   end
 
@@ -48,24 +94,25 @@ defmodule Conta.Aggregate.Ledger do
   end
 
   def execute(
-        %__MODULE__{accounts: accounts},
+        %__MODULE__{} = ledger,
         %AccountTransaction{entries: entries} = transaction
       ) do
     cond do
       not valid_date?(transaction.on_date) ->
         {:error, :invalid_date}
 
-      not valid_entries?(entries, accounts) ->
+      not valid_entries?(entries, ledger) ->
         {:error, :invalid_entries}
 
-      not valid_accounts?(entries, accounts) ->
+      not valid_accounts?(entries, ledger) ->
         {:error, :invalid_account}
 
       :else ->
         {entries, _accounts} =
-          Enum.map_reduce(transaction.entries, accounts, fn entry, acc ->
-            accounts = update_accounts(acc, entry)
-            account = accounts[entry.account_name]
+          Enum.map_reduce(transaction.entries, ledger, fn entry, ledger ->
+            ledger = update_ledger(ledger, entry)
+            account_id = ledger.account_names[entry.account_name]
+            account = ledger.accounts[account_id]
             currency = account.currency
 
             entry =
@@ -77,7 +124,7 @@ defmodule Conta.Aggregate.Ledger do
               |> Map.put(:currency, currency)
               |> then(&struct!(TransactionCreated.Entry, &1))
 
-            {entry, accounts}
+            {entry, ledger}
           end)
 
         %TransactionCreated{
@@ -98,13 +145,18 @@ defmodule Conta.Aggregate.Ledger do
     |> ShortcutSet.changeset()
   end
 
-  defp update_accounts(accounts, entry) do
-    Map.update!(accounts, entry.account_name, fn account ->
-      Map.update!(account, :balances, fn balances ->
-        amount = get_amount(to_string(account.type), entry.debit, entry.credit)
-        Map.update(balances, account.currency, amount, &(&1 + amount))
+  defp update_ledger(ledger, entry) do
+    account_id = ledger.account_names[entry.account_name]
+
+    accounts =
+      Map.update!(ledger.accounts, account_id, fn account ->
+        Map.update!(account, :balances, fn balances ->
+          amount = get_amount(to_string(account.type), entry.debit, entry.credit)
+          Map.update(balances, account.currency, amount, &(&1 + amount))
+        end)
       end)
-    end)
+
+    %__MODULE__{ledger | accounts: accounts}
   end
 
   defp to_date(date) when is_struct(date, Date), do: date
@@ -122,9 +174,10 @@ defmodule Conta.Aggregate.Ledger do
     end
   end
 
-  defp valid_entries?(entries, accounts) when is_list(entries) do
+  defp valid_entries?(entries, ledger) when is_list(entries) do
     Enum.reduce(entries, %{}, fn entry, acc ->
-      account = accounts[entry.account_name]
+      account_id = ledger.account_names[entry.account_name]
+      account = ledger.accounts[account_id]
       balance = entry.debit - entry.credit
       change_balance = entry.change_debit - entry.change_credit
 
@@ -136,50 +189,146 @@ defmodule Conta.Aggregate.Ledger do
     |> Enum.all?(&(&1 == 0))
   end
 
-  defp valid_accounts?(entries, accounts) when is_list(entries) do
-    Enum.all?(entries, &is_map_key(accounts, &1.account_name))
+  defp valid_accounts?(entries, ledger) when is_list(entries) do
+    Enum.all?(entries, &is_map_key(ledger.account_names, &1.account_name))
   end
 
-  defp valid_parent?(account_name, accounts) when is_list(account_name) do
+  defp valid_parent?(account_name, ledger) when is_list(account_name) do
     case Enum.split(account_name, -1) do
       {[], _} -> true
-      {parent, _} -> is_map_key(accounts, parent)
+      {parent, _} -> is_map_key(ledger.account_names, parent)
     end
   end
 
-  def apply(%__MODULE__{} = ledger, %AccountSet{} = event) do
-    account =
-      event
-      |> Map.take(~w[name type currency notes]a)
-      |> then(&struct!(Account, &1))
-
-    %__MODULE__{
-      name: event.ledger,
-      accounts: Map.put(ledger.accounts, account.name, account)
-    }
+  def apply(%__MODULE__{} = ledger, %AccountModified{} = event) do
+    params = Map.take(event, ~w[id type currency notes]a)
+    account = struct(ledger.accounts[event.id], params)
+    accounts = Map.put(ledger.accounts, account.id, account)
+    %__MODULE__{ledger | accounts: accounts}
   end
 
-  def apply(%__MODULE__{accounts: accounts} = ledger, %TransactionCreated{entries: entries}) do
-    accounts = Enum.reduce(entries, accounts, &update_account_balance(&2, &1.account_name, &1))
-    %__MODULE__{ledger | accounts: accounts}
+  def apply(%__MODULE__{} = ledger, %AccountRenamed{} = event) do
+    prev_account_names =
+      [event.prev_name | search_children(ledger, event.prev_name)]
+      |> Enum.sort_by(&length/1, :desc)
+
+    {new_accounts, ledger} =
+      prev_account_names
+      |> Enum.reduce({[], ledger}, fn prev_account_name, {new_accounts, ledger} ->
+        account_id = ledger.account_names[prev_account_name]
+        account = ledger.accounts[account_id]
+        ledger = remove_account(ledger, account)
+
+        new_account_name = change_parent(prev_account_name, event.prev_name, event.new_name)
+        new_account = %Account{account | name: new_account_name}
+
+        {[new_account|new_accounts], ledger}
+      end)
+
+    Enum.reduce(new_accounts, ledger, &add_account(&2, &1))
+  end
+
+  def apply(%__MODULE__{} = ledger, %AccountCreated{} = event) do
+    account =
+      event
+      |> Map.take(~w[id name type currency notes]a)
+      |> then(&struct!(Account, &1))
+
+    add_account(ledger, account)
+  end
+
+  def apply(%__MODULE__{} = ledger, %TransactionCreated{entries: entries}) do
+    Enum.reduce(entries, ledger, &update_account_balance(&2, &1))
   end
 
   def apply(%__MODULE__{shortcuts: shortcuts} = ledger, %ShortcutSet{name: name}) do
     %__MODULE__{ledger | shortcuts: MapSet.put(shortcuts, name)}
   end
 
-  defp update_account_balance(accounts, [], _entry), do: accounts
+  defp update_account_hierarchy(ledger, [], _enum_data, _f), do: ledger
 
-  defp update_account_balance(accounts, account_name, entry) do
+  defp update_account_hierarchy(ledger, account_name, enum_data, f) do
     {parent_account_name, _} = Enum.split(account_name, -1)
 
-    accounts
-    |> Map.update!(account_name, fn account ->
-      amount = get_amount(to_string(account.type), entry.debit, entry.credit)
-      balances = Map.update(account.balances, entry.currency, amount, &(&1 + amount))
-      %Account{account | balances: balances}
+    Enum.reduce(enum_data, ledger, fn data, ledger ->
+      account_id = ledger.account_names[account_name]
+      accounts = Map.update!(ledger.accounts, account_id, &f.(&1, data))
+      %__MODULE__{ledger | accounts: accounts}
     end)
-    |> update_account_balance(parent_account_name, entry)
+    |> update_account_hierarchy(parent_account_name, enum_data, f)
+  end
+
+  defp search_children(ledger, account_name) do
+    ledger.account_names
+    |> Map.keys()
+    |> Enum.filter(&child?(&1, account_name))
+  end
+
+  defp child?(child_name, parent_name) do
+    List.starts_with?(child_name, parent_name) and child_name != parent_name
+  end
+
+  defp change_parent(account_name, prev_parent, new_parent) do
+    new_parent ++ Enum.drop(account_name, length(prev_parent))
+  end
+
+  defp remove_account(ledger, account) do
+    ledger =
+      ledger
+      |> search_children(account.name)
+      |> Enum.reduce(ledger, &remove_account(&2, &1))
+      |> update_account_hierarchy(
+        account.name,
+        account.balances,
+        fn account, {currency, amount} ->
+          balances = Map.update(account.balances, currency, amount, &(&1 - amount))
+          %Account{account | balances: balances}
+        end
+      )
+
+    accounts = Map.delete(ledger.accounts, account.id)
+    account_names = Map.delete(ledger.account_names, account.name)
+    %__MODULE__{ledger | accounts: accounts, account_names: account_names}
+  end
+
+  defp add_account(ledger, account) do
+    current_account_id = account.id
+    accounts = Map.put_new(ledger.accounts, account.id, account)
+    account_names = Map.put_new(ledger.account_names, account.name, account.id)
+
+    ledger =
+      %__MODULE__{ledger | accounts: accounts, account_names: account_names}
+      |> update_account_hierarchy(
+        account.name,
+        account.balances,
+        fn account, {currency, amount} ->
+          if current_account_id != account.id do
+            balances = Map.update(account.balances, currency, amount, &(&1 + amount))
+            %Account{account | balances: balances}
+          else
+            account
+          end
+        end
+      )
+
+    account_names = Map.put(ledger.account_names, account.name, account.id)
+    %__MODULE__{ledger | account_names: account_names}
+  end
+
+  defp update_account_balance(ledger, entry) do
+    account_id = ledger.account_names[entry.account_name]
+    account = ledger.accounts[account_id]
+    balance = get_amount(to_string(account.type), entry.debit, entry.credit)
+
+    update_account_hierarchy(
+      ledger,
+      entry.account_name,
+      %{entry.currency => balance},
+      fn account, {currency, amount} ->
+        balances = Map.update(account.balances, currency, amount, &(&1 + amount))
+        %Account{account | balances: balances}
+      end
+    )
   end
 
   defp get_amount("assets", debit, credit), do: debit - credit

@@ -6,7 +6,8 @@ defmodule Conta.Projector.Ledger do
 
   import Ecto.Query, only: [from: 2]
 
-  alias Conta.Event.AccountSet
+  alias Conta.Event.AccountCreated
+  alias Conta.Event.AccountModified
   alias Conta.Event.ShortcutSet
   alias Conta.Event.TransactionCreated
 
@@ -17,7 +18,7 @@ defmodule Conta.Projector.Ledger do
 
   alias Conta.Repo
 
-  project(%AccountSet{} = account, _metadata, fn multi ->
+  project(%AccountCreated{} = account, _metadata, fn multi ->
     parent_id =
       case Enum.split(account.name, -1) do
         {[], _} ->
@@ -29,6 +30,7 @@ defmodule Conta.Projector.Ledger do
 
     changeset =
       Account.changeset(%{
+        id: account.id,
         notes: account.notes,
         parent_id: parent_id,
         name: account.name,
@@ -50,6 +52,13 @@ defmodule Conta.Projector.Ledger do
     ]
 
     Ecto.Multi.insert(multi, :create_account, changeset, opts)
+  end)
+
+  project(%AccountModified{} = event, _metadata, fn multi ->
+    account = Repo.get!(Account, event.id)
+    params = Map.from_struct(event)
+    changeset = Account.changeset(account, params)
+    Ecto.Multi.update(multi, :account_modified, changeset)
   end)
 
   project(%TransactionCreated{} = transaction, _metadata, fn multi ->

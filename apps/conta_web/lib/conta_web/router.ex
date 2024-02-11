@@ -18,6 +18,15 @@ defmodule ContaWeb.Router do
     pipe_through :browser
 
     get "/", PageController, :home
+
+    scope "/ledger/" do
+      live "/accounts", AccountLive.Index, :index
+      live "/accounts/new", AccountLive.Index, :new
+      live "/accounts/:id/edit", AccountLive.Index, :edit
+
+      live "/accounts/:id", AccountLive.Show, :show
+      live "/accounts/:id/show/edit", AccountLive.Show, :edit
+    end
   end
 
   # Other scopes may use custom stacks.

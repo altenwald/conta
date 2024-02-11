@@ -1,2 +1,38 @@
 <.flash_group flash={@flash} />
-<%= @inner_content %>
+<.nav logo_url={~p{/images/conta_header.png}}>
+  <.navbar_start>
+    <%# TODO add here ~p links %>
+    <.navbar_item href="/"><%= gettext("Dashboard") %></.navbar_item>
+    <.navbar_dropdown name={gettext("Ledger")}>
+      <.navbar_item href="/ledger/accounts"><%= gettext("Accounts") %></.navbar_item>
+    </.navbar_dropdown>
+    <.navbar_dropdown name={gettext("Books")}>
+      <.navbar_item href="/books/invoices"><%= gettext("Invoices") %></.navbar_item>
+      <.navbar_item href="/books/products"><%= gettext("Products") %></.navbar_item>
+      <.navbar_item href="/books/services"><%= gettext("Services") %></.navbar_item>
+      <.navbar_item href="/books/discounts"><%= gettext("Discounts") %></.navbar_item>
+      <.navbar_item href="/books/shipping"><%= gettext("Shipping") %></.navbar_item>
+      <.navbar_divider/>
+      <.navbar_item href="/books/expenses"><%= gettext("Expenses") %></.navbar_item>
+    </.navbar_dropdown>
+    <.navbar_dropdown name={gettext("Directories")}>
+      <.navbar_item href="/directories/contacts"><%= gettext("Clients & Providers") %></.navbar_item>
+      <.navbar_item href="/directories/banks"><%= gettext("Banks") %></.navbar_item>
+    </.navbar_dropdown>
+  </.navbar_start>
+  <.navbar_end>
+    <.navbar_item>
+      <.buttons>
+        <.button type={:primary}>
+          <strong><%= gettext("Register") %></strong>
+        </.button>
+        <.button type={:light}>
+          <%= gettext("Sign in") %>
+        </.button>
+      </.buttons>
+    </.navbar_item>
+  </.navbar_end>
+</.nav>
+<main class="container">
+  <%= @inner_content %>
+</main>

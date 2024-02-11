@@ -10,6 +10,8 @@ defmodule Conta.Ledger do
   alias Conta.Projector.Ledger.ShortcutParam
   alias Conta.Repo
 
+  @default_currencies ~w[EUR GBP USD]a
+
   def set_account(name, type, currency \\ :EUR, notes \\ nil, ledger \\ "default") do
     %SetAccount{name: name, type: type, currency: currency, notes: notes, ledger: ledger}
     |> dispatch()
@@ -41,6 +43,39 @@ defmodule Conta.Ledger do
     end
   end
 
+  def get_account_command!(id) do
+    Repo.get!(Account, id)
+    |> Map.from_struct()
+    |> then(&struct(SetAccount, &1))
+    |> populate_account_virtual()
+  end
+
+  def get_account!(id) do
+    Repo.get!(Account, id)
+    |> Repo.preload(:balances)
+  end
+
+  defp populate_account_virtual(account) do
+    case List.pop_at(account.name, -1) do
+      {simple_name, []} ->
+        %SetAccount{account | simple_name: simple_name, parent_name: nil}
+
+      {simple_name, parent_name} ->
+        parent_name = Enum.join(parent_name, ".")
+        %SetAccount{account | simple_name: simple_name, parent_name: parent_name}
+    end
+  end
+
+  def list_ledgers do
+    from(a in Account, order_by: a.ledger, select: a.ledger, group_by: a.ledger)
+    |> Repo.all()
+  end
+
+  def list_accounts do
+    from(a in Account, order_by: a.name, preload: :balances)
+    |> Repo.all()
+  end
+
   def list_accounts(type, depth \\ nil)
 
   def list_accounts(type, nil) do
@@ -57,7 +92,11 @@ defmodule Conta.Ledger do
     |> Repo.all()
   end
 
-  def currencies do
+  def list_currencies do
+    Application.get_env(:conta, :currencies, @default_currencies)
+  end
+
+  def list_used_currencies do
     from(a in Account, group_by: a.currency, select: a.currency)
     |> Repo.all()
   end

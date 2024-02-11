@@ -24,7 +24,7 @@ config :conta_web, ContaWeb.Endpoint,
   server: false
 
 # Print only warnings and errors during test
-config :logger, level: :warning
+config :logger, level: :debug
 
 # In test we don't send emails.
 config :conta, Conta.Mailer, adapter: Swoosh.Adapters.Test

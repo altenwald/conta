@@ -20,7 +20,7 @@ defmodule ContaWeb.MixProject do
   def application do
     [
       mod: {ContaWeb.Application, []},
-      extra_applications: [:logger, :runtime_tools]
+      extra_applications: [:logger, :runtime_tools, :os_mon]
     ]
   end
 
@@ -41,6 +41,7 @@ defmodule ContaWeb.MixProject do
       {:tailwind, "~> 0.2", runtime: Mix.env() == :dev},
       {:dart_sass, "~> 0.1", runtime: Mix.env() == :dev},
       {:bulma, "~> 0.9"},
+      {:fontawesome, "~> 0.3"},
       {:telemetry_metrics, "~> 0.6"},
       {:telemetry_poller, "~> 1.0"},
       {:gettext, "~> 0.24"},

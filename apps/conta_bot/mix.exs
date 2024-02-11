@@ -24,7 +24,7 @@ defmodule ContaBot.MixProject do
 
   defp deps do
     [
-      {:ex_gram, "~> 0.50"},
+      {:ex_gram, github: "rockneurotiko/ex_gram", branch: "fix_timeout_on_tesla_adapters"},
       {:tesla, "~> 1.8"},
       {:finch, "~> 0.17"},
       {:jason, "~> 1.4"},

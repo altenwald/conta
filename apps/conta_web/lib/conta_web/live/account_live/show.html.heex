@@ -1,0 +1,63 @@
+<section class="section is-main-section">
+  <div class="card tile is-child has-table has-mobile-sort-spaced">
+    <header class="card-header">
+      <p class="card-header-title">
+        <span class="icon"><i class="fas fa-book"></i></span>
+        <%= gettext("Account %{account_name}", account_name: Enum.join(@account.name, ".")) %>
+      </p>
+    </header>
+    <div class="card-content">
+      <div class="b-table has-pagination">
+        <div class="table-wrapper has-mobile-cards">
+          <div class="field is-grouped">
+            <div class="control">
+              <.link class="button" patch={~p"/ledger/accounts/#{@account.id}/show/edit"} phx-click={JS.push_focus()}>
+                Edit account
+              </.link>
+            </div>
+          </div>
+          <section class="section">
+            <.field class="is-horizontal" label={gettext("Account name")}>
+              <%= @account.name %>
+            </.field>
+            <.field class="is-horizontal" label={gettext("Ledger")}>
+              <%= @account.ledger %>
+            </.field>
+            <.field class="is-horizontal" label={gettext("Type")}>
+              <%= @account.type %>
+            </.field>
+            <.field class="is-horizontal" label={gettext("currency")}>
+              <%= Money.Currency.name(@account.currency) %>
+              (<%= Money.Currency.symbol(@account.currency) %>)
+            </.field>
+            <.field class="is-horizontal" label={gettext("notes")}>
+              <%= @account.notes || gettext("No notes") %>
+            </.field>
+            <.field class="is-horizontal" label={gettext("balances")}>
+              <.table id="balances" rows={@account.balances}>
+                <:col :let={balance} label={gettext("Currency")}>
+                  <%= Money.Currency.name(balance.currency) %>
+                  (<%= Money.Currency.symbol(balance.currency) %>)
+                  <sup :if={@account.currency == balance.currency}>*</sup>
+                </:col>
+                <:col :let={balance} label={gettext("Amount")}><%= balance.amount %></:col>
+              </.table>
+              <p><%= gettext("(*) Default currency") %></p>
+            </.field>
+          </section>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<.modal :if={@live_action == :edit} id="account-modal" show on_cancel={JS.patch(~p"/ledger/accounts/#{@account}")}>
+  <.live_component
+    module={ContaWeb.AccountLive.FormComponent}
+    id={@account.id}
+    title={@page_title}
+    action={@live_action}
+    account={@account}
+    patch={~p"/ledger/accounts/#{@account}"}
+  />
+</.modal>
