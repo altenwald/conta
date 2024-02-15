@@ -1,5 +1,6 @@
 defmodule Conta.Projector.LedgerTest do
   use Conta.DataCase
+  import Conta.Factory
   alias Conta.Projector.Ledger
 
   setup do
@@ -46,20 +47,11 @@ defmodule Conta.Projector.LedgerTest do
     end
 
     test "update account", metadata do
-      account =
-        %Conta.Projector.Ledger.Account{
-          id: "252831a0-e442-42db-80d6-a6af4820834a",
-          name: ["Expenses"],
-          ledger: "default",
-          type: :expenses,
-          notes: "global expenses account"
-        }
-
-      account = Repo.insert!(account)
+      account = insert(:account, %{name: ["Expenses"], type: :expenses, notes: "global expenses account"})
 
       event =
         %Conta.Event.AccountModified{
-          id: "252831a0-e442-42db-80d6-a6af4820834a",
+          id: account.id,
           type: :expenses,
           notes: "no so global expenses account"
         }
@@ -67,12 +59,52 @@ defmodule Conta.Projector.LedgerTest do
       assert :ok == Conta.Projector.Ledger.handle(event, metadata)
 
       assert %Conta.Projector.Ledger.Account{
-        id: "252831a0-e442-42db-80d6-a6af4820834a",
         name: ["Expenses"],
         ledger: "default",
         type: :expenses,
         notes: "no so global expenses account"
       } = Repo.get!(Conta.Projector.Ledger.Account, account.id)
+    end
+
+    test "rename account", metadata do
+      balance1 = build(:balance, %{amount: 100_0})
+      balance2 = build(:balance, %{amount: 90_0})
+      balance3 = build(:balance, %{amount: 10_0})
+
+      account1 = insert(:account, %{name: ~w[Assets], balances: [balance1]})
+      account2 = insert(:account, %{name: ~w[Assets Bank], parent_id: account1.id, balances: [balance2]})
+      account3 = insert(:account, %{name: ~w[Assets Account], parent_id: account1.id, balances: [balance3]})
+
+      event =
+        %Conta.Event.AccountRenamed{
+          id: account3.id,
+          prev_name: ["Assets", "Account"],
+          new_name: ["Assets", "Bank", "Account"]
+        }
+
+      assert :ok == Conta.Projector.Ledger.handle(event, metadata)
+
+      assert %Conta.Projector.Ledger.Account{
+        name: ~w[Assets],
+        ledger: "default",
+        type: :assets,
+        subaccounts: [
+          %Conta.Projector.Ledger.Account{
+            name: ~w[Assets Bank],
+            ledger: "default",
+            type: :assets,
+            subaccounts: [
+              %Conta.Projector.Ledger.Account{
+                name: ~w[Assets Bank Account],
+                ledger: "default",
+                type: :assets
+              }
+            ]
+          }
+        ]
+      } =
+        Repo.get!(Conta.Projector.Ledger.Account, account1.id)
+        |> Repo.preload([:balances, subaccounts: [:balances, subaccounts: :balances]])
     end
   end
 end

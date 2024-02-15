@@ -44,6 +44,7 @@ defmodule Conta.MixProject do
       {:contex, "~> 0.5", github: "manuel-rubio/contex"},
       {:resvg, "~> 0.3"},
       {:luerl, "~> 1.1"},
+      {:ex_machina, "~> 2.7", only: :test},
       {:doctor, "~> 0.21", only: [:dev, :test], runtime: false}
     ]
   end

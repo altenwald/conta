@@ -64,6 +64,7 @@ defmodule Conta.Projector.Ledger.Account do
     field(:notes, :string)
     belongs_to(:parent, __MODULE__, foreign_key: :parent_id)
     has_many(:balances, Balance)
+    has_many(:subaccounts, __MODULE__, foreign_key: :parent_id)
 
     timestamps(type: :utc_datetime_usec)
   end

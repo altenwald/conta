@@ -8,6 +8,7 @@ defmodule Conta.Projector.Ledger do
 
   alias Conta.Event.AccountCreated
   alias Conta.Event.AccountModified
+  alias Conta.Event.AccountRenamed
   alias Conta.Event.ShortcutSet
   alias Conta.Event.TransactionCreated
 
@@ -59,6 +60,29 @@ defmodule Conta.Projector.Ledger do
     params = Map.from_struct(event)
     changeset = Account.changeset(account, params)
     Ecto.Multi.update(multi, :account_modified, changeset)
+  end)
+
+  project(%AccountRenamed{} = event, _metadata, fn multi ->
+    account =
+      Repo.get!(Account, event.id)
+      |> Repo.preload([:parent, :balances])
+
+    {parent_name, _} = Enum.split(event.new_name, -1)
+    multi =
+      if parent_name != [] do
+        parent = Repo.get_by!(Account, name: parent_name)
+        changeset = Account.changeset(account, %{parent_id: parent.id, name: event.new_name})
+        add = &update_account_balance(&2, :add, &1, parent)
+
+        Enum.reduce(account.balances, multi, add)
+        |> Ecto.Multi.update(:update_account, changeset)
+      else
+        account = Account.changeset(account, %{parent_id: nil, name: event.new_name})
+        Ecto.Multi.update(multi, :update_account, account)
+      end
+
+    subtract = &update_account_balance(&2, :subtract, &1, account.parent)
+    Enum.reduce(account.balances, multi, subtract)
   end)
 
   project(%TransactionCreated{} = transaction, _metadata, fn multi ->
@@ -113,6 +137,19 @@ defmodule Conta.Projector.Ledger do
       {parent, _} = Enum.split(account_name, -idx)
       [parent | acc]
     end)
+  end
+
+  defp update_account_balance(multi, _type, _balance, nil), do: multi
+
+  defp update_account_balance(multi, type, balance, account) do
+    parent_account = Repo.preload(account, :parent).parent
+    name = {:account_balance_update, type, account.id}
+    query = from(b in Balance, where: b.account_id == ^account.id and b.currency == ^balance.currency)
+    updates = [inc: [amount: -balance.amount.amount]]
+
+    multi
+    |> Ecto.Multi.update_all(name, query, updates)
+    |> update_account_balance(type, balance, parent_account)
   end
 
   defp upsert_account_balances(multi, idx, accounts, trans_entry) do
