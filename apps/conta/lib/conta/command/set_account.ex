@@ -7,8 +7,8 @@ defmodule Conta.Command.SetAccount do
   @typep currency() :: atom()
 
   typed_embedded_schema do
-    field :id, :binary_id
     field :ledger, :string
+    field :id, :binary_id
     field :name, :string
     field :type, Ecto.Enum, values: ~w[assets liabilities equity revenue expenses]a
     field(:currency, Money.Ecto.Currency.Type) :: currency()
@@ -22,14 +22,24 @@ defmodule Conta.Command.SetAccount do
 
   @doc false
   def changeset(model \\ %__MODULE__{}, params) do
-    params = populate_account_virtual(params)
-
     model
     |> cast(params, @required_fields ++ @optional_fields)
+    |> populate_name()
     |> validate_required(@required_fields)
+    |> validate_format(:simple_name, ~r/^[^.]+$/)
   end
 
-  defp populate_account_virtual(%{"name" => name} = params) when is_list(name) do
+  def to_command(changeset) do
+    apply_changes(changeset)
+  end
+
+  defp populate_name(changeset) do
+    simple_name = List.wrap(get_field(changeset, :simple_name))
+    parent_name = String.split(get_field(changeset, :parent_name) || "", ".")
+    put_change(changeset, :name, parent_name ++ simple_name)
+  end
+
+  def populate_account_virtual(%{"name" => name} = params) when is_list(name) do
     case List.pop_at(name, -1) do
       {simple_name, []} ->
         params
@@ -43,5 +53,5 @@ defmodule Conta.Command.SetAccount do
     end
   end
 
-  defp populate_account_virtual(%{} = params), do: params
+  def populate_account_virtual(%{} = params), do: params
 end

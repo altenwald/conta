@@ -154,11 +154,23 @@ defmodule Conta.Aggregate.CompanyTest do
         postcode: "28000",
         city: "Madrid",
         state: "Madrid",
-        country: "ES"
+        country: "ES",
+        contacts: %{
+          "My client" => %Conta.Aggregate.Company.Contact{
+            name: "My client",
+            nif: "B123456789",
+            address: "My client's address",
+            postcode: "14000",
+            city: "Cordoba",
+            state: "Cordoba",
+            country: "ES"
+          }
+        }
       }
 
       command = %Conta.Command.CreateInvoice{
         nif: "A55666777",
+        client_name: "My client",
         invoice_number: 1,
         invoice_date: Date.new!(2023, 12, 20),
         type: :service,
@@ -169,15 +181,6 @@ defmodule Conta.Aggregate.CompanyTest do
         payment_method: %Conta.Command.CreateInvoice.PaymentMethod{
           method: :gateway,
           details: "myaccount@paypal.com"
-        },
-        client: %Conta.Command.CreateInvoice.Client{
-          name: "My client",
-          nif: "B123456789",
-          address: "My client's address",
-          postcode: "14000",
-          city: "Cordoba",
-          state: "Cordoba",
-          country: "ES"
         },
         details: [
           %Conta.Command.CreateInvoice.Detail{
@@ -243,7 +246,18 @@ defmodule Conta.Aggregate.CompanyTest do
         state: "Madrid",
         country: "ES",
         invoice_numbers: %{2023 => 1},
-        template_names: MapSet.new(["default"])
+        template_names: MapSet.new(["default"]),
+        contacts: %{
+          "My client" => %Conta.Aggregate.Company.Contact{
+            name: "My client",
+            nif: "B123456789",
+            address: "My client's address",
+            postcode: "14000",
+            city: "Cordoba",
+            state: "Cordoba",
+            country: "ES"
+          }
+        }
       } == Conta.Aggregate.Company.apply(company, event)
     end
   end

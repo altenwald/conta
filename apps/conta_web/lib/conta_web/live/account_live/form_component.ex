@@ -1,5 +1,6 @@
 defmodule ContaWeb.AccountLive.FormComponent do
   use ContaWeb, :live_component
+  import Conta.Commanded.Application, only: [dispatch: 1]
 
   alias Conta.Ledger
   alias Conta.Command.SetAccount
@@ -21,13 +22,6 @@ defmodule ContaWeb.AccountLive.FormComponent do
             phx-change="validate"
             phx-submit="save"
           >
-            <.input
-              field={@form[:ledger]}
-              type="select"
-              label={gettext("Ledger")}
-              options={Ledger.list_ledgers()}
-              prompt={gettext("Choose a ledger for the account...")}
-            />
             <.input field={@form[:simple_name]} type="text" label={gettext("Name")} />
             <.input
               field={@form[:parent_name]}
@@ -96,36 +90,22 @@ defmodule ContaWeb.AccountLive.FormComponent do
   end
 
   def handle_event("save", %{"set_account" => account_params}, socket) do
-    save_account(socket, socket.assigns.action, account_params)
-  end
+    changeset = SetAccount.changeset(socket.assigns.account, account_params)
+    if changeset.valid? and dispatch(SetAccount.to_command(changeset)) == :ok do
+      # TODO
+      # notify_parent({:saved, account})
+      message =
+        case socket.assigns.action do
+          :edit -> gettext("Account updated successfully")
+          :new -> gettext("Account created successfully")
+        end
 
-  defp save_account(socket, :edit, account_params) do
-    case Ledger.update_account(socket.assigns.account, account_params) do
-      {:ok, account} ->
-        notify_parent({:saved, account})
-
-        {:noreply,
-         socket
-         |> put_flash(:info, "Account updated successfully")
-         |> push_patch(to: socket.assigns.patch)}
-
-      {:error, %Ecto.Changeset{} = changeset} ->
-        {:noreply, assign_form(socket, changeset)}
-    end
-  end
-
-  defp save_account(socket, :new, account_params) do
-    case Ledger.create_account(account_params) do
-      {:ok, account} ->
-        notify_parent({:saved, account})
-
-        {:noreply,
-         socket
-         |> put_flash(:info, "Account created successfully")
-         |> push_patch(to: socket.assigns.patch)}
-
-      {:error, %Ecto.Changeset{} = changeset} ->
-        {:noreply, assign_form(socket, changeset)}
+      {:noreply,
+        socket
+        |> put_flash(:info, message)
+        |> push_patch(to: socket.assigns.patch)}
+    else
+      {:noreply, assign_form(socket, changeset)}
     end
   end
 

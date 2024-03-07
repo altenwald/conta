@@ -528,8 +528,12 @@ defmodule ContaWeb.CoreComponents do
   def error(assigns) do
     ~H"""
     <p class="help is-danger">
-      <FontAwesome.exclamation class="mr-3"/>
-      <%= render_slot(@inner_block) %>
+      <span class="icon-text">
+        <span class="icon mr-3">
+          <FontAwesome.triangle_exclamation/>
+        </span>
+        <%= render_slot(@inner_block) %>
+      </span>
     </p>
     """
   end

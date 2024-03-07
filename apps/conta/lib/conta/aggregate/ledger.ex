@@ -182,8 +182,8 @@ defmodule Conta.Aggregate.Ledger do
       change_balance = entry.change_debit - entry.change_credit
 
       acc
-      |> Map.update(account.currency, balance, &(&1 + balance))
-      |> Map.update(entry.change_currency, change_balance, &(&1 + change_balance))
+      |> Map.update(to_string(account.currency), balance, &(&1 + balance))
+      |> Map.update(to_string(entry.change_currency), change_balance, &(&1 + change_balance))
     end)
     |> Map.values()
     |> Enum.all?(&(&1 == 0))

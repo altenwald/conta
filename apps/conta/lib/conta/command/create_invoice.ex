@@ -6,6 +6,7 @@ defmodule Conta.Command.CreateInvoice do
 
   typed_embedded_schema do
     field :nif, :string
+    field :client_name, :string
     field :template, :string, default: "default"
     field :invoice_number, :integer
     field :invoice_date, :date
@@ -24,16 +25,6 @@ defmodule Conta.Command.CreateInvoice do
       field :method, Ecto.Enum, values: @methods
       field :details, :string
     end
-    embeds_one :client, Client do
-      field :name, :string
-      field :nif, :string
-      field :intracommunity, :boolean, default: false
-      field :address, :string
-      field :postcode, :string
-      field :city, :string
-      field :state, :string
-      field :country, :string
-    end
     embeds_many :details, Detail do
       field :sku, :string
       field :description, :string
@@ -45,7 +36,7 @@ defmodule Conta.Command.CreateInvoice do
     end
   end
 
-  @required_fields ~w[nif invoice_date type subtotal_price tax_price total_price destination_country]a
+  @required_fields ~w[nif client_name invoice_date type subtotal_price tax_price total_price destination_country]a
   @optional_fields ~w[invoice_number template due_date comments]a
 
   @doc false
@@ -53,7 +44,6 @@ defmodule Conta.Command.CreateInvoice do
     model
     |> cast(params, @required_fields ++ @optional_fields)
     |> cast_embed(:payment_method, with: &changeset_payment/2)
-    |> cast_embed(:client, with: &changeset_client/2)
     |> cast_embed(:details, required: true, with: &changeset_details/2)
     |> validate_required(@required_fields)
   end
@@ -63,16 +53,6 @@ defmodule Conta.Command.CreateInvoice do
 
   @doc false
   def changeset_payment(model, params) do
-    model
-    |> cast(params, @required_fields ++ @optional_fields)
-    |> validate_required(@required_fields)
-  end
-
-  @required_fields ~w[name nif country]a
-  @optional_fields ~w[intracommunity address postcode city state]a
-
-  @doc false
-  def changeset_client(model, params) do
     model
     |> cast(params, @required_fields ++ @optional_fields)
     |> validate_required(@required_fields)
