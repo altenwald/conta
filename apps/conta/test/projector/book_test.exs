@@ -20,6 +20,29 @@ defmodule Conta.Projector.BookTest do
     }
   end
 
+  describe "payment_method" do
+    test "create successfully", metadata do
+      event =
+        %Conta.Event.PaymentMethodSet{
+          nif: "A55666777",
+          slug: "stripe",
+          name: "Stripe Payments",
+          method: "gateway",
+          details: nil
+        }
+
+      assert :ok = Conta.Projector.Book.handle(event, metadata)
+
+      assert %Book.PaymentMethod{
+        id: _,
+        method: :gateway,
+        name: "Stripe Payments",
+        nif: "A55666777",
+        slug: "stripe"
+      } = Repo.get_by!(Book.PaymentMethod, nif: "A55666777", slug: "stripe")
+    end
+  end
+
   describe "invoice" do
     test "create successfully", metadata do
       event =

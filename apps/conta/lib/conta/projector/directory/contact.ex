@@ -7,7 +7,6 @@ defmodule Conta.Projector.Directory.Contact do
 
   typed_schema "directories_contacts" do
     field :company_nif, :string
-    field :slug, :string
     field :name, :string
     field :nif, :string
     field :intracommunity, :boolean, default: false
@@ -18,7 +17,7 @@ defmodule Conta.Projector.Directory.Contact do
     field :country, :string
   end
 
-  @required_fields ~w[company_nif slug name nif address postcode city country]a
+  @required_fields ~w[company_nif name nif address postcode city country]a
   @optional_fields ~w[intracommunity state]a
 
   @doc false

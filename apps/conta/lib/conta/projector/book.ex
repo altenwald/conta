@@ -5,8 +5,10 @@ defmodule Conta.Projector.Book do
     name: __MODULE__
 
   alias Conta.Event.InvoiceCreated
+  alias Conta.Event.PaymentMethodSet
   alias Conta.Event.TemplateSet
   alias Conta.Projector.Book.Invoice
+  alias Conta.Projector.Book.PaymentMethod
   alias Conta.Projector.Book.Template
 
   project(%InvoiceCreated{} = invoice, _metadata, fn multi ->
@@ -27,6 +29,23 @@ defmodule Conta.Projector.Book do
 
     changeset = Invoice.changeset(params)
     Ecto.Multi.insert(multi, :invoice, changeset)
+  end)
+
+  project(%PaymentMethodSet{} = payment_method, _metadata, fn multi ->
+    changeset =
+      payment_method
+      |> Map.from_struct()
+      |> PaymentMethod.changeset()
+
+    update =
+      payment_method
+      |> Map.from_struct()
+      |> Map.delete(:nif)
+      |> Map.delete(:slug)
+      |> Enum.to_list()
+
+    opts = [on_conflict: [set: update], conflict_target: [:nif, :slug]]
+    Ecto.Multi.insert(multi, :template, changeset, opts)
   end)
 
   project(%TemplateSet{} = template, _metadata, fn multi ->

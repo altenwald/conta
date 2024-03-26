@@ -4,7 +4,6 @@ defmodule Conta.Repo.Migrations.CreateDirectoriesContacts do
   def change do
     create table(:directories_contacts, primary_key: false) do
       add :id, :binary_id, primary_key: true
-      add :slug, :string
       add :company_nif, :string
       add :name, :string
       add :nif, :string
@@ -17,6 +16,5 @@ defmodule Conta.Repo.Migrations.CreateDirectoriesContacts do
     end
 
     create unique_index(:directories_contacts, [:company_nif, :nif])
-    create unique_index(:directories_contacts, [:slug])
   end
 end
