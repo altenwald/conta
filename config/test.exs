@@ -36,3 +36,5 @@ config :swoosh, :api_client, false
 config :phoenix, :plug_init_mode, :runtime
 
 config :ex_gram, test_environment: true
+
+config :ex_gram, token: System.get_env("EXGRAM_TOKEN_TEST")

@@ -5,7 +5,7 @@ defmodule Conta.Projector.Book.Invoice do
   @primary_key {:id, :binary_id, autogenerate: true}
   @foreign_key_type :binary_id
 
-  typed_schema "invoices" do
+  typed_schema "book_invoices" do
     field :template, :string, default: "default"
     field :invoice_number, :string
     field :invoice_date, :date

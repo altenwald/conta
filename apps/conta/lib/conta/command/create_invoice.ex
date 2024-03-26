@@ -6,25 +6,20 @@ defmodule Conta.Command.CreateInvoice do
 
   typed_embedded_schema do
     field :nif, :string
-    field :client_name, :string
+    field :client_nif, :string
     field :template, :string, default: "default"
     field :invoice_number, :integer
     field :invoice_date, :date
+    field :paid_date, :date
     field :due_date, :date
     field :type, Ecto.Enum, values: ~w[product service]a
-    field :subtotal_price, :integer
-    field :tax_price, :integer
-    field :total_price, :integer
+    field :subtotal_price, Money.Ecto.Amount.Type
+    field :tax_price, Money.Ecto.Amount.Type
+    field :total_price, Money.Ecto.Amount.Type
+    field :currency, Money.Ecto.Currency.Type
     field :comments, :string
     field :destination_country, :string
-    embeds_one :payment_method, PaymentMethod do
-      # methods are cash, bank (i.e. wire transfer) and
-      # gateway (i.e. paypal or stripe)
-      @methods ~w[cash bank gateway]a
-
-      field :method, Ecto.Enum, values: @methods
-      field :details, :string
-    end
+    field :payment_method, :string
     embeds_many :details, Detail do
       field :sku, :string
       field :description, :string
@@ -36,25 +31,14 @@ defmodule Conta.Command.CreateInvoice do
     end
   end
 
-  @required_fields ~w[nif client_name invoice_date type subtotal_price tax_price total_price destination_country]a
-  @optional_fields ~w[invoice_number template due_date comments]a
+  @required_fields ~w[nif invoice_date type subtotal_price tax_price total_price destination_country payment_method]a
+  @optional_fields ~w[invoice_number paid_date client_nif template due_date comments]a
 
   @doc false
   def changeset(model \\ %__MODULE__{}, params) do
     model
     |> cast(params, @required_fields ++ @optional_fields)
-    |> cast_embed(:payment_method, with: &changeset_payment/2)
     |> cast_embed(:details, required: true, with: &changeset_details/2)
-    |> validate_required(@required_fields)
-  end
-
-  @required_fields ~w[method details]a
-  @optional_fields ~w[]a
-
-  @doc false
-  def changeset_payment(model, params) do
-    model
-    |> cast(params, @required_fields ++ @optional_fields)
     |> validate_required(@required_fields)
   end
 

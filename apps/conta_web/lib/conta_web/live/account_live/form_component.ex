@@ -39,7 +39,7 @@ defmodule ContaWeb.AccountLive.FormComponent do
                 {gettext("Liabilities"), :liabilities},
                 {gettext("Equity"), :equity},
                 {gettext("Revenue"), :revenue},
-                {gettext("Expenses"), :expenses},
+                {gettext("Expenses"), :expenses}
               ]}
               prompt={gettext("Choose an account type...")}
             />
@@ -49,7 +49,9 @@ defmodule ContaWeb.AccountLive.FormComponent do
               label={gettext("Currency")}
               options={
                 Ledger.list_currencies()
-                |> Enum.map(fn id -> {"#{Money.Currency.name(id)} (#{Money.Currency.symbol(id)})", id} end)
+                |> Enum.map(fn id ->
+                  {"#{Money.Currency.name(id)} (#{Money.Currency.symbol(id)})", id}
+                end)
                 |> Enum.sort()
               }
               prompt={gettext("Choose a currency...")}
@@ -91,8 +93,9 @@ defmodule ContaWeb.AccountLive.FormComponent do
 
   def handle_event("save", %{"set_account" => account_params}, socket) do
     changeset = SetAccount.changeset(socket.assigns.account, account_params)
+
     if changeset.valid? and dispatch(SetAccount.to_command(changeset)) == :ok do
-      # TODO
+      #  TODO
       # notify_parent({:saved, account})
       message =
         case socket.assigns.action do
@@ -101,9 +104,9 @@ defmodule ContaWeb.AccountLive.FormComponent do
         end
 
       {:noreply,
-        socket
-        |> put_flash(:info, message)
-        |> push_patch(to: socket.assigns.patch)}
+       socket
+       |> put_flash(:info, message)
+       |> push_patch(to: socket.assigns.patch)}
     else
       {:noreply, assign_form(socket, changeset)}
     end

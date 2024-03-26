@@ -72,7 +72,7 @@ defmodule Conta.Projector.LedgerTest do
       balance3 = build(:balance, %{amount: 10_0})
 
       account1 = insert(:account, %{name: ~w[Assets], balances: [balance1]})
-      account2 = insert(:account, %{name: ~w[Assets Bank], parent_id: account1.id, balances: [balance2]})
+      _account2 = insert(:account, %{name: ~w[Assets Bank], parent_id: account1.id, balances: [balance2]})
       account3 = insert(:account, %{name: ~w[Assets Account], parent_id: account1.id, balances: [balance3]})
 
       event =

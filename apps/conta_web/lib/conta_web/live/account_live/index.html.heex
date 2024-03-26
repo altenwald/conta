@@ -22,13 +22,36 @@
             row_click={fn {_id, account} -> JS.navigate(~p"/ledger/accounts/#{account}") end}
           >
             <:action :let={{_id, account}}>
-              <div class="is-sr-only">
-                <.link navigate={~p"/ledger/accounts/#{account}"}>
-                  <%= gettext("Show") %>
-                </.link>
-              </div>
-              <.link class="button is-light" patch={~p"/ledger/accounts/#{account}/edit"}>
-                <%= gettext("Edit") %>
+              <.link
+                class="button is-info is-light"
+                title={gettext("Open")}
+                navigate={~p"/ledger/accounts/#{account}/entries"}
+              >
+                <span class="icon">
+                  <FontAwesome.folder_open />
+                </span>
+              </.link>
+            </:action>
+            <:action :let={{_id, account}}>
+              <.link
+                class="button is-light"
+                title={gettext("Show")}
+                navigate={~p"/ledger/accounts/#{account}"}
+              >
+                <span class="icon">
+                  <FontAwesome.eye />
+                </span>
+              </.link>
+            </:action>
+            <:action :let={{_id, account}}>
+              <.link
+                class="button is-light"
+                patch={~p"/ledger/accounts/#{account}/edit"}
+                title={gettext("Edit")}
+              >
+                <span class="icon">
+                  <FontAwesome.pencil />
+                </span>
               </.link>
             </:action>
             <:action :let={{id, account}}>
@@ -36,12 +59,19 @@
                 phx-click={JS.push("delete", value: %{id: account.id}) |> hide("##{id}")}
                 class="button is-danger is-light"
                 data-confirm={gettext("Are you sure?")}
+                title={gettext("Delete")}
               >
-                <%= gettext("Delete") %>
+                <span class="icon">
+                  <FontAwesome.trash_can />
+                </span>
               </.link>
             </:action>
-            <:col :let={{_id, account}} label={gettext("name")}><%= Enum.join(account.name, ".") %></:col>
-            <:col :let={{_id, account}} class="has-text-right" label={gettext("balance")}><%= get_balance(account) %></:col>
+            <:col :let={{_id, account}} label={gettext("name")}>
+              <%= Enum.join(account.name, ".") %>
+            </:col>
+            <:col :let={{_id, account}} class="has-text-right money" label={gettext("balance")}>
+              <%= get_balance(account) %>
+            </:col>
           </.table>
         </div>
       </div>
@@ -49,7 +79,12 @@
   </div>
 </section>
 
-<.modal :if={@live_action in [:new, :edit]} id="account-modal" show on_cancel={JS.patch(~p"/ledger/accounts")}>
+<.modal
+  :if={@live_action in [:new, :edit]}
+  id="account-modal"
+  show
+  on_cancel={JS.patch(~p"/ledger/accounts")}
+>
   <.live_component
     module={ContaWeb.AccountLive.FormComponent}
     id={@account.name || :new}

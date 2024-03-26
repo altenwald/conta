@@ -1,13 +1,10 @@
-defmodule Conta.Event.ContactSet do
+defmodule Conta.Aggregate.Company.Contact do
   use TypedEctoSchema
-  import Conta.EctoHelpers
   import Ecto.Changeset
 
   @primary_key false
 
-  @derive Jason.Encoder
   typed_embedded_schema do
-    field :company_nif, :string
     field :name, :string
     field :nif, :string
     field :intracommunity, :boolean, default: false
@@ -18,14 +15,21 @@ defmodule Conta.Event.ContactSet do
     field :country, :string
   end
 
-  @required_fields ~w[company_nif name nif address postcode city country]a
+  @required_fields ~w[name nif address postcode city country]a
   @optional_fields ~w[intracommunity state]a
 
-  @doc false
-  def changeset(model \\ %__MODULE__{}, params) do
-    model
+  def new(params) do
+    %__MODULE__{}
     |> cast(params, @required_fields ++ @optional_fields)
     |> validate_required(@required_fields)
-    |> traverse_errors()
+    |> case do
+      %Ecto.Changeset{valid?: true} = changeset ->
+        changeset
+        |> apply_changes()
+        |> Map.from_struct()
+
+      %Ecto.Changeset{valid?: false, errors: errors} ->
+        {:error, errors}
+    end
   end
 end

@@ -1,14 +1,15 @@
-defmodule Conta.Event.CompanySet do
+defmodule Conta.Command.SetContact do
   use TypedEctoSchema
   import Conta.EctoHelpers
   import Ecto.Changeset
 
   @primary_key false
 
-  @derive Jason.Encoder
   typed_embedded_schema do
-    field :nif, :string
+    field :company_nif, :string
     field :name, :string
+    field :nif, :string
+    field :intracommunity, :boolean, default: false
     field :address, :string
     field :postcode, :string
     field :city, :string
@@ -16,8 +17,8 @@ defmodule Conta.Event.CompanySet do
     field :country, :string
   end
 
-  @required_fields ~w[nif name address postcode city state country]a
-  @optional_fields ~w[]a
+  @required_fields ~w[company_nif name nif address postcode city country]a
+  @optional_fields ~w[intracommunity state]a
 
   @doc false
   def changeset(model \\ %__MODULE__{}, params) do

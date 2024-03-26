@@ -1,7 +1,6 @@
 <.flash_group flash={@flash} />
 <.nav logo_url={~p{/images/conta_header.png}}>
   <.navbar_start>
-    <%# TODO add here ~p links %>
     <.navbar_item href="/"><%= gettext("Dashboard") %></.navbar_item>
     <.navbar_dropdown name={gettext("Ledger")}>
       <.navbar_item href="/ledger/accounts"><%= gettext("Accounts") %></.navbar_item>
@@ -12,11 +11,13 @@
       <.navbar_item href="/books/services"><%= gettext("Services") %></.navbar_item>
       <.navbar_item href="/books/discounts"><%= gettext("Discounts") %></.navbar_item>
       <.navbar_item href="/books/shipping"><%= gettext("Shipping") %></.navbar_item>
-      <.navbar_divider/>
+      <.navbar_divider />
       <.navbar_item href="/books/expenses"><%= gettext("Expenses") %></.navbar_item>
     </.navbar_dropdown>
     <.navbar_dropdown name={gettext("Directories")}>
-      <.navbar_item href="/directories/contacts"><%= gettext("Clients & Providers") %></.navbar_item>
+      <.navbar_item href="/directories/contacts">
+        <%= gettext("Clients & Providers") %>
+      </.navbar_item>
       <.navbar_item href="/directories/banks"><%= gettext("Banks") %></.navbar_item>
     </.navbar_dropdown>
   </.navbar_start>

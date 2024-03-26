@@ -8,6 +8,7 @@ defmodule Conta.Commanded.Router do
   alias Conta.Command.CreateInvoice
   alias Conta.Command.SetCompany
   alias Conta.Command.SetContact
+  alias Conta.Command.SetPaymentMethod
   alias Conta.Command.SetShortcut
   alias Conta.Command.SetTemplate
 
@@ -21,6 +22,7 @@ defmodule Conta.Commanded.Router do
 
   dispatch(SetCompany, to: Company)
   dispatch(SetContact, to: Company, identity: :company_nif)
+  dispatch(SetPaymentMethod, to: Company)
   dispatch(SetTemplate, to: Company)
   dispatch(CreateInvoice, to: Company)
 end

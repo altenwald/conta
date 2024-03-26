@@ -55,6 +55,10 @@ defmodule Conta.Ledger do
     |> Repo.preload(:balances)
   end
 
+  def get_entry!(id) do
+    Repo.get!(Entry, id)
+  end
+
   defp populate_account_virtual(account) do
     case List.pop_at(account.name, -1) do
       {simple_name, []} ->
@@ -125,15 +129,24 @@ defmodule Conta.Ledger do
 
   def list_entries(account_name, limit) when is_list(account_name) and is_integer(limit) do
     if account = Repo.get_by(Account, name: account_name) do
-      from(
-        e in Entry,
-        where: e.account_name == ^account_name,
-        order_by: [desc: e.on_date, desc: e.inserted_at],
-        limit: ^limit
-      )
-      |> Repo.all()
-      |> Enum.map(&adjust_currency(&1, account.currency))
+      list_entries_by_account(account, limit)
     end
+  end
+
+  def list_entries_by_account(%Account{} = account, limit \\ nil) do
+    from(
+      e in Entry,
+      where: e.account_name == ^account.name,
+      order_by: [desc: e.on_date, desc: e.inserted_at]
+    )
+    |> case do
+      query when limit != nil ->
+        from(e in query, limit: ^limit)
+
+      query -> query
+    end
+    |> Repo.all()
+    |> Enum.map(&adjust_currency(&1, account.currency))
   end
 
   def list_entries_by(text, limit) when is_integer(limit) do
@@ -178,7 +191,7 @@ defmodule Conta.Ledger do
         "transaction" ->
           data
           |> Conta.Command.AccountTransaction.changeset()
-          |> Conta.Event.traverse_errors()
+          |> Conta.EctoHelpers.traverse_errors()
           |> case do
             %Conta.Command.AccountTransaction{} = command ->
               Conta.Commanded.Application.dispatch(command)
@@ -190,7 +203,7 @@ defmodule Conta.Ledger do
         "invoice" ->
           data
           |> Conta.Command.CreateInvoice.changeset()
-          |> Conta.Event.traverse_errors()
+          |> Conta.EctoHelpers.traverse_errors()
           |> case do
             %Conta.Command.CreateInvoice{} = command ->
               Conta.Commanded.Application.dispatch(command)

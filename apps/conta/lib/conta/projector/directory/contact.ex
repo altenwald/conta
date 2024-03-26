@@ -1,13 +1,13 @@
-defmodule Conta.Event.ContactSet do
+defmodule Conta.Projector.Directory.Contact do
   use TypedEctoSchema
-  import Conta.EctoHelpers
   import Ecto.Changeset
 
-  @primary_key false
+  @primary_key {:id, :binary_id, autogenerate: true}
+  @foreign_key_type :binary_id
 
-  @derive Jason.Encoder
-  typed_embedded_schema do
+  typed_schema "directories_contacts" do
     field :company_nif, :string
+    field :slug, :string
     field :name, :string
     field :nif, :string
     field :intracommunity, :boolean, default: false
@@ -18,7 +18,7 @@ defmodule Conta.Event.ContactSet do
     field :country, :string
   end
 
-  @required_fields ~w[company_nif name nif address postcode city country]a
+  @required_fields ~w[company_nif slug name nif address postcode city country]a
   @optional_fields ~w[intracommunity state]a
 
   @doc false
@@ -26,6 +26,9 @@ defmodule Conta.Event.ContactSet do
     model
     |> cast(params, @required_fields ++ @optional_fields)
     |> validate_required(@required_fields)
-    |> traverse_errors()
+  end
+
+  def to_command(changeset) do
+    apply_changes(changeset)
   end
 end

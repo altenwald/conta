@@ -1,6 +1,6 @@
 defmodule Conta.Event.AccountRenamed do
   use TypedEctoSchema
-  import Conta.Event
+  import Conta.EctoHelpers
   import Ecto.Changeset
 
   @primary_key false

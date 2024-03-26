@@ -1,6 +1,6 @@
 defmodule Conta.Event.InvoiceCreated do
   use TypedEctoSchema
-  import Conta.Event
+  import Conta.EctoHelpers
   import Ecto.Changeset
   alias Conta.Event.InvoiceCreated.Client
   alias Conta.Event.InvoiceCreated.Company

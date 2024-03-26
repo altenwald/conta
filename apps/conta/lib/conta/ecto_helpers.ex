@@ -1,4 +1,4 @@
-defmodule Conta.Event do
+defmodule Conta.EctoHelpers do
   import Ecto.Changeset
 
   def traverse_errors(%Ecto.Changeset{valid?: true} = changeset) do

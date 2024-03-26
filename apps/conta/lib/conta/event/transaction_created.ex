@@ -1,6 +1,6 @@
 defmodule Conta.Event.TransactionCreated do
   use TypedEctoSchema
-  import Conta.Event
+  import Conta.EctoHelpers
   import Ecto.Changeset
   alias Conta.Event.TransactionCreated.Entry
 

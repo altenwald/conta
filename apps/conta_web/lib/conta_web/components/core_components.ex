@@ -34,10 +34,16 @@ defmodule ContaWeb.CoreComponents do
     <nav class="navbar" role="navigation" aria-label="main navigation">
       <div class="navbar-brand">
         <a class="navbar-item" href="/">
-          <img src={@logo_url} width="112" height="28">
+          <img src={@logo_url} width="112" height="28" />
         </a>
 
-        <a role="button" class="navbar-burger" aria-label="menu" aria-expanded="false" data-target="navbarMenu">
+        <a
+          role="button"
+          class="navbar-burger"
+          aria-label="menu"
+          aria-expanded="false"
+          data-target="navbarMenu"
+        >
           <span aria-hidden="true"></span>
           <span aria-hidden="true"></span>
           <span aria-hidden="true"></span>
@@ -99,7 +105,7 @@ defmodule ContaWeb.CoreComponents do
 
   def navbar_divider(assigns) do
     ~H"""
-    <hr class="navbar-divider"/>
+    <hr class="navbar-divider" />
     """
   end
 
@@ -251,7 +257,7 @@ defmodule ContaWeb.CoreComponents do
         <div class="icon-text">
           <span><%= gettext("Attempting to reconnect") %></span>
           <span class="icon ml-3">
-            <FontAwesome.spinner class="fa-spin"/>
+            <FontAwesome.spinner class="fa-spin" />
           </span>
         </div>
       </.flash>
@@ -267,7 +273,7 @@ defmodule ContaWeb.CoreComponents do
         <div class="icon-text">
           <span><%= gettext("Hang in there while we get back on track") %></span>
           <span class="icon ml-3">
-            <FontAwesome.arrows_rotate class="fa-spin"/>
+            <FontAwesome.arrows_rotate class="fa-spin" />
           </span>
         </div>
       </.flash>
@@ -408,7 +414,7 @@ defmodule ContaWeb.CoreComponents do
     ~H"""
     <.field id={@id} name={@name} label={@label} class="is-horizontal" errors={@errors}>
       <label class="checkbox">
-        <input type="hidden" name={@name} value="false"/>
+        <input type="hidden" name={@name} value="false" />
         <input
           type="checkbox"
           id={@id}
@@ -427,20 +433,13 @@ defmodule ContaWeb.CoreComponents do
   def input(%{type: "select"} = assigns) do
     ~H"""
     <.field id={@id} name={@name} label={@label} class="is-horizontal" errors={@errors}>
-      <div
-        class={[
-          "select",
-          "is-fullwidth",
-          @multiple && "is-multiple",
-          @errors != [] && "is-danger"
-        ]}
-      >
-        <select
-          id={@id}
-          name={@name}
-          multiple={@multiple}
-          {@rest}
-        >
+      <div class={[
+        "select",
+        "is-fullwidth",
+        @multiple && "is-multiple",
+        @errors != [] && "is-danger"
+      ]}>
+        <select id={@id} name={@name} multiple={@multiple} {@rest}>
           <option :if={@prompt} value=""><%= @prompt %></option>
           <%= Phoenix.HTML.Form.options_for_select(@options, @value) %>
         </select>
@@ -452,12 +451,7 @@ defmodule ContaWeb.CoreComponents do
   def input(%{type: "textarea"} = assigns) do
     ~H"""
     <.field id={@id} name={@name} label={@label} class="is-horizontal" errors={@errors}>
-      <textarea
-        id={@id}
-        name={@name}
-        class={["textarea", @errors != [] && "is-danger"]}
-        {@rest}
-      ><%= Phoenix.HTML.Form.normalize_value("textarea", @value) %></textarea>
+      <textarea id={@id} name={@name} class={["textarea", @errors != [] && "is-danger"]} {@rest}><%= Phoenix.HTML.Form.normalize_value("textarea", @value) %></textarea>
     </.field>
     """
   end
@@ -530,7 +524,7 @@ defmodule ContaWeb.CoreComponents do
     <p class="help is-danger">
       <span class="icon-text">
         <span class="icon mr-3">
-          <FontAwesome.triangle_exclamation/>
+          <FontAwesome.triangle_exclamation />
         </span>
         <%= render_slot(@inner_block) %>
       </span>
@@ -580,10 +574,7 @@ defmodule ContaWeb.CoreComponents do
           </th>
         </tr>
       </thead>
-      <tbody
-        id={@id}
-        phx-update={match?(%Phoenix.LiveView.LiveStream{}, @rows) && "stream"}
-      >
+      <tbody id={@id} phx-update={match?(%Phoenix.LiveView.LiveStream{}, @rows) && "stream"}>
         <tr :for={row <- @rows} id={@row_id && @row_id.(row)}>
           <td :for={col <- @col} class={["is-vcentered", col[:class]]}>
             <%= render_slot(col, @row_item.(row)) %>
@@ -612,9 +603,11 @@ defmodule ContaWeb.CoreComponents do
   def back(assigns) do
     ~H"""
     <div class="mt-3">
-      <.link navigate={@navigate}>
-        <FontAwesome.arrow_left/>
-        <%= render_slot(@inner_block) %>
+      <.link navigate={@navigate} class="icon-text">
+        <span class="icon mr-2">
+          <FontAwesome.arrow_left />
+        </span>
+        <span><%= render_slot(@inner_block) %></span>
       </.link>
     </div>
     """

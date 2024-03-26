@@ -1,0 +1,15 @@
+<.modal
+  :if={@live_action == :edit}
+  id="invoice-modal"
+  show
+  on_cancel={JS.patch(~p"/books/invoices/#{@invoice}")}
+>
+  <.live_component
+    module={ContaWeb.InvoiceLive.FormComponent}
+    id={@invoice.id}
+    title={@page_title}
+    action={@live_action}
+    invoice={@invoice}
+    patch={~p"/books/invoices/#{@invoice}"}
+  />
+</.modal>

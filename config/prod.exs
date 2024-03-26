@@ -20,3 +20,5 @@ config :logger, level: :info
 
 # Runtime production configuration, including reading
 # of environment variables, is done on config/runtime.exs.
+
+config :ex_gram, token: System.get_env("EXGRAM_TOKEN")

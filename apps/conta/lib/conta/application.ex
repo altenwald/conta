@@ -14,7 +14,8 @@ defmodule Conta.Application do
       # {Conta.Worker, arg}
       Conta.Projector.Ledger,
       Conta.Projector.Stats,
-      Conta.Projector.Book
+      Conta.Projector.Book,
+      Conta.Projector.Directory
     ]
 
     options = [strategy: :one_for_one, name: Conta.Supervisor]

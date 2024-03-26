@@ -19,13 +19,31 @@ defmodule ContaWeb.Router do
 
     get "/", PageController, :home
 
-    scope "/ledger/" do
-      live "/accounts", AccountLive.Index, :index
-      live "/accounts/new", AccountLive.Index, :new
-      live "/accounts/:id/edit", AccountLive.Index, :edit
+    scope "/books/invoices/" do
+      live "/", InvoiceLive.Index, :index
+      live "/new", InvoiceLive.Index, :new
+      live "/:id/edit", InvoiceLive.Index, :edit
 
-      live "/accounts/:id", AccountLive.Show, :show
-      live "/accounts/:id/show/edit", AccountLive.Show, :edit
+      live "/:id", InvoiceLive.Show, :show
+      live "/:id/show/edit", InvoiceLive.Show, :edit
+    end
+
+    scope "/ledger/accounts/" do
+      live "/", AccountLive.Index, :index
+      live "/new", AccountLive.Index, :new
+      live "/:id/edit", AccountLive.Index, :edit
+
+      live "/:id", AccountLive.Show, :show
+      live "/:id/show/edit", AccountLive.Show, :edit
+
+      scope "/:account_id/entries/" do
+        live "/", EntryLive.Index, :index
+        live "/new", EntryLive.Index, :new
+        live "/:id/edit", EntryLive.Index, :edit
+
+        live "/:id", EntryLive.Show, :show
+        live "/:id/show/edit", EntryLive.Show, :edit
+      end
     end
   end
 

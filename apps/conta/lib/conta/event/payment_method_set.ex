@@ -1,4 +1,4 @@
-defmodule Conta.Event.CompanySet do
+defmodule Conta.Event.PaymentMethodSet do
   use TypedEctoSchema
   import Conta.EctoHelpers
   import Ecto.Changeset
@@ -8,16 +8,14 @@ defmodule Conta.Event.CompanySet do
   @derive Jason.Encoder
   typed_embedded_schema do
     field :nif, :string
+    field :slug, :string
     field :name, :string
-    field :address, :string
-    field :postcode, :string
-    field :city, :string
-    field :state, :string
-    field :country, :string
+    field :method, :string
+    field :details, :string
   end
 
-  @required_fields ~w[nif name address postcode city state country]a
-  @optional_fields ~w[]a
+  @required_fields ~w[nif slug name method]a
+  @optional_fields ~w[details]a
 
   @doc false
   def changeset(model \\ %__MODULE__{}, params) do
