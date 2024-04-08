@@ -13,9 +13,9 @@ defmodule Conta.Command.CreateInvoice do
     field :paid_date, :date
     field :due_date, :date
     field :type, Ecto.Enum, values: ~w[product service]a
-    field :subtotal_price, Money.Ecto.Amount.Type
-    field :tax_price, Money.Ecto.Amount.Type
-    field :total_price, Money.Ecto.Amount.Type
+    field :subtotal_price, :decimal
+    field :tax_price, :decimal
+    field :total_price, :decimal
     field :currency, Money.Ecto.Currency.Type
     field :comments, :string
     field :destination_country, :string
@@ -24,10 +24,10 @@ defmodule Conta.Command.CreateInvoice do
       field :sku, :string
       field :description, :string
       field :tax, :integer
-      field :base_price, :integer
+      field :base_price, :decimal
       field :units, :integer, default: 1
-      field :tax_price, :integer
-      field :total_price, :integer
+      field :tax_price, :decimal
+      field :total_price, :decimal
     end
   end
 
@@ -50,5 +50,9 @@ defmodule Conta.Command.CreateInvoice do
     model
     |> cast(params, @required_fields ++ @optional_fields)
     |> validate_required(@required_fields)
+  end
+
+  def to_command(changeset) do
+    apply_changes(changeset)
   end
 end

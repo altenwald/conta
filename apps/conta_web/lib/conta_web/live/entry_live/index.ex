@@ -10,8 +10,16 @@ defmodule ContaWeb.EntryLive.Index do
 
     {:ok,
      socket
-     |> stream(:ledger_entries, Ledger.list_entries_by_account(account))
+     |> stream(:ledger_entries, list_entries_by_account(account))
      |> assign(:account, account)}
+  end
+
+  defp list_entries_by_account(account) do
+    account
+    |> Ledger.list_entries_by_account()
+    |> Enum.group_by(& &1.on_date)
+    |> Enum.map(fn {on_date, entries} -> %{id: on_date, title: on_date, rows: entries} end)
+    |> Enum.sort_by(& &1.title, {:desc, Date})
   end
 
   @impl true

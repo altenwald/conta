@@ -27,6 +27,7 @@ defmodule ContaWeb.InvoiceLive.Index do
     socket
     |> assign(:page_title, "New Invoice")
     |> assign(:invoice_number, create_invoice.invoice_number)
+    |> assign(:company_nif, create_invoice.nif)
     |> assign(:create_invoice, create_invoice)
   end
 

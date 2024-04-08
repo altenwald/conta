@@ -27,7 +27,6 @@
               end
             }
           >
-            <:col :let={{_id, entry}} label={gettext("date")}><%= entry.on_date %></:col>
             <:col :let={{_id, entry}} label={gettext("description")}>
               <span title={entry.description}><%= description(entry.description) %></span>
             </:col>

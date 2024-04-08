@@ -9,10 +9,10 @@ defmodule Conta.Event.InvoiceCreated.Detail do
     field :sku, :string
     field :description, :string
     field :tax, :integer
-    field :base_price, :integer
+    field :base_price, :decimal
     field :units, :integer, default: 1
-    field :tax_price, :integer
-    field :total_price, :integer
+    field :tax_price, :decimal
+    field :total_price, :decimal
   end
 
   @required_fields ~w[description tax base_price tax_price total_price]a

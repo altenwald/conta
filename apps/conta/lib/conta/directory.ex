@@ -11,6 +11,8 @@ defmodule Conta.Directory do
     |> Repo.all()
   end
 
+  def get_contact(nif), do: Repo.get_by(Contact, nif: nif)
+
   def contact_set(params) do
     with {:ok, command} <- SetContact.changeset(params) do
       dispatch(command)

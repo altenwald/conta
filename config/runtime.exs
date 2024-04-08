@@ -75,3 +75,5 @@ if config_env() == :prod do
 end
 
 config :conta_bot, :granted_users, String.split(System.get_env("GRANTED_USERS"), ",")
+
+config :conta, :default_company_nif, System.get_env("DEFAULT_COMPANY_NIF")

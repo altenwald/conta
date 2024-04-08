@@ -5,6 +5,8 @@ defmodule Conta.Projector.Book.Invoice do
   @primary_key {:id, :binary_id, autogenerate: true}
   @foreign_key_type :binary_id
 
+  @currencies Map.new(Map.keys(Money.Currency.all()), &{&1, to_string(&1)})
+
   typed_schema "book_invoices" do
     field :template, :string, default: "default"
     field :invoice_number, :string
@@ -14,6 +16,7 @@ defmodule Conta.Projector.Book.Invoice do
     field :subtotal_price, :integer
     field :tax_price, :integer
     field :total_price, :integer
+    field :currency, Ecto.Enum, values: Map.keys(Money.Currency.all()), default: :EUR
     field :comments, :string
     field :destination_country, :string
 
@@ -44,7 +47,7 @@ defmodule Conta.Projector.Book.Invoice do
       @methods ~w[cash bank gateway]a
 
       field :method, Ecto.Enum, values: @methods
-      field :details, :string
+      field :details, :string, default: ""
     end
 
     embeds_many :details, Detail do
@@ -61,24 +64,24 @@ defmodule Conta.Projector.Book.Invoice do
   end
 
   @required_fields ~w[invoice_number invoice_date type subtotal_price tax_price total_price destination_country]a
-  @optional_fields ~w[due_date comments template]a
+  @optional_fields ~w[due_date comments template currency]a
 
   @doc false
   def changeset(model \\ %__MODULE__{}, params) do
     model
     |> cast(params, @required_fields ++ @optional_fields)
     |> validate_required(@required_fields)
-    |> cast_embed(:payment_method, with: &changeset_payment/2)
+    |> cast_embed(:payment_method, with: &changeset_payment_method/2)
     |> cast_embed(:client, with: &changeset_client/2)
     |> cast_embed(:company, with: &changeset_company/2)
     |> cast_embed(:details, with: &changeset_details/2)
   end
 
   @doc false
-  def changeset_payment(model, params) do
+  def changeset_payment_method(model, params) do
     model
     |> cast(params, [:method, :details])
-    |> validate_required([:method, :details])
+    |> validate_required([:method])
   end
 
   @required_fields ~w[name nif country]a

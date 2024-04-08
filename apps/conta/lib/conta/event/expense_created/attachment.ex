@@ -1,4 +1,4 @@
-defmodule Conta.Event.InvoiceCreated.PaymentMethod do
+defmodule Conta.Event.ExpenseCreated.Attachment do
   use TypedEctoSchema
   import Ecto.Changeset
 
@@ -7,12 +7,14 @@ defmodule Conta.Event.InvoiceCreated.PaymentMethod do
   @derive Jason.Encoder
   typed_embedded_schema do
     field :name, :string
-    field :method, :string
-    field :details, :string
+    field :file, :binary
+    field :mimetype, :string
+    field :size, :integer
+    timestamps()
   end
 
-  @required_fields ~w[name method]a
-  @optional_fields ~w[details]a
+  @required_fields ~w[name file mimetype size]a
+  @optional_fields ~w[inserted_at updated_at]a
 
   @doc false
   def changeset(model \\ %__MODULE__{}, params) do

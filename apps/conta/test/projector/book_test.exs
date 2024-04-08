@@ -48,17 +48,17 @@ defmodule Conta.Projector.BookTest do
       event =
         %Conta.Event.InvoiceCreated{
           invoice_number: 1,
-          invoice_date: ~D[2023-12-30],
+          invoice_date: "2023-12-30",
           type: :service,
           subtotal_price: 100_00,
           tax_price: 21_00,
           total_price: 121_00,
           destination_country: "ES",
-          payment_method: %Conta.Event.InvoiceCreated.PaymentMethod{
-            method: :gateway,
+          payment_method: %{
+            method: "gateway",
             details: "myaccount@paypal.com"
           },
-          client: %Conta.Event.InvoiceCreated.Client{
+          client: %{
             name: "My client",
             nif: "B123456789",
             address: "My client's address",
@@ -68,7 +68,7 @@ defmodule Conta.Projector.BookTest do
             country: "ES"
           },
           details: [
-            %Conta.Event.InvoiceCreated.Detail{
+            %{
               description: "Consultancy",
               tax: 21,
               base_price: 100_00,
@@ -76,7 +76,7 @@ defmodule Conta.Projector.BookTest do
               total_price: 121_00
             }
           ],
-          company: %Conta.Event.InvoiceCreated.Company{
+          company: %{
             nif: "A55666777",
             name: "Great Company SA",
             address: "My Full Address",

@@ -5,14 +5,14 @@ defmodule Conta.Projector.Book.PaymentMethod do
   @primary_key {:id, :binary_id, autogenerate: true}
   @foreign_key_type :binary_id
 
-  @methods ~w[cash bank gateway]a
+  @methods ~w[cash bank gateway deposit]a
 
   typed_schema "book_payment_methods" do
     field :nif, :string
     field :name, :string
     field :slug, :string
     field :method, Ecto.Enum, values: @methods, default: :gateway
-    field :details, :string
+    field :details, :string, default: ""
   end
 
   @required_fields ~w[nif name slug]a

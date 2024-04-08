@@ -12,6 +12,7 @@ defmodule Conta.Repo.Migrations.CreateInvoices do
       add :subtotal_price, :integer
       add :tax_price, :integer
       add :total_price, :integer
+      add :currency, :string
       add :comments, :string
       add :destination_country, :string
 

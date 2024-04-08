@@ -1,11 +1,26 @@
 defmodule Conta.Book do
   import Ecto.Query, only: [from: 2]
-  alias Conta.Projector.Book.Invoice
   alias Conta.Command.CreateInvoice
+  alias Conta.Projector.Book.Invoice
+  alias Conta.Projector.Book.PaymentMethod
+  alias Conta.Projector.Book.Template
   alias Conta.Repo
 
   def list_invoices do
-    from(i in Invoice, order_by: i.invoice_date)
+    from(
+      i in Invoice,
+      order_by: [desc: fragment("extract(year from ?)", i.invoice_date), desc: i.invoice_number]
+    )
+    |> Repo.all()
+  end
+
+  def list_payment_methods(nif) do
+    from(p in PaymentMethod, where: p.nif == ^nif, order_by: p.name)
+    |> Repo.all()
+  end
+
+  def list_templates(nif) do
+    from(t in Template, where: t.nif == ^nif, order_by: t.name)
     |> Repo.all()
   end
 
@@ -13,8 +28,9 @@ defmodule Conta.Book do
     invoice_number = get_last_invoice_number()
 
     %CreateInvoice{
+      nif: Application.get_env(:conta, :default_company_nif),
       invoice_number: invoice_number,
-      invoice_date: Date.utc_today()
+      invoice_date: Date.utc_today(),
     }
   end
 

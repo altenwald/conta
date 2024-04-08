@@ -1,4 +1,4 @@
-defmodule Conta.Event.InvoiceCreated.Company do
+defmodule Conta.Event.ExpenseCreated.Provider do
   use TypedEctoSchema
   import Ecto.Changeset
 
@@ -6,8 +6,9 @@ defmodule Conta.Event.InvoiceCreated.Company do
 
   @derive Jason.Encoder
   typed_embedded_schema do
-    field :nif, :string
     field :name, :string
+    field :nif, :string
+    field :intracommunity, :boolean, default: false
     field :address, :string
     field :postcode, :string
     field :city, :string
@@ -15,8 +16,8 @@ defmodule Conta.Event.InvoiceCreated.Company do
     field :country, :string
   end
 
-  @required_fields ~w[nif name country]a
-  @optional_fields ~w[address postcode city state]a
+  @required_fields ~w[name nif country]a
+  @optional_fields ~w[intracommunity address postcode city state]a
 
   @doc false
   def changeset(model \\ %__MODULE__{}, params) do

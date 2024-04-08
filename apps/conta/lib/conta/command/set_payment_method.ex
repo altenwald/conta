@@ -1,9 +1,10 @@
 defmodule Conta.Command.SetPaymentMethod do
   use TypedEctoSchema
 
-  # methods are cash, bank (i.e. wire transfer) and
-  # gateway (i.e. paypal or stripe)
-  @methods ~w[cash bank gateway]a
+  # methods are cash, bank (i.e. wire transfer),
+  # gateway (i.e. paypal or stripe), and
+  # deposit (i.e. resellbiz or netim)
+  @methods ~w[cash bank gateway deposit]a
 
   @primary_key false
 

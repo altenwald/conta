@@ -26,9 +26,13 @@ defmodule Conta.Aggregate.Company do
             payment_methods: %{},
             template_names: MapSet.new(["default"])
 
-  def execute(%__MODULE__{}, %SetCompany{} = command) do
+  def execute(_company, %SetCompany{} = command) do
     params = Map.from_struct(command)
     CompanySet.changeset(params)
+  end
+
+  def execute(%__MODULE__{nif: nil} = company, _command) do
+    {:error, :company_not_found}
   end
 
   def execute(%__MODULE__{}, %SetTemplate{} = command) do
@@ -103,10 +107,6 @@ defmodule Conta.Aggregate.Company do
     event
     |> Map.from_struct()
     |> then(&struct(company, &1))
-  end
-
-  def apply(%__MODULE__{nif: nil}, %TemplateSet{}) do
-    {:error, :company_not_found}
   end
 
   def apply(%__MODULE__{} = company, %TemplateSet{} = event) do

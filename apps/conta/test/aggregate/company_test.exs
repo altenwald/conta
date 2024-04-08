@@ -293,18 +293,19 @@ defmodule Conta.Aggregate.CompanyTest do
         invoice_number: 1,
         invoice_date: Date.new!(2023, 12, 20),
         type: :service,
-        subtotal_price: 100_00,
-        tax_price: 21_00,
-        total_price: 121_00,
+        subtotal_price: Decimal.new("100.00"),
+        tax_price: Decimal.new("21.00"),
+        total_price: Decimal.new("121.00"),
+        currency: "EUR",
         destination_country: "ES",
         payment_method: "paypal",
         details: [
           %Conta.Command.CreateInvoice.Detail{
             description: "Consultancy",
             tax: 21,
-            base_price: 100_00,
-            tax_price: 21_00,
-            total_price: 121_00
+            base_price: Decimal.new("100.00"),
+            tax_price: Decimal.new("21.00"),
+            total_price: Decimal.new("121.00")
           }
         ]
       }
@@ -315,11 +316,12 @@ defmodule Conta.Aggregate.CompanyTest do
         invoice_number: 1,
         invoice_date: Date.new!(2023, 12, 20),
         type: :service,
-        subtotal_price: 100_00,
-        tax_price: 21_00,
-        total_price: 121_00,
+        subtotal_price: Decimal.new("100.00"),
+        tax_price: Decimal.new("21.00"),
+        total_price: Decimal.new("121.00"),
+        currency: "EUR",
         destination_country: "ES",
-        payment_method: %Conta.Event.InvoiceCreated.PaymentMethod{
+        payment_method: %Conta.Event.Common.PaymentMethod{
           name: "PayPal",
           method: "gateway",
           details: "myaccount@paypal.com"
@@ -337,12 +339,12 @@ defmodule Conta.Aggregate.CompanyTest do
           %Conta.Event.InvoiceCreated.Detail{
             description: "Consultancy",
             tax: 21,
-            base_price: 100_00,
-            tax_price: 21_00,
-            total_price: 121_00
+            base_price: Decimal.new("100.00"),
+            tax_price: Decimal.new("21.00"),
+            total_price: Decimal.new("121.00")
           }
         ],
-        company: %Conta.Event.InvoiceCreated.Company{
+        company: %Conta.Event.Common.Company{
           nif: "A55666777",
           name: "Great Company SA",
           address: "My Full Address",
@@ -408,18 +410,19 @@ defmodule Conta.Aggregate.CompanyTest do
         invoice_number: 1,
         invoice_date: Date.new!(2023, 12, 20),
         type: :service,
-        subtotal_price: 100_00,
-        tax_price: 21_00,
-        total_price: 121_00,
+        subtotal_price: Decimal.new("100.00"),
+        tax_price: Decimal.new("21.00"),
+        total_price: Decimal.new("121.00"),
+        currency: "EUR",
         destination_country: "ES",
         payment_method: "paypal",
         details: [
           %Conta.Command.CreateInvoice.Detail{
             description: "Consultancy",
             tax: 21,
-            base_price: 100_00,
-            tax_price: 21_00,
-            total_price: 121_00
+            base_price: Decimal.new("100.00"),
+            tax_price: Decimal.new("21.00"),
+            total_price: Decimal.new("121.00")
           }
         ]
       }
@@ -430,11 +433,12 @@ defmodule Conta.Aggregate.CompanyTest do
         invoice_number: 1,
         invoice_date: Date.new!(2023, 12, 20),
         type: :service,
-        subtotal_price: 100_00,
-        tax_price: 21_00,
-        total_price: 121_00,
+        subtotal_price: Decimal.new("100.00"),
+        tax_price: Decimal.new("21.00"),
+        total_price: Decimal.new("121.00"),
+        currency: "EUR",
         destination_country: "ES",
-        payment_method: %Conta.Event.InvoiceCreated.PaymentMethod{
+        payment_method: %Conta.Event.Common.PaymentMethod{
           name: "PayPal",
           method: "gateway",
           details: "myaccount@paypal.com"
@@ -444,12 +448,12 @@ defmodule Conta.Aggregate.CompanyTest do
           %Conta.Event.InvoiceCreated.Detail{
             description: "Consultancy",
             tax: 21,
-            base_price: 100_00,
-            tax_price: 21_00,
-            total_price: 121_00
+            base_price: Decimal.new("100.00"),
+            tax_price: Decimal.new("21.00"),
+            total_price: Decimal.new("121.00")
           }
         ],
-        company: %Conta.Event.InvoiceCreated.Company{
+        company: %Conta.Event.Common.Company{
           nif: "A55666777",
           name: "Great Company SA",
           address: "My Full Address",
@@ -504,18 +508,18 @@ defmodule Conta.Aggregate.CompanyTest do
         invoice_number: 1,
         invoice_date: Date.new!(2023, 12, 20),
         type: :service,
-        subtotal_price: 100_00,
-        tax_price: 21_00,
-        total_price: 121_00,
+        subtotal_price: Money.new(100_00),
+        tax_price: Money.new(21_00),
+        total_price: Money.new(121_00),
         destination_country: "ES",
         payment_method: "stripe",
         details: [
           %Conta.Command.CreateInvoice.Detail{
             description: "Consultancy",
             tax: 21,
-            base_price: 100_00,
-            tax_price: 21_00,
-            total_price: 121_00
+            base_price: Money.new(100_00),
+            tax_price: Money.new(21_00),
+            total_price: Money.new(121_00)
           }
         ]
       }

@@ -28,13 +28,17 @@
             </:col>
             <:col :let={{_id, invoice}} label={gettext("date")}><%= invoice.invoice_date %></:col>
             <:col :let={{_id, invoice}} label={gettext("client")}>
-              <%= if(client = invoice.client, do: client.name) %>
+              <%= if(client = invoice.client, do: client.name, else: gettext("Customer from %{country}", country: Countries.get(invoice.destination_country).name)) %>
             </:col>
-            <:col :let={{_id, invoice}} label={gettext("subtotal")}>
-              <%= invoice.subtotal_price %>
+            <:col :let={{_id, invoice}} label={gettext("subtotal")} class="has-text-right">
+              <%= Money.new(invoice.subtotal_price, invoice.currency) %>
             </:col>
-            <:col :let={{_id, invoice}} label={gettext("tax")}><%= invoice.tax_price %></:col>
-            <:col :let={{_id, invoice}} label={gettext("total")}><%= invoice.total_price %></:col>
+            <:col :let={{_id, invoice}} label={gettext("tax")} class="has-text-right">
+              <%= Money.new(invoice.tax_price, invoice.currency) %>
+            </:col>
+            <:col :let={{_id, invoice}} label={gettext("total")} class="has-text-right">
+              <%= Money.new(invoice.total_price, invoice.currency) %>
+            </:col>
           </.table>
         </div>
       </div>
@@ -54,6 +58,7 @@
     title={@page_title}
     action={@live_action}
     create_invoice={@create_invoice}
+    company_nif={@company_nif}
     patch={~p"/books/invoices"}
   />
 </.modal>

@@ -44,11 +44,11 @@ defmodule ContaWeb.AccountLive.Index do
   # end
 
   defp get_balance(%_{currency: currency, balances: balances}) do
-    balances = Enum.group_by(balances, & &1.currency, & &1.amount)
+    balances = Enum.group_by(balances, & &1.currency, & &1.amount.amount)
 
     case balances[currency] do
-      [currency] -> to_string(currency)
-      nil -> nil
+      [money] -> to_string(Money.new(money, currency))
+      nil -> to_string(Money.new(0, currency))
     end
   end
 end

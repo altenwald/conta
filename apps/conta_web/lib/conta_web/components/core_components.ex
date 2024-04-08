@@ -574,8 +574,8 @@ defmodule ContaWeb.CoreComponents do
           </th>
         </tr>
       </thead>
-      <tbody id={@id} phx-update={match?(%Phoenix.LiveView.LiveStream{}, @rows) && "stream"}>
-        <tr :for={row <- @rows} id={@row_id && @row_id.(row)}>
+      <tbody id={@id} phx-update={if is_struct(@rows, Phoenix.LiveView.LiveStream), do: "stream"}>
+        <tr :for={{_id, %_{}} = row <- @rows} id={@row_id && @row_id.(row)}>
           <td :for={col <- @col} class={["is-vcentered", col[:class]]}>
             <%= render_slot(col, @row_item.(row)) %>
           </td>
@@ -585,6 +585,16 @@ defmodule ContaWeb.CoreComponents do
             <% end %>
           </td>
         </tr>
+        <%= for {_id, %{rows: rows, title: title}} <- @rows do %>
+          <tr>
+            <th colspan={length(@col)}><%= title %></th>
+          </tr>
+          <tr :for={row <- rows} id={@row_id && @row_id.({row.id, row})}>
+            <td :for={col <- @col} class={["is-vcentered", col[:class]]}>
+              <%= render_slot(col, @row_item.({row.id, row})) %>
+            </td>
+          </tr>
+        <% end %>
       </tbody>
     </table>
     """

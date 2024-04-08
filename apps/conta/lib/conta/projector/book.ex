@@ -11,21 +11,46 @@ defmodule Conta.Projector.Book do
   alias Conta.Projector.Book.PaymentMethod
   alias Conta.Projector.Book.Template
 
+  defp to_integer(i) when is_integer(i), do: i
+
+  defp to_integer(f) when is_float(f), do: ceil(f * 100)
+
+  defp to_integer(str) when is_binary(str) do
+    str
+    |> Decimal.parse()
+    |> then(fn {decimal, ""} -> to_integer(decimal) end)
+  end
+
+  defp to_integer(decimal) when is_struct(decimal, Decimal) do
+    decimal
+    |> Decimal.mult(100)
+    |> Decimal.round(0, :ceiling)
+    |> Decimal.to_integer()
+  end
+
   project(%InvoiceCreated{} = invoice, _metadata, fn multi ->
+    invoice_date = Date.from_iso8601!(invoice.invoice_date)
     invoice_number =
       invoice.invoice_number
       |> to_string()
       |> String.pad_leading(5, "0")
-      |> then(&"#{invoice.invoice_date.year}-#{&1}")
+      |> then(&"#{invoice_date.year}-#{&1}")
 
     params =
       invoice
       |> Map.from_struct()
       |> Map.put(:invoice_number, invoice_number)
-      |> Map.put(:payment_method, Map.from_struct(invoice.payment_method))
-      |> Map.put(:client, Map.from_struct(invoice.client))
-      |> Map.put(:company, Map.from_struct(invoice.company))
-      |> Map.update!(:details, fn details -> Enum.map(details, &Map.from_struct/1) end)
+      |> Map.update!(:subtotal_price, &to_integer/1)
+      |> Map.update!(:tax_price, &to_integer/1)
+      |> Map.update!(:total_price, &to_integer/1)
+      |> Map.update!(:details, fn details ->
+        for detail <- details do
+          detail
+          |> Map.update!(:base_price, &to_integer/1)
+          |> Map.update!(:tax_price, &to_integer/1)
+          |> Map.update!(:total_price, &to_integer/1)
+        end
+      end)
 
     changeset = Invoice.changeset(params)
     Ecto.Multi.insert(multi, :invoice, changeset)
