@@ -24,8 +24,9 @@ defmodule ContaWeb.Router do
       live "/new", InvoiceLive.Index, :new
       live "/:id/edit", InvoiceLive.Index, :edit
 
-      live "/:id", InvoiceLive.Show, :show
-      live "/:id/show/edit", InvoiceLive.Show, :edit
+      live_session :default, root_layout: {ContaWeb.Layouts, :root_print} do
+        live "/:id", InvoiceLive.Show, :show
+      end
     end
 
     scope "/ledger/accounts/" do

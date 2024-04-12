@@ -23,12 +23,25 @@
             rows={@streams.books_invoices}
             row_click={fn {_id, invoice} -> JS.navigate(~p"/books/invoices/#{invoice}") end}
           >
+            <:action :let={{_id, invoice}}>
+              <.link class="button is-info is-light" navigate={~p"/books/invoices/#{invoice}"}>
+                <span class="icon">
+                  <FontAwesome.file_invoice />
+                </span>
+              </.link>
+            </:action>
             <:col :let={{_id, invoice}} label={gettext("date")}>
               <%= invoice.invoice_number %>
             </:col>
             <:col :let={{_id, invoice}} label={gettext("date")}><%= invoice.invoice_date %></:col>
             <:col :let={{_id, invoice}} label={gettext("client")}>
-              <%= if(client = invoice.client, do: client.name, else: gettext("Customer from %{country}", country: Countries.get(invoice.destination_country).name)) %>
+              <%= if(client = invoice.client,
+                do: client.name,
+                else:
+                  gettext("Customer from %{country}",
+                    country: Countries.get(invoice.destination_country).name
+                  )
+              ) %>
             </:col>
             <:col :let={{_id, invoice}} label={gettext("subtotal")} class="has-text-right">
               <%= Money.new(invoice.subtotal_price, invoice.currency) %>

@@ -21,6 +21,7 @@ defmodule Conta.Aggregate.Company do
             city: nil,
             state: nil,
             country: nil,
+            details: nil,
             invoice_numbers: %{},
             contacts: %{},
             payment_methods: %{},
@@ -84,7 +85,7 @@ defmodule Conta.Aggregate.Company do
         |> Map.put(:client, process_client(company.contacts[client_nif]))
         |> Map.put(:details, process_details(command))
         |> Map.put(:payment_method, process_payment_method(company.payment_methods[payment_method]))
-        |> Map.put(:company, Map.take(company, ~w[nif name address postcode city state country]a))
+        |> Map.put(:company, Map.take(company, ~w[nif name address postcode city state country details]a))
         |> InvoiceCreated.changeset()
     end
   end

@@ -14,5 +14,6 @@ defmodule Conta.Command.SetPaymentMethod do
     field :name, :string
     field :method, Ecto.Enum, values: @methods
     field :details, :string
+    field :holder, :string
   end
 end

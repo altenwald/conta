@@ -14,14 +14,44 @@ defmodule Conta.Book do
     |> Repo.all()
   end
 
+  def get_invoice!(id) do
+    Repo.get!(Invoice, id)
+  end
+
+  def list_payment_methods(nif \\ nil)
+
+  def list_payment_methods(nil) do
+    list_payment_methods(Application.get_env(:conta, :default_company_nif))
+  end
+
   def list_payment_methods(nif) do
     from(p in PaymentMethod, where: p.nif == ^nif, order_by: p.name)
     |> Repo.all()
   end
 
+  def list_templates(nif \\ nil)
+
+  def list_templates(nil) do
+    list_templates(Application.get_env(:conta, :default_company_nif))
+  end
+
   def list_templates(nif) do
     from(t in Template, where: t.nif == ^nif, order_by: t.name)
     |> Repo.all()
+  end
+
+  def get_template_by_name!(nif \\ nil, name)
+
+  def get_template_by_name!(nil, name) do
+    get_template_by_name!(Application.fetch_env!(:conta, :default_company_nif), name)
+  end
+
+  def get_template_by_name!(nif, nil) do
+    get_template_by_name!(nif, Application.fetch_env!(:conta, :default_template))
+  end
+
+  def get_template_by_name!(nif, name) do
+    Repo.get_by!(Template, name: name, nif: nif)
   end
 
   def new_create_invoice do

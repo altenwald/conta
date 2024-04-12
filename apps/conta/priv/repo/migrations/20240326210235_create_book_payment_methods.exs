@@ -9,6 +9,7 @@ defmodule Conta.Repo.Migrations.CreateBookPaymentMethods do
       add :slug, :string
       add :method, :string
       add :details, :string
+      add :holder, :string
     end
 
     create unique_index(:book_payment_methods, [:nif, :slug])

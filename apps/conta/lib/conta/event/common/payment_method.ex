@@ -9,10 +9,11 @@ defmodule Conta.Event.Common.PaymentMethod do
     field :name, :string
     field :method, :string
     field :details, :string
+    field :holder, :string
   end
 
   @required_fields ~w[name method]a
-  @optional_fields ~w[details]a
+  @optional_fields ~w[details holder]a
 
   @doc false
   def changeset(model \\ %__MODULE__{}, params) do

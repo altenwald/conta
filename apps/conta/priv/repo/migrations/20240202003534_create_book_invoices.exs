@@ -7,6 +7,7 @@ defmodule Conta.Repo.Migrations.CreateInvoices do
       add :template, :string
       add :invoice_number, :string
       add :invoice_date, :date
+      add :paid_date, :date
       add :due_date, :date
       add :type, :string
       add :subtotal_price, :integer

@@ -14,6 +14,7 @@ defmodule Conta.Event.InvoiceCreated do
     field :template, :string, default: "default"
     field :invoice_number, :integer
     field :invoice_date, :date
+    field :paid_date, :date
     field :due_date, :date
     field :type, Ecto.Enum, values: ~w[product service]a
     field :subtotal_price, :decimal
@@ -29,7 +30,7 @@ defmodule Conta.Event.InvoiceCreated do
   end
 
   @required_fields ~w[invoice_number invoice_date type subtotal_price tax_price total_price destination_country currency]a
-  @optional_fields ~w[template due_date comments]a
+  @optional_fields ~w[template paid_date due_date comments]a
 
   @doc false
   def changeset(model \\ %__MODULE__{}, params) do

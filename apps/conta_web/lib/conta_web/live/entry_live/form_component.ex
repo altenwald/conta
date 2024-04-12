@@ -27,6 +27,10 @@ defmodule ContaWeb.EntryLive.FormComponent do
     """
   end
 
+  defp list_accounts do
+    for account <- Ledger.list_accounts(), do: Enum.join(account.name, ".")
+  end
+
   @impl true
   def update(%{entry: entry} = assigns, socket) do
     changeset = Ledger.change_entry(entry)

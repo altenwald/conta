@@ -13,10 +13,11 @@ defmodule Conta.Projector.Book.PaymentMethod do
     field :slug, :string
     field :method, Ecto.Enum, values: @methods, default: :gateway
     field :details, :string, default: ""
+    field :holder, :string
   end
 
   @required_fields ~w[nif name slug]a
-  @optional_fields ~w[method details]a
+  @optional_fields ~w[method details holder]a
 
   @doc false
   def changeset(model \\ %__MODULE__{}, params) do

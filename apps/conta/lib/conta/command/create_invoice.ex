@@ -7,7 +7,7 @@ defmodule Conta.Command.CreateInvoice do
   typed_embedded_schema do
     field :nif, :string
     field :client_nif, :string
-    field :template, :string, default: "default"
+    field :template, :string
     field :invoice_number, :integer
     field :invoice_date, :date
     field :paid_date, :date

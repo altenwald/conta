@@ -11,5 +11,6 @@ defmodule Conta.Command.SetCompany do
     field :city, :string
     field :state, :string
     field :country, :string
+    field :details, :string
   end
 end

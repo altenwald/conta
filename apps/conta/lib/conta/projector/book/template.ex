@@ -15,7 +15,7 @@ defmodule Conta.Projector.Book.Template do
     timestamps()
   end
 
-  @required_fields ~w[name]a
+  @required_fields ~w[nif name]a
   @optional_fields ~w[css logo logo_mime_type]a
 
   @doc false

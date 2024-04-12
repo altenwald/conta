@@ -1,0 +1,103 @@
+/* This file is for your main application css. */
+
+// NOT SUPPORTED?!?
+// @charset "utf-8";
+$table-row-active-background-color: #3298dc;
+
+@import "bulma";
+
+.money {
+  font-family: 'Consolas', monospace;
+}
+@media print {
+  body { -webkit-print-color-adjust: exact; }
+  div.print-foot {
+    page-break-after: always;
+    page-break-inside: avoid;
+  }
+}
+
+datalist#series-matches,
+datalist#accounts-matches {
+  position: absolute;
+  display: block;
+  z-index: 1;
+  border: 1px solid $border;
+  padding: 5px;
+  background-color: white;
+  cursor: pointer;
+}
+
+datalist#series-matches > option:hover,
+datalist#accounts-matches > option:hover {
+  background-color: $cyan;
+  color: $white;
+}
+
+.has-nowrap {
+  white-space: nowrap;
+}
+
+.field.is-centered {
+  text-align: center;
+}
+
+.modal-card-body {
+  color: #000000;
+}
+
+.invoice-title {
+  font-size: 30px;
+  font-weight: bolder;
+}
+
+tr.tr-bottom {
+  border-bottom: 2px solid darkgray;
+}
+
+table > thead > tr.first > th {
+  position: -webkit-sticky; /* Safari */
+  position: sticky;
+  top: 0;
+  background-color: white;
+  z-index: 1;
+}
+
+table > thead > tr.second > th {
+  background-color: white;
+}
+
+aside.menu {
+  position: fixed;
+  width: 20%;
+}
+
+#document_base64_container {
+  padding-top: 15px;
+}
+
+tr.simple-invoice {
+  height: 10.5rem;
+}
+
+tr.simple-invoice td {
+  vertical-align: middle;
+  text-align: center;
+}
+
+.invoice-logo {
+  width: 300px;
+}
+
+.invoice-comments {
+  height: 150px;
+}
+
+/*******************************/
+
+html, body {
+  font-size: 13px;
+}
+.columns {
+  margin: 0 !important;
+}

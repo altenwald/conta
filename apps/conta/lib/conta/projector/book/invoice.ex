@@ -11,6 +11,7 @@ defmodule Conta.Projector.Book.Invoice do
     field :template, :string, default: "default"
     field :invoice_number, :string
     field :invoice_date, :date
+    field :paid_date, :date
     field :due_date, :date
     field :type, Ecto.Enum, values: ~w[product service]a
     field :subtotal_price, :integer
@@ -39,6 +40,7 @@ defmodule Conta.Projector.Book.Invoice do
       field :city, :string
       field :state, :string
       field :country, :string
+      field :details, :string
     end
 
     embeds_one :payment_method, PaymentMethod do
@@ -48,6 +50,8 @@ defmodule Conta.Projector.Book.Invoice do
 
       field :method, Ecto.Enum, values: @methods
       field :details, :string, default: ""
+      field :name, :string
+      field :holder, :string
     end
 
     embeds_many :details, Detail do
@@ -64,7 +68,7 @@ defmodule Conta.Projector.Book.Invoice do
   end
 
   @required_fields ~w[invoice_number invoice_date type subtotal_price tax_price total_price destination_country]a
-  @optional_fields ~w[due_date comments template currency]a
+  @optional_fields ~w[paid_date due_date comments template currency]a
 
   @doc false
   def changeset(model \\ %__MODULE__{}, params) do
@@ -80,7 +84,7 @@ defmodule Conta.Projector.Book.Invoice do
   @doc false
   def changeset_payment_method(model, params) do
     model
-    |> cast(params, [:method, :details])
+    |> cast(params, ~w[method details name holder]a)
     |> validate_required([:method])
   end
 
@@ -95,7 +99,7 @@ defmodule Conta.Projector.Book.Invoice do
   end
 
   @required_fields ~w[name nif country]a
-  @optional_fields ~w[address postcode city state]a
+  @optional_fields ~w[address postcode city state details]a
 
   @doc false
   def changeset_company(model, params) do
