@@ -57,6 +57,13 @@ defmodule ContaWeb.InvoiceLive.FormComponent do
               prompt={gettext("Choose a template...")}
             />
             <.input
+              field={@form[:currency]}
+              type="select"
+              label={gettext("Currency")}
+              options={list_currencies()}
+              prompt={gettext("Choose a currency...")}
+            />
+            <.input
               field={@form[:subtotal_price]}
               type="number"
               step=".01"
@@ -139,6 +146,20 @@ defmodule ContaWeb.InvoiceLive.FormComponent do
       </div>
     </div>
     """
+  end
+
+  defp list_currencies do
+    # TODO get more frequent currencies from database entries or put in a specific table/cache
+    frequent = ~w[EUR USD GBP]a
+
+    currencies =
+      Money.Currency.all()
+      |> Map.drop(frequent)
+      |> Map.keys()
+
+    for currency <- frequent ++ currencies do
+      {Money.Currency.name!(currency), currency}
+    end
   end
 
   defp list_clients do

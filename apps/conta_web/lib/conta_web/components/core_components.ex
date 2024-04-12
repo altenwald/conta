@@ -413,7 +413,7 @@ defmodule ContaWeb.CoreComponents do
 
     ~H"""
     <.field id={@id} name={@name} label={@label} class="is-horizontal" errors={@errors}>
-      <label class="checkbox">
+      <label class="b-checkbox checkbox mt-2">
         <input type="hidden" name={@name} value="false" />
         <input
           type="checkbox"
@@ -421,10 +421,10 @@ defmodule ContaWeb.CoreComponents do
           name={@name}
           value="true"
           checked={@checked}
-          class={[@errors != [] && "is-danger"]}
           {@rest}
         />
-        <%= @label %>
+        <span class="check"></span>
+        <span class="control-label"></span>
       </label>
     </.field>
     """
@@ -585,8 +585,8 @@ defmodule ContaWeb.CoreComponents do
             <% end %>
           </td>
         </tr>
-        <%= for {_id, %{rows: rows, title: title}} <- @rows do %>
-          <tr>
+        <%= for {id, %{rows: rows, title: title}} <- @rows do %>
+          <tr id={id}>
             <th colspan={length(@col)}><%= title %></th>
           </tr>
           <tr :for={row <- rows} id={@row_id && @row_id.({row.id, row})}>

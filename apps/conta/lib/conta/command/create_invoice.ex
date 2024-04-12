@@ -16,7 +16,7 @@ defmodule Conta.Command.CreateInvoice do
     field :subtotal_price, :decimal
     field :tax_price, :decimal
     field :total_price, :decimal
-    field :currency, Money.Ecto.Currency.Type
+    field :currency, :string
     field :comments, :string
     field :destination_country, :string
     field :payment_method, :string
@@ -31,7 +31,7 @@ defmodule Conta.Command.CreateInvoice do
     end
   end
 
-  @required_fields ~w[nif invoice_date type subtotal_price tax_price total_price destination_country payment_method]a
+  @required_fields ~w[nif invoice_date currency type subtotal_price tax_price total_price destination_country payment_method]a
   @optional_fields ~w[invoice_number paid_date client_nif template due_date comments]a
 
   @doc false

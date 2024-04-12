@@ -17,7 +17,7 @@ defmodule Conta.Ledger do
     |> dispatch()
   end
 
-  def create_transaction(on_date, entries, ledger \\ "default") do
+  def create_account_transaction(on_date, entries, ledger \\ "default") do
     %AccountTransaction{ledger: ledger, on_date: on_date, entries: entries}
     |> dispatch()
   end

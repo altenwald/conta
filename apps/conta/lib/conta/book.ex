@@ -25,7 +25,7 @@ defmodule Conta.Book do
   end
 
   def new_create_invoice do
-    invoice_number = get_last_invoice_number()
+    invoice_number = get_last_invoice_number() + 1
 
     %CreateInvoice{
       nif: Application.get_env(:conta, :default_company_nif),
@@ -50,8 +50,8 @@ defmodule Conta.Book do
     )
     |> Repo.one()
     |> case do
-      nil -> 1
-      value -> value
+      nil -> 0
+      <<year::binary-size(4), "-", value::binary>> -> String.to_integer(value)
     end
   end
 end

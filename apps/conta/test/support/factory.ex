@@ -20,4 +20,20 @@ defmodule Conta.Factory do
       amount: 10_00
     }
   end
+
+  def entry_factory do
+    id = Ecto.UUID.generate()
+    %Conta.Projector.Ledger.Entry{
+      id: id,
+      on_date: ~D[2024-01-01],
+      description: "Buy something",
+      credit: 10_00,
+      balance: 10_00,
+      transaction_id: "f3093f1f-0a55-4356-b925-831035a8bca7",
+      account_name: ~w[Assets Bank],
+      related_account_name: ~w[Expenses Supermarket],
+      inserted_at: DateTime.utc_now(),
+      updated_at: DateTime.utc_now()
+    }
+  end
 end
