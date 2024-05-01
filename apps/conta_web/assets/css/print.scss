@@ -15,6 +15,9 @@ $table-row-active-background-color: #3298dc;
     page-break-after: always;
     page-break-inside: avoid;
   }
+  .no-print {
+    display: none !important;
+  }
 }
 
 datalist#series-matches,

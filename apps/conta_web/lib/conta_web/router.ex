@@ -10,6 +10,14 @@ defmodule ContaWeb.Router do
     plug :put_secure_browser_headers
   end
 
+  pipeline :printer do
+    plug :accepts, ["html"]
+    plug :fetch_session
+    plug :put_root_layout, html: {ContaWeb.Layouts, :root_print}
+    plug :protect_from_forgery
+    plug :put_secure_browser_headers
+  end
+
   pipeline :api do
     plug :accepts, ["json"]
   end
@@ -24,8 +32,11 @@ defmodule ContaWeb.Router do
       live "/new", InvoiceLive.Index, :new
       live "/:id/edit", InvoiceLive.Index, :edit
 
-      live_session :default, root_layout: {ContaWeb.Layouts, :root_print} do
-        live "/:id", InvoiceLive.Show, :show
+      scope "/" do
+        pipe_through :printer
+
+        get "/:id", InvoiceController, :show
+        get "/:id/download", InvoiceController, :download
       end
     end
 

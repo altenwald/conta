@@ -27,11 +27,12 @@ defmodule ContaWeb.CoreComponents do
       <.nav/>
   """
   attr :logo_url, :string, required: true
+  attr :class, :string, default: nil
   slot :inner_block, required: true
 
   def nav(assigns) do
     ~H"""
-    <nav class="navbar" role="navigation" aria-label="main navigation">
+    <nav class={["navbar", @class]} role="navigation" aria-label="main navigation">
       <div class="navbar-brand">
         <a class="navbar-item" href="/">
           <img src={@logo_url} width="112" height="28" />
@@ -415,14 +416,7 @@ defmodule ContaWeb.CoreComponents do
     <.field id={@id} name={@name} label={@label} class="is-horizontal" errors={@errors}>
       <label class="b-checkbox checkbox mt-2">
         <input type="hidden" name={@name} value="false" />
-        <input
-          type="checkbox"
-          id={@id}
-          name={@name}
-          value="true"
-          checked={@checked}
-          {@rest}
-        />
+        <input type="checkbox" id={@id} name={@name} value="true" checked={@checked} {@rest} />
         <span class="check"></span>
         <span class="control-label"></span>
       </label>

@@ -24,7 +24,11 @@
             row_click={fn {_id, invoice} -> JS.navigate(~p"/books/invoices/#{invoice}") end}
           >
             <:action :let={{_id, invoice}}>
-              <.link class="button is-info is-light" navigate={~p"/books/invoices/#{invoice}"}>
+              <.link
+                class="button is-info is-light"
+                href={~p"/books/invoices/#{invoice}"}
+                target="_blank"
+              >
                 <span class="icon">
                   <FontAwesome.file_invoice />
                 </span>

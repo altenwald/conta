@@ -1,1 +1,27 @@
+<.nav logo_url={~p{/images/conta_header.png}} class="no-print">
+  <.navbar_end>
+    <.navbar_item>
+      <.buttons>
+        <.link class="button is-primary" href={~p"/books/invoices/#{@invoice}/download"}>
+          <span class="icon">
+            <FontAwesome.download />
+          </span>
+          &nbsp; <strong><%= gettext("Download") %></strong>
+        </.link>
+        <.button type={:light} onclick="javascript:window.print()">
+          <span class="icon">
+            <FontAwesome.print />
+          </span>
+          &nbsp; <strong><%= gettext("Print") %></strong>
+        </.button>
+        <.button type={:light} onclick="javascript:window.close()">
+          <span class="icon">
+            <FontAwesome.xmark />
+          </span>
+          &nbsp; <strong><%= gettext("Close") %></strong>
+        </.button>
+      </.buttons>
+    </.navbar_item>
+  </.navbar_end>
+</.nav>
 <%= @inner_content %>
