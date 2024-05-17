@@ -51,4 +51,12 @@ defmodule ContaWeb.AccountLive.Index do
       nil -> to_string(Money.new(0, currency))
     end
   end
+
+  defp get_other_balances(%_{currency: currency, balances: balances}) do
+    balances = Enum.group_by(balances, & &1.currency, & &1.amount.amount)
+
+    for {balance_currency, [amount]} <- balances, balance_currency != currency, amount != 0 do
+      to_string(Money.new(amount, balance_currency))
+    end
+  end
 end

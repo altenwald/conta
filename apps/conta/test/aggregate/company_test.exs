@@ -98,7 +98,6 @@ defmodule Conta.Aggregate.CompanyTest do
       company = %Conta.Aggregate.Company{}
 
       assert {:error, %{
-        state: ["can't be blank"],
         address: ["can't be blank"],
         city: ["can't be blank"],
         postcode: ["can't be blank"]
@@ -116,6 +115,44 @@ defmodule Conta.Aggregate.CompanyTest do
         city: "Madrid",
         state: "Madrid",
         country: "ES"
+      }
+
+      command = %Conta.Command.SetTemplate{
+        nif: "A55666777",
+        name: "startup",
+        css: "body { color: #333; }"
+      }
+
+      event = Conta.Aggregate.Company.execute(company, command)
+
+      assert %Conta.Event.TemplateSet{
+        nif: "A55666777",
+        name: "startup",
+        css: "body { color: #333; }"
+      } == event
+
+      assert %Conta.Aggregate.Company{
+        nif: "A55666777",
+        name: "Great Company SA",
+        address: "My Full Address",
+        postcode: "28000",
+        city: "Madrid",
+        state: "Madrid",
+        country: "ES",
+        template_names: MapSet.new(["default", "startup"])
+      } == Conta.Aggregate.Company.apply(company, event)
+    end
+
+    test "updating template successfully" do
+      company = %Conta.Aggregate.Company{
+        nif: "A55666777",
+        name: "Great Company SA",
+        address: "My Full Address",
+        postcode: "28000",
+        city: "Madrid",
+        state: "Madrid",
+        country: "ES",
+        template_names: MapSet.new(["default", "startup"])
       }
 
       command = %Conta.Command.SetTemplate{
@@ -205,6 +242,78 @@ defmodule Conta.Aggregate.CompanyTest do
         }
       } == Conta.Aggregate.Company.apply(company, event)
     end
+
+    test "updating contact successfully" do
+      company = %Conta.Aggregate.Company{
+        nif: "A55666777",
+        name: "Great Company SA",
+        address: "My Full Address",
+        postcode: "28000",
+        city: "Madrid",
+        state: "Madrid",
+        country: "ES",
+        contacts: %{
+          "B123456789" => %Conta.Aggregate.Company.Contact{
+            name: "Limited Company SL",
+            nif: "B123456789",
+            intracommunity: true,
+            address: "Full Address Here",
+            postcode: "08080",
+            city: "Barcelona",
+            state: "Catalunya",
+            country: "ES"
+          }
+        }
+      }
+
+      command = %Conta.Command.SetContact{
+        company_nif: "A55666777",
+        nif: "B123456789",
+        name: "Anonymous Company SA",
+        intracommunity: true,
+        address: "Full Address Here",
+        postcode: "28080",
+        city: "Madrid",
+        state: "Madrid",
+        country: "ES"
+      }
+
+      event = Conta.Aggregate.Company.execute(company, command)
+
+      assert %Conta.Event.ContactSet{
+        company_nif: "A55666777",
+        nif: "B123456789",
+        name: "Anonymous Company SA",
+        intracommunity: true,
+        address: "Full Address Here",
+        postcode: "28080",
+        city: "Madrid",
+        state: "Madrid",
+        country: "ES"
+      } == event
+
+      assert %Conta.Aggregate.Company{
+        nif: "A55666777",
+        name: "Great Company SA",
+        address: "My Full Address",
+        postcode: "28000",
+        city: "Madrid",
+        state: "Madrid",
+        country: "ES",
+        contacts: %{
+          "B123456789" => %Conta.Aggregate.Company.Contact{
+            name: "Anonymous Company SA",
+            nif: "B123456789",
+            intracommunity: true,
+            address: "Full Address Here",
+            postcode: "28080",
+            city: "Madrid",
+            state: "Madrid",
+            country: "ES"
+          }
+        }
+      } == Conta.Aggregate.Company.apply(company, event)
+    end
   end
 
   describe "payment method" do
@@ -255,10 +364,66 @@ defmodule Conta.Aggregate.CompanyTest do
         }
       } == Conta.Aggregate.Company.apply(company, event)
     end
+
+    test "updating payment method successfully" do
+      company = %Conta.Aggregate.Company{
+        nif: "A55666777",
+        name: "Great Company SA",
+        address: "My Full Address",
+        postcode: "28000",
+        city: "Madrid",
+        state: "Madrid",
+        country: "ES",
+        payment_methods: %{
+          "paypal" => %Conta.Aggregate.Company.PaymentMethod{
+            slug: "paypal",
+            name: "PayPal",
+            method: "gateway",
+            details: "Account myaccount@paypal.com"
+          }
+        }
+      }
+
+      command = %Conta.Command.SetPaymentMethod{
+        nif: "A55666777",
+        slug: "paypal",
+        name: "Paypal",
+        method: :gateway,
+        details: "Account business@paypal.com"
+      }
+
+      event = Conta.Aggregate.Company.execute(company, command)
+
+      assert %Conta.Event.PaymentMethodSet{
+        nif: "A55666777",
+        slug: "paypal",
+        name: "Paypal",
+        method: "gateway",
+        details: "Account business@paypal.com"
+      } == event
+
+      assert %Conta.Aggregate.Company{
+        nif: "A55666777",
+        name: "Great Company SA",
+        address: "My Full Address",
+        postcode: "28000",
+        city: "Madrid",
+        state: "Madrid",
+        country: "ES",
+        payment_methods: %{
+          "paypal" => %Conta.Aggregate.Company.PaymentMethod{
+            slug: "paypal",
+            name: "Paypal",
+            method: "gateway",
+            details: "Account business@paypal.com"
+          }
+        }
+      } == Conta.Aggregate.Company.apply(company, event)
+    end
   end
 
   describe "invoice" do
-    test "create successfully" do
+    test "update failed because missing invoice" do
       company = %Conta.Aggregate.Company{
         nif: "A55666777",
         name: "Great Company SA",
@@ -287,7 +452,8 @@ defmodule Conta.Aggregate.CompanyTest do
         }
       }
 
-      command = %Conta.Command.CreateInvoice{
+      command = %Conta.Command.SetInvoice{
+        action: :update,
         nif: "A55666777",
         client_nif: "B123456789",
         invoice_number: 1,
@@ -297,10 +463,174 @@ defmodule Conta.Aggregate.CompanyTest do
         tax_price: Decimal.new("21.00"),
         total_price: Decimal.new("121.00"),
         currency: "EUR",
-        destination_country: "ES",
         payment_method: "paypal",
         details: [
-          %Conta.Command.CreateInvoice.Detail{
+          %Conta.Command.SetInvoice.Detail{
+            description: "Consultancy",
+            tax: 21,
+            base_price: Decimal.new("100.00"),
+            tax_price: Decimal.new("21.00"),
+            total_price: Decimal.new("121.00")
+          }
+        ]
+      }
+
+      assert {:error, %{invoice_number: ["can't be found for update"]}} = Conta.Aggregate.Company.execute(company, command)
+    end
+
+    test "create failed because missing payment method" do
+      company = %Conta.Aggregate.Company{
+        nif: "A55666777",
+        name: "Great Company SA",
+        address: "My Full Address",
+        postcode: "28000",
+        city: "Madrid",
+        state: "Madrid",
+        country: "ES",
+        contacts: %{
+          "B123456789" => %Conta.Aggregate.Company.Contact{
+            name: "My client",
+            nif: "B123456789",
+            address: "My client's address",
+            postcode: "14000",
+            city: "Cordoba",
+            state: "Cordoba",
+            country: "ES"
+          }
+        },
+        payment_methods: %{
+          "paypal" => %Conta.Aggregate.Company.PaymentMethod{
+            name: "PayPal",
+            method: "gateway",
+            details: "myaccount@paypal.com"
+          }
+        }
+      }
+
+      command = %Conta.Command.SetInvoice{
+        action: :insert,
+        nif: "A55666777",
+        client_nif: "B123456789",
+        invoice_number: 1,
+        invoice_date: Date.new!(2023, 12, 20),
+        type: :service,
+        subtotal_price: Decimal.new("100.00"),
+        tax_price: Decimal.new("21.00"),
+        total_price: Decimal.new("121.00"),
+        currency: "EUR",
+        payment_method: "stripe",
+        details: [
+          %Conta.Command.SetInvoice.Detail{
+            description: "Consultancy",
+            tax: 21,
+            base_price: Decimal.new("100.00"),
+            tax_price: Decimal.new("21.00"),
+            total_price: Decimal.new("121.00")
+          }
+        ]
+      }
+
+      assert {:error, %{payment_method: ["is invalid"]}} = Conta.Aggregate.Company.execute(company, command)
+    end
+
+    test "create failed because missing contact" do
+      company = %Conta.Aggregate.Company{
+        nif: "A55666777",
+        name: "Great Company SA",
+        address: "My Full Address",
+        postcode: "28000",
+        city: "Madrid",
+        state: "Madrid",
+        country: "ES",
+        contacts: %{
+          "B123456789" => %Conta.Aggregate.Company.Contact{
+            name: "My client",
+            nif: "B123456789",
+            address: "My client's address",
+            postcode: "14000",
+            city: "Cordoba",
+            state: "Cordoba",
+            country: "ES"
+          }
+        },
+        payment_methods: %{
+          "paypal" => %Conta.Aggregate.Company.PaymentMethod{
+            name: "PayPal",
+            method: "gateway",
+            details: "myaccount@paypal.com"
+          }
+        }
+      }
+
+      command = %Conta.Command.SetInvoice{
+        action: :insert,
+        nif: "A55666777",
+        client_nif: "A123456789",
+        invoice_number: 1,
+        invoice_date: Date.new!(2023, 12, 20),
+        type: :service,
+        subtotal_price: Decimal.new("100.00"),
+        tax_price: Decimal.new("21.00"),
+        total_price: Decimal.new("121.00"),
+        currency: "EUR",
+        payment_method: "paypal",
+        details: [
+          %Conta.Command.SetInvoice.Detail{
+            description: "Consultancy",
+            tax: 21,
+            base_price: Decimal.new("100.00"),
+            tax_price: Decimal.new("21.00"),
+            total_price: Decimal.new("121.00")
+          }
+        ]
+      }
+
+      assert {:error, %{client_nif: ["is invalid"]}} = Conta.Aggregate.Company.execute(company, command)
+    end
+
+    test "create successfully the first of the year" do
+      company = %Conta.Aggregate.Company{
+        nif: "A55666777",
+        name: "Great Company SA",
+        address: "My Full Address",
+        postcode: "28000",
+        city: "Madrid",
+        state: "Madrid",
+        country: "ES",
+        contacts: %{
+          "B123456789" => %Conta.Aggregate.Company.Contact{
+            name: "My client",
+            nif: "B123456789",
+            address: "My client's address",
+            postcode: "14000",
+            city: "Cordoba",
+            state: "Cordoba",
+            country: "ES"
+          }
+        },
+        payment_methods: %{
+          "paypal" => %Conta.Aggregate.Company.PaymentMethod{
+            name: "PayPal",
+            method: "gateway",
+            details: "myaccount@paypal.com"
+          }
+        }
+      }
+
+      command = %Conta.Command.SetInvoice{
+        action: :insert,
+        nif: "A55666777",
+        client_nif: "B123456789",
+        invoice_number: 1,
+        invoice_date: Date.new!(2023, 12, 20),
+        type: :service,
+        subtotal_price: Decimal.new("100.00"),
+        tax_price: Decimal.new("21.00"),
+        total_price: Decimal.new("121.00"),
+        currency: "EUR",
+        payment_method: "paypal",
+        details: [
+          %Conta.Command.SetInvoice.Detail{
             description: "Consultancy",
             tax: 21,
             base_price: Decimal.new("100.00"),
@@ -312,7 +642,8 @@ defmodule Conta.Aggregate.CompanyTest do
 
       event = Conta.Aggregate.Company.execute(company, command)
 
-      assert %Conta.Event.InvoiceCreated{
+      assert %Conta.Event.InvoiceSet{
+        action: :insert,
         invoice_number: 1,
         invoice_date: Date.new!(2023, 12, 20),
         type: :service,
@@ -326,7 +657,7 @@ defmodule Conta.Aggregate.CompanyTest do
           method: "gateway",
           details: "myaccount@paypal.com"
         },
-        client: %Conta.Event.InvoiceCreated.Client{
+        client: %Conta.Event.InvoiceSet.Client{
           name: "My client",
           nif: "B123456789",
           address: "My client's address",
@@ -336,7 +667,7 @@ defmodule Conta.Aggregate.CompanyTest do
           country: "ES"
         },
         details: [
-          %Conta.Event.InvoiceCreated.Detail{
+          %Conta.Event.InvoiceSet.Detail{
             description: "Consultancy",
             tax: 21,
             base_price: Decimal.new("100.00"),
@@ -364,7 +695,7 @@ defmodule Conta.Aggregate.CompanyTest do
         city: "Madrid",
         state: "Madrid",
         country: "ES",
-        invoice_numbers: %{2023 => 1},
+        invoice_numbers: %{2023 => MapSet.new([1])},
         template_names: MapSet.new(["default"]),
         contacts: %{
           "B123456789" => %Conta.Aggregate.Company.Contact{
@@ -387,7 +718,7 @@ defmodule Conta.Aggregate.CompanyTest do
       } == Conta.Aggregate.Company.apply(company, event)
     end
 
-    test "create simple successfully" do
+    test "update successfully from client to simple" do
       company = %Conta.Aggregate.Company{
         nif: "A55666777",
         name: "Great Company SA",
@@ -396,6 +727,18 @@ defmodule Conta.Aggregate.CompanyTest do
         city: "Madrid",
         state: "Madrid",
         country: "ES",
+        invoice_numbers: %{2023 => MapSet.new([1])},
+        contacts: %{
+          "B123456789" => %Conta.Aggregate.Company.Contact{
+            name: "My client",
+            nif: "B123456789",
+            address: "My client's address",
+            postcode: "14000",
+            city: "Cordoba",
+            state: "Cordoba",
+            country: "ES"
+          }
+        },
         payment_methods: %{
           "paypal" => %Conta.Aggregate.Company.PaymentMethod{
             name: "PayPal",
@@ -405,7 +748,8 @@ defmodule Conta.Aggregate.CompanyTest do
         }
       }
 
-      command = %Conta.Command.CreateInvoice{
+      command = %Conta.Command.SetInvoice{
+        action: :update,
         nif: "A55666777",
         invoice_number: 1,
         invoice_date: Date.new!(2023, 12, 20),
@@ -417,7 +761,7 @@ defmodule Conta.Aggregate.CompanyTest do
         destination_country: "ES",
         payment_method: "paypal",
         details: [
-          %Conta.Command.CreateInvoice.Detail{
+          %Conta.Command.SetInvoice.Detail{
             description: "Consultancy",
             tax: 21,
             base_price: Decimal.new("100.00"),
@@ -429,7 +773,8 @@ defmodule Conta.Aggregate.CompanyTest do
 
       event = Conta.Aggregate.Company.execute(company, command)
 
-      assert %Conta.Event.InvoiceCreated{
+      assert %Conta.Event.InvoiceSet{
+        action: :update,
         invoice_number: 1,
         invoice_date: Date.new!(2023, 12, 20),
         type: :service,
@@ -443,9 +788,8 @@ defmodule Conta.Aggregate.CompanyTest do
           method: "gateway",
           details: "myaccount@paypal.com"
         },
-        client: nil,
         details: [
-          %Conta.Event.InvoiceCreated.Detail{
+          %Conta.Event.InvoiceSet.Detail{
             description: "Consultancy",
             tax: 21,
             base_price: Decimal.new("100.00"),
@@ -473,7 +817,118 @@ defmodule Conta.Aggregate.CompanyTest do
         city: "Madrid",
         state: "Madrid",
         country: "ES",
-        invoice_numbers: %{2023 => 1},
+        invoice_numbers: %{2023 => MapSet.new([1])},
+        template_names: MapSet.new(["default"]),
+        contacts: %{
+          "B123456789" => %Conta.Aggregate.Company.Contact{
+            nif: "B123456789",
+            name: "My client",
+            address: "My client's address",
+            postcode: "14000",
+            city: "Cordoba",
+            state: "Cordoba",
+            country: "ES"
+          }
+        },
+        payment_methods: %{
+          "paypal" => %Conta.Aggregate.Company.PaymentMethod{
+            name: "PayPal",
+            method: "gateway",
+            details: "myaccount@paypal.com"
+          }
+        }
+      } == Conta.Aggregate.Company.apply(company, event)
+    end
+
+    test "create simple successfully the first of the year" do
+      company = %Conta.Aggregate.Company{
+        nif: "A55666777",
+        name: "Great Company SA",
+        address: "My Full Address",
+        postcode: "28000",
+        city: "Madrid",
+        state: "Madrid",
+        country: "ES",
+        payment_methods: %{
+          "paypal" => %Conta.Aggregate.Company.PaymentMethod{
+            name: "PayPal",
+            method: "gateway",
+            details: "myaccount@paypal.com"
+          }
+        }
+      }
+
+      command = %Conta.Command.SetInvoice{
+        action: :insert,
+        nif: "A55666777",
+        invoice_number: 1,
+        invoice_date: Date.new!(2023, 12, 20),
+        type: :service,
+        subtotal_price: Decimal.new("100.00"),
+        tax_price: Decimal.new("21.00"),
+        total_price: Decimal.new("121.00"),
+        currency: "EUR",
+        destination_country: "ES",
+        payment_method: "paypal",
+        details: [
+          %Conta.Command.SetInvoice.Detail{
+            description: "Consultancy",
+            tax: 21,
+            base_price: Decimal.new("100.00"),
+            tax_price: Decimal.new("21.00"),
+            total_price: Decimal.new("121.00")
+          }
+        ]
+      }
+
+      event = Conta.Aggregate.Company.execute(company, command)
+
+      assert %Conta.Event.InvoiceSet{
+        action: :insert,
+        invoice_number: 1,
+        invoice_date: Date.new!(2023, 12, 20),
+        type: :service,
+        subtotal_price: Decimal.new("100.00"),
+        tax_price: Decimal.new("21.00"),
+        total_price: Decimal.new("121.00"),
+        currency: "EUR",
+        destination_country: "ES",
+        payment_method: %Conta.Event.Common.PaymentMethod{
+          name: "PayPal",
+          method: "gateway",
+          details: "myaccount@paypal.com"
+        },
+        client: nil,
+        details: [
+          %Conta.Event.InvoiceSet.Detail{
+            description: "Consultancy",
+            tax: 21,
+            base_price: Decimal.new("100.00"),
+            tax_price: Decimal.new("21.00"),
+            total_price: Decimal.new("121.00")
+          }
+        ],
+        company: %Conta.Event.Common.Company{
+          nif: "A55666777",
+          name: "Great Company SA",
+          address: "My Full Address",
+          postcode: "28000",
+          city: "Madrid",
+          state: "Madrid",
+          country: "ES"
+        },
+        template: "default"
+      } == event
+
+      assert %Conta.Aggregate.Company{
+        nif: "A55666777",
+        name: "Great Company SA",
+        address: "My Full Address",
+        postcode: "28000",
+        city: "Madrid",
+        state: "Madrid",
+        country: "ES",
+        invoice_numbers: %{2023 => MapSet.new([1])},
         template_names: MapSet.new(["default"]),
         payment_methods: %{
           "paypal" => %Conta.Aggregate.Company.PaymentMethod{
@@ -503,7 +958,7 @@ defmodule Conta.Aggregate.CompanyTest do
         }
       }
 
-      command = %Conta.Command.CreateInvoice{
+      command = %Conta.Command.SetInvoice{
         nif: "A55666777",
         invoice_number: 1,
         invoice_date: Date.new!(2023, 12, 20),
@@ -514,7 +969,7 @@ defmodule Conta.Aggregate.CompanyTest do
         destination_country: "ES",
         payment_method: "stripe",
         details: [
-          %Conta.Command.CreateInvoice.Detail{
+          %Conta.Command.SetInvoice.Detail{
             description: "Consultancy",
             tax: 21,
             base_price: Money.new(100_00),
@@ -524,7 +979,7 @@ defmodule Conta.Aggregate.CompanyTest do
         ]
       }
 
-      assert {:error, :invalid_payment_method} = Conta.Aggregate.Company.execute(company, command)
+      assert {:error, %{payment_method: ["is invalid"]}} = Conta.Aggregate.Company.execute(company, command)
     end
   end
 end

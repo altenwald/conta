@@ -1,7 +1,10 @@
 defmodule ContaWeb.EntryLive.FormComponent do
   use ContaWeb, :live_component
+  import Conta.Commanded.Application, only: [dispatch: 1]
+  require Logger
 
   alias Conta.Ledger
+  alias ContaWeb.EntryLive.FormComponent.AccountTransaction, as: FormAccountTransaction
 
   @impl true
   def render(assigns) do
@@ -15,13 +18,91 @@ defmodule ContaWeb.EntryLive.FormComponent do
         <section class="modal-card-body">
           <.simple_form
             for={@form}
-            id="entry-form"
+            id="account-transaction-form"
             phx-target={@myself}
             phx-change="validate"
             phx-submit="save"
           >
+            <.input field={@form[:ledger]} type="hidden" />
+            <.input field={@form[:on_date]} type="date" label={gettext("Date")} />
+            <.input field={@form[:breakdown]} type="checkbox" label={gettext("Breakdown")} />
+            <%= if @breakdown do %>
+              <div class="field is-horizontal">
+                <div class="field-label is-normal">
+                  <label class="label"><%= gettext("Entries") %></label>
+                </div>
+                <div class="field-body">
+                  <.link class="button" phx-target={@myself} phx-click="add_entry">
+                    <%= gettext("Add Entry") %>
+                  </.link>
+                </div>
+              </div>
+              <.inputs_for :let={d} field={@form[:entries]}>
+                <div class="columns">
+                  <div class="column is-one-fifth">
+                    <.link
+                      class="button is-danger"
+                      phx-target={@myself}
+                      phx-click="del_entry"
+                      phx-value-index={d.index}
+                    >
+                      <%= gettext("Remove") %>
+                    </.link>
+                  </div>
+                  <div class="column">
+                    <.input
+                      field={d[:description]}
+                      label={gettext("Description")}
+                      phx-mounted={if(d.index == 0, do: JS.focus())}
+                    />
+                    <.input
+                      field={d[:account_name]}
+                      label={gettext("Account")}
+                      type="select"
+                      options={list_accounts()}
+                      prompt={gettext("Choose an account...")}
+                    />
+                    <.input field={d[:amount]} label={gettext("Amount")} type="number" step=".01" />
+                  </div>
+                </div>
+              </.inputs_for>
+            <% else %>
+              <.input
+                field={@form[:description]}
+                label={gettext("Description")}
+                type="text"
+                phx-mounted={JS.focus()}
+              />
+              <.input
+                field={@form[:account_name]}
+                label={gettext("Account")}
+                type="select"
+                options={list_accounts()}
+                prompt={gettext("Choose an account...")}
+              />
+              <.input
+                field={@form[:related_account_name]}
+                label={gettext("Related Account")}
+                type="select"
+                options={list_accounts()}
+                prompt={gettext("Choose an account...")}
+              />
+              <.input field={@form[:amount]} label={gettext("Amount")} type="number" step=".01" />
+            <% end %>
           </.simple_form>
         </section>
+        <footer class="modal-card-foot is-at-right">
+          <.button
+            form="account-transaction-form"
+            class="is-primary"
+            phx-disable-with={gettext("Saving...")}
+          >
+            <%= gettext("Save Transaction") %>
+          </.button>
+          <.link class="button" patch={~p"/ledger/accounts/#{@account}/entries"}>
+            <%= gettext("Cancel") %>
+          </.link>
+        </footer>
       </div>
     </div>
     """
@@ -32,8 +113,13 @@ defmodule ContaWeb.EntryLive.FormComponent do
   end
 
   @impl true
-  def update(%{entry: entry} = assigns, socket) do
-    changeset = Ledger.change_entry(entry)
+  def update(%{account_transaction: account_transaction} = assigns, socket) do
+    params = %{
+      "account_name" => Enum.join(assigns.account.name, "."),
+      "on_date" => Date.utc_today()
+    }
+
+    changeset = FormAccountTransaction.changeset(account_transaction, params)
 
     {:ok,
      socket
@@ -42,52 +128,88 @@ defmodule ContaWeb.EntryLive.FormComponent do
   end
 
   @impl true
-  def handle_event("validate", %{"entry" => entry_params}, socket) do
+  def handle_event("del_entry", %{"index" => idx}, socket) do
+    params = Map.update!(socket.assigns.params, "entries", &Map.delete(&1, idx))
+
+    changeset = FormAccountTransaction.changeset(params)
+
+    {:noreply,
+     socket
+     |> assign_form(changeset)
+     |> assign(params: params)}
+  end
+
+  def handle_event("add_entry", _params, socket) do
+    params =
+      Map.update!(socket.assigns.params, "entries", fn entries ->
+        [FormAccountTransaction.new() | Map.values(entries)]
+        |> Enum.with_index(0)
+        |> Map.new(fn {value, idx} -> {to_string(idx), value} end)
+      end)
+
+    changeset = FormAccountTransaction.changeset(params)
+
+    {:noreply,
+     socket
+     |> assign_form(changeset)
+     |> assign(params: params)}
+  end
+
+  def handle_event(
+        "validate",
+        %{"_target" => ["account_transaction", "breakdown"], "account_transaction" => params},
+        socket
+      ) do
+    params =
+      if socket.assigns.breakdown do
+        FormAccountTransaction.disable_breakdown(params)
+      else
+        FormAccountTransaction.enable_breakdown(params)
+      end
+
+    changeset = FormAccountTransaction.changeset(params)
+
+    {:noreply,
+     socket
+     |> assign_form(changeset)
+     |> assign(
+       params: params,
+       breakdown: not socket.assigns.breakdown
+     )}
+  end
+
+  def handle_event("validate", %{"account_transaction" => params}, socket) do
     changeset =
-      socket.assigns.entry
-      |> Ledger.change_entry(entry_params)
+      socket.assigns.account_transaction
+      |> FormAccountTransaction.changeset(params)
       |> Map.put(:action, :validate)
 
-    {:noreply, assign_form(socket, changeset)}
+    {:noreply,
+     socket
+     |> assign_form(changeset)
+     |> assign(params: params)}
   end
 
-  def handle_event("save", %{"entry" => entry_params}, socket) do
-    save_entry(socket, socket.assigns.action, entry_params)
+  def handle_event("save", %{"account_transaction" => params}, socket) do
+    save_account_transaction(socket, socket.assigns.action, params)
   end
 
-  defp save_entry(socket, :edit, entry_params) do
-    case Ledger.update_entry(socket.assigns.entry, entry_params) do
-      {:ok, entry} ->
-        notify_parent({:saved, entry})
+  defp save_account_transaction(socket, :new, params) do
+    changeset = FormAccountTransaction.changeset(socket.assigns.account_transaction, params)
 
-        {:noreply,
-         socket
-         |> put_flash(:info, "Entry updated successfully")
-         |> push_patch(to: socket.assigns.patch)}
-
-      {:error, %Ecto.Changeset{} = changeset} ->
-        {:noreply, assign_form(socket, changeset)}
-    end
-  end
-
-  defp save_entry(socket, :new, entry_params) do
-    case Ledger.create_entry(entry_params) do
-      {:ok, entry} ->
-        notify_parent({:saved, entry})
-
-        {:noreply,
-         socket
-         |> put_flash(:info, "Entry created successfully")
-         |> push_patch(to: socket.assigns.patch)}
-
-      {:error, %Ecto.Changeset{} = changeset} ->
-        {:noreply, assign_form(socket, changeset)}
+    if changeset.valid? and dispatch(FormAccountTransaction.to_command(changeset)) == :ok do
+      {:noreply,
+       socket
+       |> put_flash(:info, gettext("Account transaction created successfully"))
+       |> push_patch(to: socket.assigns.patch)}
+    else
+      Logger.debug("changeset errors: #{inspect(changeset.errors)}")
+      changeset = Map.put(changeset, :action, :validate)
+      {:noreply, assign_form(socket, changeset)}
     end
   end
 
   defp assign_form(socket, %Ecto.Changeset{} = changeset) do
     assign(socket, :form, to_form(changeset))
   end
-
-  defp notify_parent(msg), do: send(self(), {__MODULE__, msg})
 end

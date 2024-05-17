@@ -1,13 +1,15 @@
-defmodule Conta.Command.CreateInvoice do
+defmodule Conta.Command.SetInvoice do
   use TypedEctoSchema
   import Ecto.Changeset
+  import Conta.EctoHelpers
 
   @primary_key false
 
   typed_embedded_schema do
     field :nif, :string
+    field :action, Ecto.Enum, values: ~w[insert update]a
     field :client_nif, :string
-    field :template, :string
+    field :template, :string, default: "default"
     field :invoice_number, :integer
     field :invoice_date, :date
     field :paid_date, :date
@@ -31,8 +33,8 @@ defmodule Conta.Command.CreateInvoice do
     end
   end
 
-  @required_fields ~w[nif invoice_date currency type subtotal_price tax_price total_price destination_country payment_method]a
-  @optional_fields ~w[invoice_number paid_date client_nif template due_date comments]a
+  @required_fields ~w[nif action invoice_date currency type subtotal_price tax_price total_price payment_method]a
+  @optional_fields ~w[destination_country invoice_number paid_date client_nif template due_date comments]a
 
   @doc false
   def changeset(model \\ %__MODULE__{}, params) do
@@ -40,6 +42,7 @@ defmodule Conta.Command.CreateInvoice do
     |> cast(params, @required_fields ++ @optional_fields)
     |> cast_embed(:details, required: true, with: &changeset_details/2)
     |> validate_required(@required_fields)
+    |> validate_if_required(:client_nif, [:destination_country])
   end
 
   @required_fields ~w[description tax base_price tax_price total_price]a

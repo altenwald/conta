@@ -22,6 +22,17 @@ defmodule Conta.Ledger do
     |> dispatch()
   end
 
+  def new_account_transaction(account_name, ledger \\ "default") do
+    %AccountTransaction{
+      ledger: ledger,
+      on_date: Date.utc_today(),
+      entries: [
+        %AccountTransaction.Entry{account_name: account_name},
+        %AccountTransaction.Entry{}
+      ]
+    }
+  end
+
   def entry(description, account_name, credit, debit, change_currency, change_credit, change_debit, change_price) do
     %AccountTransaction.Entry{
       description: description,
@@ -202,10 +213,10 @@ defmodule Conta.Ledger do
 
         "invoice" ->
           data
-          |> Conta.Command.CreateInvoice.changeset()
+          |> Conta.Command.SetInvoice.changeset()
           |> Conta.EctoHelpers.traverse_errors()
           |> case do
-            %Conta.Command.CreateInvoice{} = command ->
+            %Conta.Command.SetInvoice{} = command ->
               Conta.Commanded.Application.dispatch(command)
 
             {:error, _} = error ->

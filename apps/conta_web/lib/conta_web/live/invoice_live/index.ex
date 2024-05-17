@@ -2,7 +2,7 @@ defmodule ContaWeb.InvoiceLive.Index do
   use ContaWeb, :live_view
 
   alias Conta.Book
-  alias Conta.Command.CreateInvoice
+  alias Conta.Command.SetInvoice
   alias Conta.Projector.Book.Invoice
 
   @impl true

@@ -4,7 +4,7 @@ defmodule Conta.Projector.Book do
     repo: Conta.Repo,
     name: __MODULE__
 
-  alias Conta.Event.InvoiceCreated
+  alias Conta.Event.InvoiceSet
   alias Conta.Event.PaymentMethodSet
   alias Conta.Event.TemplateSet
   alias Conta.Projector.Book.Invoice
@@ -28,15 +28,22 @@ defmodule Conta.Projector.Book do
     |> Decimal.to_integer()
   end
 
-  project(%InvoiceCreated{} = invoice, _metadata, fn multi ->
-    invoice_date = Date.from_iso8601!(invoice.invoice_date)
-    invoice_number =
-      invoice.invoice_number
-      |> to_string()
-      |> String.pad_leading(5, "0")
-      |> then(&"#{invoice_date.year}-#{&1}")
+  defp to_invoice_number(date, number) when is_binary(date),
+    do: to_invoice_number(Date.from_iso8601!(date), number)
 
-    params =
+  defp to_invoice_number(date, number) when is_struct(date, Date),
+    do: to_invoice_number(date.year, number)
+
+  defp to_invoice_number(year, number) when is_integer(number),
+    do: to_invoice_number(year, to_string(number))
+
+  defp to_invoice_number(year, number) when is_integer(year) and is_binary(number),
+    do: "#{year}-#{String.pad_leading(number, 5, "0")}"
+
+  project(%InvoiceSet{action: :insert} = invoice, _metadata, fn multi ->
+    invoice_number = to_invoice_number(invoice.invoice_date, invoice.invoice_number)
+
+    changeset =
       invoice
       |> Map.from_struct()
       |> Map.put(:invoice_number, invoice_number)
@@ -51,9 +58,34 @@ defmodule Conta.Projector.Book do
           |> Map.update!(:total_price, &to_integer/1)
         end
       end)
+      |> Invoice.changeset()
 
-    changeset = Invoice.changeset(params)
     Ecto.Multi.insert(multi, :invoice, changeset)
+  end)
+
+  project(%InvoiceSet{action: :update} = invoice, _metadata, fn multi ->
+    invoice_number = to_invoice_number(invoice.invoice_date, invoice.invoice_number)
+
+    params =
+      invoice
+      |> Map.from_struct()
+      |> Map.delete(:invoice_number)
+      |> Map.update!(:subtotal_price, &to_integer/1)
+      |> Map.update!(:tax_price, &to_integer/1)
+      |> Map.update!(:total_price, &to_integer/1)
+      |> Map.update!(:details, fn details ->
+        for detail <- details do
+          detail
+          |> Map.update!(:base_price, &to_integer/1)
+          |> Map.update!(:tax_price, &to_integer/1)
+          |> Map.update!(:total_price, &to_integer/1)
+        end
+      end)
+
+    old_invoice = Conta.Repo.get_by!(Invoice, [invoice_number: invoice_number])
+
+    changeset = Invoice.changeset(old_invoice, params)
+    Ecto.Multi.update(multi, :invoice, changeset)
   end)
 
   project(%PaymentMethodSet{} = payment_method, _metadata, fn multi ->
@@ -65,8 +97,7 @@ defmodule Conta.Projector.Book do
     update =
       payment_method
       |> Map.from_struct()
-      |> Map.delete(:nif)
-      |> Map.delete(:slug)
+      |> Map.drop(~w[nif slug]a)
       |> Enum.to_list()
 
     opts = [on_conflict: [set: update], conflict_target: [:nif, :slug]]

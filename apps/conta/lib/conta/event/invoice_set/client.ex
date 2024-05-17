@@ -1,4 +1,4 @@
-defmodule Conta.Event.InvoiceCreated.Client do
+defmodule Conta.Event.InvoiceSet.Client do
   use TypedEctoSchema
   import Ecto.Changeset
 

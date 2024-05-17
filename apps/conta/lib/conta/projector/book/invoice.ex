@@ -5,7 +5,7 @@ defmodule Conta.Projector.Book.Invoice do
   @primary_key {:id, :binary_id, autogenerate: true}
   @foreign_key_type :binary_id
 
-  @currencies Map.new(Map.keys(Money.Currency.all()), &{&1, to_string(&1)})
+  @currencies Enum.map(Map.keys(Money.Currency.all()), &{&1, to_string(&1)})
 
   typed_schema "book_invoices" do
     field :template, :string, default: "default"
@@ -17,11 +17,11 @@ defmodule Conta.Projector.Book.Invoice do
     field :subtotal_price, :integer
     field :tax_price, :integer
     field :total_price, :integer
-    field :currency, Ecto.Enum, values: Map.keys(Money.Currency.all()), default: :EUR
+    field :currency, Ecto.Enum, values: @currencies, default: :EUR
     field :comments, :string
     field :destination_country, :string
 
-    embeds_one :client, Client do
+    embeds_one :client, Client, on_replace: :delete do
       field :name, :string
       field :nif, :string
       field :intracommunity, :boolean, default: false
@@ -32,7 +32,7 @@ defmodule Conta.Projector.Book.Invoice do
       field :country, :string
     end
 
-    embeds_one :company, Company do
+    embeds_one :company, Company, on_replace: :delete do
       field :name, :string
       field :nif, :string
       field :address, :string
@@ -43,7 +43,7 @@ defmodule Conta.Projector.Book.Invoice do
       field :details, :string
     end
 
-    embeds_one :payment_method, PaymentMethod do
+    embeds_one :payment_method, PaymentMethod, on_replace: :delete do
       # methods are cash, bank (i.e. wire transfer) and
       # gateway (i.e. paypal or stripe)
       @methods ~w[cash bank gateway]a
@@ -54,7 +54,7 @@ defmodule Conta.Projector.Book.Invoice do
       field :holder, :string
     end
 
-    embeds_many :details, Detail do
+    embeds_many :details, Detail, on_replace: :delete do
       field :sku, :string
       field :description, :string
       field :tax, :integer
@@ -92,7 +92,7 @@ defmodule Conta.Projector.Book.Invoice do
   @optional_fields ~w[intracommunity address postcode city state]a
 
   @doc false
-  def changeset_client(model, params) do
+  def changeset_client(model \\ %__MODULE__.Client{}, params) do
     model
     |> cast(params, @required_fields ++ @optional_fields)
     |> validate_required(@required_fields)

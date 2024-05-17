@@ -4,7 +4,7 @@ defmodule ContaWeb.InvoiceLive.FormComponent do
   require Logger
 
   alias Conta.Book
-  alias Conta.Command.CreateInvoice
+  alias Conta.Command.SetInvoice
   alias Conta.Directory
 
   @impl true
@@ -187,7 +187,7 @@ defmodule ContaWeb.InvoiceLive.FormComponent do
 
   @impl true
   def update(%{create_invoice: invoice} = assigns, socket) do
-    changeset = CreateInvoice.changeset(invoice, %{})
+    changeset = SetInvoice.changeset(invoice, %{action: :insert})
 
     {:ok,
      socket
@@ -273,7 +273,7 @@ defmodule ContaWeb.InvoiceLive.FormComponent do
 
     changeset =
       socket.assigns.create_invoice
-      |> CreateInvoice.changeset(invoice_params)
+      |> SetInvoice.changeset(invoice_params)
       |> Map.put(:action, :validate)
 
     socket =
@@ -285,26 +285,24 @@ defmodule ContaWeb.InvoiceLive.FormComponent do
   end
 
   defp save_invoice(socket, :edit, invoice_params) do
-    case Book.update_invoice(socket.assigns.invoice, invoice_params) do
-      {:ok, invoice} ->
-        notify_parent({:saved, invoice})
+    changeset = SetInvoice.changeset(socket.assigns.modify_invoice, invoice_params)
 
-        {:noreply,
-         socket
-         |> put_flash(:info, "Invoice updated successfully")
-         |> push_patch(to: socket.assigns.patch)}
-
-      {:error, %Ecto.Changeset{} = changeset} ->
-        {:noreply, assign_form(socket, changeset)}
+    if changeset.valid? and dispatch(SetInvoice.to_command(changeset)) == :ok do
+      {:noreply,
+       socket
+       |> put_flash(:info, gettext("Invoice modified successfully"))
+       |> push_patch(to: socket.assigns.patch)}
+    else
+      Logger.debug("changeset errors: #{inspect(changeset.erorrs)}")
+      changeset = Map.put(changeset, :action, :validate)
+      {:noreply, assign_form(socket, changeset)}
     end
   end
 
   defp save_invoice(socket, :new, invoice_params) do
-    changeset = CreateInvoice.changeset(socket.assigns.create_invoice, invoice_params)
+    changeset = SetInvoice.changeset(socket.assigns.create_invoice, invoice_params)
 
-    if changeset.valid? and dispatch(CreateInvoice.to_command(changeset)) == :ok do
-      #   TODO
-      # notify_parent({:saved, invoice})
+    if changeset.valid? and dispatch(SetInvoice.to_command(changeset)) == :ok do
       {:noreply,
        socket
        |> put_flash(:info, gettext("Invoice created successfully"))
@@ -319,6 +317,4 @@ defmodule ContaWeb.InvoiceLive.FormComponent do
   defp assign_form(socket, %Ecto.Changeset{} = changeset) do
     assign(socket, :form, to_form(changeset))
   end
-
-  defp notify_parent(msg), do: send(self(), {__MODULE__, msg})
 end

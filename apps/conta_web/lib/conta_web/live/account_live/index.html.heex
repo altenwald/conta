@@ -71,6 +71,9 @@
             </:col>
             <:col :let={{_id, account}} class="has-text-right money" label={gettext("balance")}>
               <%= get_balance(account) %>
+              <%= for balance <- get_other_balances(account) do %>
+                <br /><%= balance %>
+              <% end %>
             </:col>
           </.table>
         </div>

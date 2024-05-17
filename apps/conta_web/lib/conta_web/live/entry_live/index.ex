@@ -3,6 +3,7 @@ defmodule ContaWeb.EntryLive.Index do
 
   alias Conta.Ledger
   alias Conta.Projector.Ledger.Entry
+  alias ContaWeb.EntryLive.FormComponent.AccountTransaction
 
   @impl true
   def mount(%{"account_id" => account_id}, _session, socket) do
@@ -27,27 +28,25 @@ defmodule ContaWeb.EntryLive.Index do
     {:noreply, apply_action(socket, socket.assigns.live_action, params)}
   end
 
-  defp apply_action(socket, :edit, %{"id" => id}) do
-    socket
-    |> assign(:page_title, "Edit Entry")
-    |> assign(:entry, Ledger.get_entry!(id))
-  end
-
   defp apply_action(socket, :new, _params) do
     socket
-    |> assign(:page_title, "New Entry")
-    |> assign(:entry, %Entry{})
+    |> assign(:page_title, gettext("New Entry"))
+    |> assign(:transaction_id, Ecto.UUID.generate())
+    |> assign(:account_transaction, %AccountTransaction{})
+    |> assign(:breakdown, false)
   end
 
   defp apply_action(socket, :index, _params) do
     socket
-    |> assign(:page_title, "Listing Ledger entries")
-    |> assign(:entry, nil)
+    |> assign(:page_title, gettext("Listing Ledger entries"))
+    |> assign(:transaction_id, nil)
+    |> assign(:account_transaction, nil)
   end
 
   @impl true
   def handle_info({ContaWeb.EntryLive.FormComponent, {:saved, entry}}, socket) do
-    {:noreply, stream_insert(socket, :ledger_entries, entry)}
+    account = socket.assigns.account
+    {:noreply, stream(socket, :ledger_entries, list_entries_by_account(account))}
   end
 
   @impl true

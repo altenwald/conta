@@ -4,8 +4,8 @@ defmodule Conta.Commanded.Router do
   alias Conta.Aggregate.Company
   alias Conta.Aggregate.Ledger
   alias Conta.Command.AccountTransaction
-  alias Conta.Command.CreateExpense
-  alias Conta.Command.CreateInvoice
+  alias Conta.Command.SetExpense
+  alias Conta.Command.SetInvoice
   alias Conta.Command.SetAccount
   alias Conta.Command.SetCompany
   alias Conta.Command.SetContact
@@ -19,8 +19,8 @@ defmodule Conta.Commanded.Router do
   dispatch(SetAccount, to: Ledger)
   dispatch(SetShortcut, to: Ledger)
 
-  dispatch(CreateExpense, to: Company, identity: :nif)
-  dispatch(CreateInvoice, to: Company, identity: :nif)
+  dispatch(SetExpense, to: Company, identity: :nif)
+  dispatch(SetInvoice, to: Company, identity: :nif)
   dispatch(SetCompany, to: Company, identity: :nif)
   dispatch(SetContact, to: Company, identity: :company_nif)
   dispatch(SetPaymentMethod, to: Company, identity: :nif)

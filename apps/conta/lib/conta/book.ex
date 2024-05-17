@@ -1,6 +1,6 @@
 defmodule Conta.Book do
   import Ecto.Query, only: [from: 2]
-  alias Conta.Command.CreateInvoice
+  alias Conta.Command.SetInvoice
   alias Conta.Projector.Book.Invoice
   alias Conta.Projector.Book.PaymentMethod
   alias Conta.Projector.Book.Template
@@ -57,7 +57,8 @@ defmodule Conta.Book do
   def new_create_invoice do
     invoice_number = get_last_invoice_number() + 1
 
-    %CreateInvoice{
+    %SetInvoice{
+      action: :insert,
       nif: Application.get_env(:conta, :default_company_nif),
       invoice_number: invoice_number,
       invoice_date: Date.utc_today(),
@@ -70,7 +71,13 @@ defmodule Conta.Book do
     get_last_invoice_number(Date.utc_today.year)
   end
 
-  def get_last_invoice_number(year) do
+  def get_last_invoice_number(year) when is_integer(year) do
+    year
+    |> to_string()
+    |> get_last_invoice_number()
+  end
+
+  def get_last_invoice_number(year) when is_binary(year) do
     from(
       i in Invoice,
       where: fragment("extract(year from ?) = ?", i.invoice_date, ^year),
@@ -81,7 +88,7 @@ defmodule Conta.Book do
     |> Repo.one()
     |> case do
       nil -> 0
-      <<year::binary-size(4), "-", value::binary>> -> String.to_integer(value)
+      <<^year::binary-size(4), "-", value::binary>> -> String.to_integer(value)
     end
   end
 end
