@@ -2,8 +2,8 @@ defmodule ContaWeb.AccountLive.FormComponent do
   use ContaWeb, :live_component
   import Conta.Commanded.Application, only: [dispatch: 1]
 
-  alias Conta.Ledger
   alias Conta.Command.SetAccount
+  alias Conta.Ledger
 
   @impl true
   def render(assigns) do
@@ -115,6 +115,4 @@ defmodule ContaWeb.AccountLive.FormComponent do
   defp assign_form(socket, %Ecto.Changeset{} = changeset) do
     assign(socket, :form, to_form(changeset))
   end
-
-  defp notify_parent(msg), do: send(self(), {__MODULE__, msg})
 end

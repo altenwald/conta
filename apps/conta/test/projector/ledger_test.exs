@@ -1,6 +1,6 @@
 defmodule Conta.Projector.LedgerTest do
   use Conta.DataCase
-  import Conta.Factory
+  import Conta.LedgerFixtures
   alias Conta.Projector.Ledger
 
   setup do
@@ -35,15 +35,15 @@ defmodule Conta.Projector.LedgerTest do
           notes: "hello there!"
         }
 
-      assert :ok == Conta.Projector.Ledger.handle(event, metadata)
+      assert :ok == Ledger.handle(event, metadata)
 
-      assert %Conta.Projector.Ledger.Account{
+      assert %Ledger.Account{
         id: "b6ad9e02-0e37-404c-953a-daa8c3d23880",
         name: ["Assets"],
         ledger: "default",
         type: :assets,
         notes: "hello there!"
-      } = Repo.get!(Conta.Projector.Ledger.Account, "b6ad9e02-0e37-404c-953a-daa8c3d23880")
+      } = Repo.get!(Ledger.Account, "b6ad9e02-0e37-404c-953a-daa8c3d23880")
     end
 
     test "update account", metadata do
@@ -56,9 +56,9 @@ defmodule Conta.Projector.LedgerTest do
           notes: "no so global expenses account"
         }
 
-      assert :ok == Conta.Projector.Ledger.handle(event, metadata)
+      assert :ok == Ledger.handle(event, metadata)
 
-      assert %Conta.Projector.Ledger.Account{
+      assert %Ledger.Account{
         name: ["Expenses"],
         ledger: "default",
         type: :expenses,
@@ -82,19 +82,19 @@ defmodule Conta.Projector.LedgerTest do
           new_name: ["Assets", "Bank", "Account"]
         }
 
-      assert :ok == Conta.Projector.Ledger.handle(event, metadata)
+      assert :ok == Ledger.handle(event, metadata)
 
-      assert %Conta.Projector.Ledger.Account{
+      assert %Ledger.Account{
         name: ~w[Assets],
         ledger: "default",
         type: :assets,
         subaccounts: [
-          %Conta.Projector.Ledger.Account{
+          %Ledger.Account{
             name: ~w[Assets Bank],
             ledger: "default",
             type: :assets,
             subaccounts: [
-              %Conta.Projector.Ledger.Account{
+              %Ledger.Account{
                 name: ~w[Assets Bank Account],
                 ledger: "default",
                 type: :assets
@@ -103,7 +103,7 @@ defmodule Conta.Projector.LedgerTest do
           }
         ]
       } =
-        Repo.get!(Conta.Projector.Ledger.Account, account1.id)
+        Repo.get!(Ledger.Account, account1.id)
         |> Repo.preload([:balances, subaccounts: [:balances, subaccounts: :balances]])
     end
   end

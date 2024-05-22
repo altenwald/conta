@@ -2,6 +2,7 @@ defmodule ContaWeb.InvoiceController do
   use ContaWeb, :controller
 
   alias Conta.Book
+  alias Phoenix.HTML.Safe, as: HtmlSafe
 
   def show(conn, %{"id" => id}) do
     invoice = Book.get_invoice!(id)
@@ -37,7 +38,7 @@ defmodule ContaWeb.InvoiceController do
     html =
       layout_opts
       |> ContaWeb.Layouts.root_print()
-      |> Phoenix.HTML.Safe.to_iodata()
+      |> HtmlSafe.to_iodata()
       |> to_string()
 
     {:ok, pdf} = ChromicPDF.print_to_pdf({:html, html})

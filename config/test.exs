@@ -1,5 +1,8 @@
 import Config
 
+# Only in tests, remove the complexity from the password hashing algorithm
+config :bcrypt_elixir, :log_rounds, 1
+
 config :conta, Conta.EventStore,
   serializer: Commanded.Serialization.JsonSerializer,
   username: "postgres",
@@ -34,6 +37,8 @@ config :swoosh, :api_client, false
 
 # Initialize plugs at runtime for faster test compilation
 config :phoenix, :plug_init_mode, :runtime
+
+config :phoenix, :filter_parameters, []
 
 config :ex_gram, test_environment: true
 

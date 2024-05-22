@@ -16,25 +16,29 @@ defmodule ContaWeb.InvoiceLive.Index do
   end
 
   defp apply_action(socket, :edit, %{"id" => id}) do
+    set_invoice = Book.get_set_invoice(id)
+
     socket
     |> assign(:page_title, gettext("Edit Invoice"))
-    |> assign(:invoice, Book.get_invoice_command!(id))
+    |> assign(:invoice_number, set_invoice.invoice_number)
+    |> assign(:company_nif, set_invoice.nif)
+    |> assign(:set_invoice, set_invoice)
   end
 
   defp apply_action(socket, :new, _params) do
-    create_invoice = Book.new_create_invoice()
+    set_invoice = Book.new_set_invoice()
 
     socket
     |> assign(:page_title, gettext("New Invoice"))
-    |> assign(:invoice_number, create_invoice.invoice_number)
-    |> assign(:company_nif, create_invoice.nif)
-    |> assign(:create_invoice, create_invoice)
+    |> assign(:invoice_number, set_invoice.invoice_number)
+    |> assign(:company_nif, set_invoice.nif)
+    |> assign(:set_invoice, set_invoice)
   end
 
   defp apply_action(socket, :index, _params) do
     socket
     |> assign(:page_title, "Listing Books invoices")
-    |> assign(:create_invoice, nil)
+    |> assign(:set_invoice, nil)
   end
 
   @impl true

@@ -16,8 +16,33 @@ defmodule ContaWeb.CoreComponents do
   """
   use Phoenix.Component
 
-  alias Phoenix.LiveView.JS
   import ContaWeb.Gettext
+
+  alias Phoenix.HTML.Form, as: HtmlForm
+  alias Phoenix.LiveView.JS
+
+  @doc """
+  Renders a header with title.
+  """
+  attr :class, :string, default: nil
+
+  slot :inner_block, required: true
+  slot :subtitle
+  slot :actions
+
+  def header(assigns) do
+    ~H"""
+    <header class={@class}>
+      <div>
+        <h2><%= render_slot(@inner_block) %></h2>
+        <p :if={@subtitle != []} class="mt-2">
+          <%= render_slot(@subtitle) %>
+        </p>
+      </div>
+      <div class="flex-none"><%= render_slot(@actions) %></div>
+    </header>
+    """
+  end
 
   @doc """
   Renders the navigation elements.
@@ -223,7 +248,8 @@ defmodule ContaWeb.CoreComponents do
     >
       <div :if={@title} class="message-header">
         <p><%= @title %></p>
-        <button phx-click={JS.add_class("close")} class="delete" aria-label="delete"></button>
+        <button phx-click={JS.add_class("close", to: "#" <> @id)} class="delete" aria-label="delete">
+        </button>
       </div>
       <div class="message-body">
         <%= msg %>
@@ -303,6 +329,7 @@ defmodule ContaWeb.CoreComponents do
     doc: "the arbitrary HTML attributes to apply to the form tag"
 
   slot :inner_block, required: true
+
   slot :actions, doc: "the slot for form actions, such as a submit button"
 
   def simple_form(assigns) do
@@ -375,6 +402,7 @@ defmodule ContaWeb.CoreComponents do
   attr :id, :any, default: nil
   attr :name, :any
   attr :label, :string, default: nil
+  attr :control_label, :string, default: nil
   attr :value, :any
 
   attr :type, :string,
@@ -393,7 +421,7 @@ defmodule ContaWeb.CoreComponents do
 
   attr :rest, :global,
     include: ~w(accept autocomplete capture cols disabled form list max maxlength min minlength
-                multiple pattern placeholder readonly required rows size step)
+                pattern placeholder readonly required rows size step)
 
   slot :inner_block
 
@@ -409,7 +437,7 @@ defmodule ContaWeb.CoreComponents do
   def input(%{type: "checkbox"} = assigns) do
     assigns =
       assign_new(assigns, :checked, fn ->
-        Phoenix.HTML.Form.normalize_value("checkbox", assigns[:value])
+        HtmlForm.normalize_value("checkbox", assigns[:value])
       end)
 
     ~H"""
@@ -418,7 +446,7 @@ defmodule ContaWeb.CoreComponents do
         <input type="hidden" name={@name} value="false" />
         <input type="checkbox" id={@id} name={@name} value="true" checked={@checked} {@rest} />
         <span class="check"></span>
-        <span class="control-label"></span>
+        <span class="control-label"><%= @control_label %></span>
       </label>
     </.field>
     """

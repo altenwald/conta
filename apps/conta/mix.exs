@@ -30,6 +30,7 @@ defmodule Conta.MixProject do
 
   defp deps do
     [
+      {:bcrypt_elixir, "~> 3.0"},
       {:commanded, "~> 1.4"},
       {:jason, "~> 1.4"},
       {:commanded_eventstore_adapter, "~> 1.4"},

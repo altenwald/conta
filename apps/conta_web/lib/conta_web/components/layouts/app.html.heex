@@ -1,6 +1,6 @@
 <.flash_group flash={@flash} />
 <.nav logo_url={~p{/images/conta_header.png}}>
-  <.navbar_start>
+  <.navbar_start :if={@current_user}>
     <.navbar_item href="/"><%= gettext("Dashboard") %></.navbar_item>
     <.navbar_dropdown name={gettext("Ledger")}>
       <.navbar_item href="/ledger/accounts"><%= gettext("Accounts") %></.navbar_item>
@@ -23,13 +23,25 @@
   </.navbar_start>
   <.navbar_end>
     <.navbar_item>
-      <.buttons>
-        <.button type={:primary}>
+      <.buttons :if={@current_user}>
+        <.button disabled class="is-ghost">
+          <%= @current_user.email %>
+        </.button>
+        <.link href={~p"/users/settings"} class="button is-light">
+          <%= gettext("Settings") %>
+        </.link>
+        <.link href={~p"/logout"} class="button is-light">
+          <%= gettext("Logout") %>
+        </.link>
+      </.buttons>
+
+      <.buttons :if={is_nil(@current_user)}>
+        <.link class="button is-primary" href={~p"/register"}>
           <strong><%= gettext("Register") %></strong>
-        </.button>
-        <.button type={:light}>
+        </.link>
+        <.link class="button is-light" href={~p"/signin"}>
           <%= gettext("Sign in") %>
-        </.button>
+        </.link>
       </.buttons>
     </.navbar_item>
   </.navbar_end>

@@ -186,7 +186,7 @@ defmodule ContaWeb.InvoiceLive.FormComponent do
   end
 
   @impl true
-  def update(%{create_invoice: invoice} = assigns, socket) do
+  def update(%{set_invoice: invoice} = assigns, socket) do
     changeset = SetInvoice.changeset(invoice, %{action: :insert})
 
     {:ok,
@@ -197,11 +197,11 @@ defmodule ContaWeb.InvoiceLive.FormComponent do
   end
 
   @impl true
-  def handle_event("validate", %{"create_invoice" => invoice_params}, socket) do
+  def handle_event("validate", %{"set_invoice" => invoice_params}, socket) do
     validate(socket, invoice_params)
   end
 
-  def handle_event("save", %{"create_invoice" => invoice_params}, socket) do
+  def handle_event("save", %{"set_invoice" => invoice_params}, socket) do
     save_invoice(socket, socket.assigns.action, invoice_params)
   end
 
@@ -272,7 +272,7 @@ defmodule ContaWeb.InvoiceLive.FormComponent do
       |> Map.put("nif", socket.assigns.company_nif)
 
     changeset =
-      socket.assigns.create_invoice
+      socket.assigns.set_invoice
       |> SetInvoice.changeset(invoice_params)
       |> Map.put(:action, :validate)
 
@@ -300,7 +300,7 @@ defmodule ContaWeb.InvoiceLive.FormComponent do
   end
 
   defp save_invoice(socket, :new, invoice_params) do
-    changeset = SetInvoice.changeset(socket.assigns.create_invoice, invoice_params)
+    changeset = SetInvoice.changeset(socket.assigns.set_invoice, invoice_params)
 
     if changeset.valid? and dispatch(SetInvoice.to_command(changeset)) == :ok do
       {:noreply,

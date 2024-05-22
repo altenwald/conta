@@ -106,63 +106,68 @@ defmodule ContaBot.Action.Shortcut do
   end
 
   def handle({:text, input}, context) do
-    case store_get_next_param(context) do
-      %_{type: :string, name: name} ->
+    context
+    |> store_get_next_param()
+    |> handle_by_type(input, context)
+  end
+
+  def handle_by_type(%_{type: :string, name: name}, input, context) do
+    context
+    |> store_put_param(name, input)
+    |> show_next_input()
+  end
+
+  def handle_by_type(%_{type: :money, name: name}, input, context) do
+    case get_money(input) do
+      {:ok, money} ->
         context
-        |> store_put_param(name, input)
+        |> store_put_param(name, money)
         |> show_next_input()
 
-      %_{type: :money, name: name} ->
-        case get_money(input) do
-          {:ok, money} ->
-            context
-            |> store_put_param(name, money)
-            |> show_next_input()
+      {:error, _} ->
+        context
+        |> answer("Invalid money value")
+        |> show_next_input()
+    end
+  end
 
-          {:error, _} ->
-            context
-            |> answer("Invalid date")
-            |> show_next_input()
-        end
+  def handle_by_type(%_{type: :date, name: name}, input, context) do
+    if Date.from_iso8601(input) do
+      context
+      |> store_put_param(name, input)
+      |> show_next_input()
+    else
+      context
+      |> answer("Invalid date")
+      |> show_next_input()
+    end
+  end
 
-      %_{type: :date, name: name} ->
-        case Date.from_iso8601(input) do
-          date when date != nil ->
-            context
-            |> store_put_param(name, input)
-            |> show_next_input()
+  def handle_by_type(%_{type: :integer, name: name}, input, context) do
+    case Integer.parse(input) do
+      {number, ""} ->
+        context
+        |> store_put_param(name, number)
+        |> show_next_input()
 
-          _ ->
-            context
-            |> answer("Invalid date")
-            |> show_next_input()
-        end
+      _ ->
+        context
+        |> answer("Invalid number")
+        |> show_next_input()
+    end
+  end
 
-      %_{type: :integer, name: name} ->
-        case Integer.parse(input) do
-          {number, ""} ->
-            context
-            |> store_put_param(name, number)
-            |> show_next_input()
+  def handle_by_type(%_{type: :float, name: name}, input, context) do
+    case Float.parse(input) do
+      {number, ""} ->
+        context
+        |> store_put_param(name, number)
+        |> show_next_input()
 
-          _ ->
-            context
-            |> answer("Invalid number")
-            |> show_next_input()
-        end
-
-      %_{type: :float, name: name} ->
-        case Float.parse(input) do
-          {number, ""} ->
-            context
-            |> store_put_param(name, number)
-            |> show_next_input()
-
-          _ ->
-            context
-            |> answer("Invalid number")
-            |> show_next_input()
-        end
+      _ ->
+        context
+        |> answer("Invalid number")
+        |> show_next_input()
     end
   end
 
@@ -180,45 +185,48 @@ defmodule ContaBot.Action.Shortcut do
   end
 
   defp show_next_input(context) do
-    case store_get_next_param(context) do
-      %_{type: :string, name: name} ->
-        answer_me(context, "write the content for: #{name}")
-
-      %_{type: :integer, name: name} ->
-        answer_me(context, "write a number for: #{name}")
-
-      %_{type: :float, name: name} ->
-        answer_me(context, "write a float number for: #{name}")
-
-      %_{type: :money, name: name} ->
-        answer_me(context, "write the money value with a dot (.) and two decimals for: #{name}")
-
-      %_{type: :options, name: name, options: options} ->
-        options = Enum.map(options, &{&1, "shortcut option #{&1}"})
-        extra = [{"Cancel", "shortcut cancel"}]
-        answer_select(context, "choose an option for #{name}", options, extra)
-
-      %_{type: :account_name} ->
-        choose_account(
-          context,
-          "shortcut account_name",
-          "Choose the account name",
-          false,
-          "shortcut next"
-        )
-
-      %_{type: :date} ->
-        choose_date(context, "shortcut")
-
-      %_{type: :currency, name: name} ->
-        options = Enum.map(Conta.Ledger.list_used_currencies(), &{&1, "shortcut option #{&1}"})
-        extra = [{"Cancel", "shortcut cancel"}]
-        answer_select(context, "choose a currency for #{name}", options, extra)
-
-      nil ->
-        run_shortcut(context)
-    end
+    context
+    |> store_get_next_param()
+    |> show_next_input_by_type(context)
   end
+
+  defp show_next_input_by_type(%_{type: :string, name: name}, context),
+    do: answer_me(context, "write the content for: #{name}")
+
+  defp show_next_input_by_type(%_{type: :integer, name: name}, context),
+    do: answer_me(context, "write a number for: #{name}")
+
+  defp show_next_input_by_type(%_{type: :float, name: name}, context),
+    do: answer_me(context, "write a float number for: #{name}")
+
+  defp show_next_input_by_type(%_{type: :money, name: name}, context),
+    do: answer_me(context, "write the money value with a dot (.) and two decimals for: #{name}")
+
+  defp show_next_input_by_type(%_{type: :options, name: name, options: options}, context) do
+    options = Enum.map(options, &{&1, "shortcut option #{&1}"})
+    extra = [{"Cancel", "shortcut cancel"}]
+    answer_select(context, "choose an option for #{name}", options, extra)
+  end
+
+  defp show_next_input_by_type(%_{type: :account_name}, context) do
+    choose_account(
+      context,
+      "shortcut account_name",
+      "Choose the account name",
+      false,
+      "shortcut next"
+    )
+  end
+
+  defp show_next_input_by_type(%_{type: :date}, context), do: choose_date(context, "shortcut")
+
+  defp show_next_input_by_type(%_{type: :currency, name: name}, context) do
+    options = Enum.map(Conta.Ledger.list_used_currencies(), &{&1, "shortcut option #{&1}"})
+    extra = [{"Cancel", "shortcut cancel"}]
+    answer_select(context, "choose a currency for #{name}", options, extra)
+  end
+
+  defp show_next_input_by_type(nil, context), do: run_shortcut(context)
 
   defp store_init(context, name, params) do
     chat_id = get_chat_id(context)

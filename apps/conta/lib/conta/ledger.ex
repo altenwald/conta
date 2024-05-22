@@ -4,6 +4,8 @@ defmodule Conta.Ledger do
 
   alias Conta.Command.AccountTransaction
   alias Conta.Command.SetAccount
+  alias Conta.Command.SetInvoice
+
   alias Conta.Projector.Ledger.Account
   alias Conta.Projector.Ledger.Entry
   alias Conta.Projector.Ledger.Shortcut
@@ -201,11 +203,11 @@ defmodule Conta.Ledger do
       case return["type"] || "transaction" do
         "transaction" ->
           data
-          |> Conta.Command.AccountTransaction.changeset()
+          |> AccountTransaction.changeset()
           |> Conta.EctoHelpers.traverse_errors()
           |> case do
-            %Conta.Command.AccountTransaction{} = command ->
-              Conta.Commanded.Application.dispatch(command)
+            %AccountTransaction{} = command ->
+              dispatch(command)
 
             {:error, _} = error ->
               error
@@ -213,11 +215,11 @@ defmodule Conta.Ledger do
 
         "invoice" ->
           data
-          |> Conta.Command.SetInvoice.changeset()
+          |> SetInvoice.changeset()
           |> Conta.EctoHelpers.traverse_errors()
           |> case do
-            %Conta.Command.SetInvoice{} = command ->
-              Conta.Commanded.Application.dispatch(command)
+            %SetInvoice{} = command ->
+              dispatch(command)
 
             {:error, _} = error ->
               error

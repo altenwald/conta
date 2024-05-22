@@ -2,13 +2,16 @@ defmodule ContaWeb.EntryLiveTest do
   use ContaWeb.ConnCase
 
   import Phoenix.LiveViewTest
-  import Conta.Factory
+  import Conta.LedgerFixtures
+
+  alias Conta.AccountsFixtures
 
   @create_attrs %{description: "Buy Ketchup", credit: 5_00}
   @update_attrs %{}
   @invalid_attrs %{}
 
   setup do
+    user = AccountsFixtures.insert(:user) |> AccountsFixtures.confirm_user()
     assets = insert(:account, %{name: ~w[Assets]})
     bank = insert(:account, %{name: ~w[Assets Bank]})
     expenses = insert(:account, %{name: ~w[Expenses], type: :expenses})
@@ -21,6 +24,7 @@ defmodule ContaWeb.EntryLiveTest do
       })
 
     %{
+      user: user,
       assets: assets,
       bank: bank,
       expenses: expenses,
@@ -31,6 +35,7 @@ defmodule ContaWeb.EntryLiveTest do
 
   describe "Index" do
     test "lists all ledger_entries", %{conn: conn} = data do
+      conn = log_in_user(conn, data.user)
       {:ok, _index_live, html} = live(conn, ~p"/ledger/accounts/#{data.bank}/entries")
 
       assert html =~ "Listing Ledger entries"
@@ -42,6 +47,7 @@ defmodule ContaWeb.EntryLiveTest do
 
     @tag skip: :broken
     test "saves new entry", %{conn: conn} = data do
+      conn = log_in_user(conn, data.user)
       {:ok, index_live, _html} = live(conn, ~p"/ledger/accounts/#{data.bank}/entries")
 
       assert index_live
@@ -66,6 +72,7 @@ defmodule ContaWeb.EntryLiveTest do
 
     @tag skip: :broken
     test "updates entry in listing", %{conn: conn, entry: entry} = data do
+      conn = log_in_user(conn, data.user)
       {:ok, index_live, _html} = live(conn, ~p"/ledger/accounts/#{data.bank}/entries")
 
       assert index_live
@@ -90,6 +97,7 @@ defmodule ContaWeb.EntryLiveTest do
 
     @tag skip: :broken
     test "deletes entry in listing", %{conn: conn, entry: entry} = data do
+      conn = log_in_user(conn, data.user)
       {:ok, index_live, _html} = live(conn, ~p"/ledger/accounts/#{data.bank.id}/entries")
 
       assert index_live

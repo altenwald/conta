@@ -1,8 +1,8 @@
 defmodule ContaWeb.AccountLive.Index do
   use ContaWeb, :live_view
 
-  alias Conta.Ledger
   alias Conta.Command.SetAccount
+  alias Conta.Ledger
 
   @impl true
   def mount(_params, _session, socket) do

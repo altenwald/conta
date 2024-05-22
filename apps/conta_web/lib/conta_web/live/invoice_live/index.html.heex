@@ -71,10 +71,10 @@
 >
   <.live_component
     module={ContaWeb.InvoiceLive.FormComponent}
-    id={@create_invoice.invoice_number || :new}
+    id={@set_invoice.invoice_number || :new}
     title={@page_title}
     action={@live_action}
-    create_invoice={@create_invoice}
+    set_invoice={@set_invoice}
     company_nif={@company_nif}
     patch={~p"/books/invoices"}
   />

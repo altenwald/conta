@@ -2,10 +2,10 @@ defmodule Conta.Aggregate.Company do
   alias Conta.Aggregate.Company.Contact
   alias Conta.Aggregate.Company.PaymentMethod
 
-  alias Conta.Command.SetInvoice
-  alias Conta.Command.SetExpense
   alias Conta.Command.SetCompany
   alias Conta.Command.SetContact
+  alias Conta.Command.SetExpense
+  alias Conta.Command.SetInvoice
   alias Conta.Command.SetPaymentMethod
   alias Conta.Command.SetTemplate
 
@@ -112,24 +112,19 @@ defmodule Conta.Aggregate.Company do
   end
 
   def execute(%__MODULE__{} = company, %SetInvoice{} = command) do
-    invoice_year = command.invoice_date.year
-    invoice_numbers = company.invoice_numbers[invoice_year] || MapSet.new()
     client_nif = command.client_nif
     payment_method = command.payment_method
-    cond do
-      MapSet.member?(invoice_numbers, command.invoice_number) and command.action == :insert ->
-        {:error, %{invoice_number: ["can't be duplicated"]}}
 
-      not MapSet.member?(invoice_numbers, command.invoice_number) and command.action == :update ->
-        {:error, %{invoice_number: ["can't be found for update"]}}
+    nil
+    |> validate_duplicate_invoice_number(company, command)
+    |> validate_exist_invoice_for_update(company, command)
+    |> validate_client_valid(company, command)
+    |> validate_payment_method(company, command)
+    |> case do
+      {:error, _} = error ->
+        error
 
-      client_nif != nil and is_nil(company.contacts[client_nif]) ->
-        {:error, %{client_nif: ["is invalid"]}}
-
-      is_nil(company.payment_methods[payment_method]) ->
-        {:error, %{payment_method: ["is invalid"]}}
-
-      :else ->
+      nil ->
         client = process_client(company.contacts[client_nif])
         country = if(client, do: client.country, else: command.destination_country)
 
@@ -163,6 +158,46 @@ defmodule Conta.Aggregate.Company do
         |> Map.put(:payment_method, process_payment_method(company.payment_methods[payment_method]))
         |> Map.put(:company, Map.take(company, ~w[nif name address postcode city state country details]a))
         |> ExpenseSet.changeset()
+    end
+  end
+
+  defp validate_duplicate_invoice_number({:error, _} = error, _company, _command), do: error
+
+  defp validate_duplicate_invoice_number(nil, %__MODULE__{} = company, %SetInvoice{} = command) do
+    invoice_year = command.invoice_date.year
+    invoice_numbers = company.invoice_numbers[invoice_year] || MapSet.new()
+    if MapSet.member?(invoice_numbers, command.invoice_number) and command.action == :insert do
+      {:error, %{invoice_number: ["can't be duplicated"]}}
+    end
+  end
+
+  defp validate_exist_invoice_for_update({:error, _} = error, _company, _command), do: error
+
+  defp validate_exist_invoice_for_update(nil, %__MODULE__{} = company, %SetInvoice{} = command) do
+    invoice_year = command.invoice_date.year
+    invoice_numbers = company.invoice_numbers[invoice_year] || MapSet.new()
+    if not MapSet.member?(invoice_numbers, command.invoice_number) and command.action == :update do
+      {:error, %{invoice_number: ["can't be found for update"]}}
+    end
+  end
+
+  defp validate_client_valid({:error, _} = error, _company, _command), do: error
+
+  defp validate_client_valid(nil, %__MODULE__{} = company, %SetInvoice{} = command) do
+    client_nif = command.client_nif
+    simple_client_valid? = is_nil(client_nif) and command.destination_country != nil
+    used_client_valid? = client_nif != nil and company.contacts[client_nif] != nil
+    client_valid? = simple_client_valid? or used_client_valid?
+    unless client_valid? do
+      {:error, %{client_nif: ["is invalid"]}}
+    end
+  end
+
+  defp validate_payment_method({:error, _} = error, _company, _command), do: error
+
+  defp validate_payment_method(nil, %__MODULE__{} = company, %SetInvoice{} = command) do
+    if is_nil(company.payment_methods[command.payment_method]) do
+      {:error, %{payment_method: ["is invalid"]}}
     end
   end
 

@@ -4,11 +4,11 @@ defmodule Conta.Commanded.Router do
   alias Conta.Aggregate.Company
   alias Conta.Aggregate.Ledger
   alias Conta.Command.AccountTransaction
-  alias Conta.Command.SetExpense
-  alias Conta.Command.SetInvoice
   alias Conta.Command.SetAccount
   alias Conta.Command.SetCompany
   alias Conta.Command.SetContact
+  alias Conta.Command.SetExpense
+  alias Conta.Command.SetInvoice
   alias Conta.Command.SetPaymentMethod
   alias Conta.Command.SetShortcut
   alias Conta.Command.SetTemplate

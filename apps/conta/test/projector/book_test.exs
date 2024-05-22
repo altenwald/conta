@@ -1,6 +1,6 @@
 defmodule Conta.Projector.BookTest do
   use Conta.DataCase
-  import Conta.Factory
+  import Conta.BookFixtures
   alias Conta.Projector.Book
 
   setup do
@@ -33,7 +33,7 @@ defmodule Conta.Projector.BookTest do
           details: nil
         }
 
-      assert :ok = Conta.Projector.Book.handle(event, metadata)
+      assert :ok = Book.handle(event, metadata)
 
       assert %Book.PaymentMethod{
         id: _,
@@ -65,7 +65,7 @@ defmodule Conta.Projector.BookTest do
         slug: "paypal"
       } = Repo.get!(Book.PaymentMethod, payment_method_id)
 
-      assert :ok = Conta.Projector.Book.handle(event, metadata)
+      assert :ok = Book.handle(event, metadata)
 
       assert %Book.PaymentMethod{
         id: ^payment_method_id,
@@ -124,10 +124,10 @@ defmodule Conta.Projector.BookTest do
           template: "default"
         }
 
-      assert :ok = Conta.Projector.Book.handle(event, metadata)
+      assert :ok = Book.handle(event, metadata)
 
-      assert %Conta.Projector.Book.Invoice{
-        client: %Conta.Projector.Book.Invoice.Client{
+      assert %Book.Invoice{
+        client: %Book.Invoice.Client{
           name: "My client",
           nif: "B123456789",
           intracommunity: false,
@@ -137,7 +137,7 @@ defmodule Conta.Projector.BookTest do
           state: "Cordoba",
           country: "ES"
         },
-        company: %Conta.Projector.Book.Invoice.Company{
+        company: %Book.Invoice.Company{
           name: "Great Company SA",
           nif: "A55666777",
           address: "My Full Address",
@@ -148,7 +148,7 @@ defmodule Conta.Projector.BookTest do
         },
         destination_country: "ES",
         details: [
-          %Conta.Projector.Book.Invoice.Detail{
+          %Book.Invoice.Detail{
             description: "Consultancy",
             tax: 21,
             base_price: 100_00,
@@ -159,7 +159,7 @@ defmodule Conta.Projector.BookTest do
         ],
         invoice_date: ~D[2023-12-30],
         invoice_number: "2023-00001",
-        payment_method: %Conta.Projector.Book.Invoice.PaymentMethod{
+        payment_method: %Book.Invoice.PaymentMethod{
           method: :gateway,
           details: "myaccount@paypal.com"
         },
@@ -167,7 +167,7 @@ defmodule Conta.Projector.BookTest do
         tax_price: 21_00,
         total_price: 121_00,
         type: :service
-      } = Repo.get_by!(Conta.Projector.Book.Invoice, invoice_number: "2023-00001")
+      } = Repo.get_by!(Book.Invoice, invoice_number: "2023-00001")
     end
 
     test "update successfully", metadata do
@@ -251,10 +251,10 @@ defmodule Conta.Projector.BookTest do
         type: :service
       } = Repo.get_by!(Conta.Projector.Book.Invoice, invoice_number: "2023-00001")
 
-      assert :ok = Conta.Projector.Book.handle(event, metadata)
+      assert :ok = Book.handle(event, metadata)
 
-      assert %Conta.Projector.Book.Invoice{
-        client: %Conta.Projector.Book.Invoice.Client{
+      assert %Book.Invoice{
+        client: %Book.Invoice.Client{
           name: "My client",
           nif: "B123456789",
           intracommunity: false,

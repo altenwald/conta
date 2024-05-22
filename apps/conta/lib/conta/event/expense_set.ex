@@ -6,8 +6,8 @@ defmodule Conta.Event.ExpenseSet do
 
   alias Conta.Event.Common.Company
   alias Conta.Event.Common.PaymentMethod
-  alias Conta.Event.ExpenseCreated.Provider
   alias Conta.Event.ExpenseCreated.Attachment
+  alias Conta.Event.ExpenseCreated.Provider
 
   @primary_key false
 

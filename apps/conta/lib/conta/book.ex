@@ -54,7 +54,45 @@ defmodule Conta.Book do
     Repo.get_by!(Template, name: name, nif: nif)
   end
 
-  def new_create_invoice do
+  def get_set_invoice(id) when is_binary(id),
+    do: get_set_invoice(get_invoice!(id))
+
+  def get_set_invoice(%Invoice{} = invoice) do
+    {_year, invoice_number} = String.split("-")
+    invoice_number = String.to_integer(invoice_number)
+
+    %SetInvoice{
+      action: :update,
+      nif: invoice.company.nif,
+      client_nif: invoice.client && invoice.client.nif,
+      template: invoice.template,
+      invoice_number: invoice_number,
+      invoice_date: invoice.invoice_date,
+      paid_date: invoice.paid_date,
+      due_date: invoice.due_date,
+      type: invoice.type,
+      subtotal_price: invoice.subtotal_price,
+      tax_price: invoice.tax_price,
+      total_price: invoice.total_price,
+      currency: invoice.currency,
+      comments: invoice.comments,
+      destination_country: invoice.destination_country,
+      payment_method: invoice.payment_method,
+      details: for %Invoice.Detail{} = details <- invoice.details do
+        %SetInvoice.Detail{
+          sku: details.sku,
+          description: details.description,
+          tax: details.tax,
+          base_price: details.base_price,
+          units: details.units,
+          tax_price: details.tax_price,
+          total_price: details.total_price
+        }
+      end
+    }
+  end
+
+  def new_set_invoice do
     invoice_number = get_last_invoice_number() + 1
 
     %SetInvoice{

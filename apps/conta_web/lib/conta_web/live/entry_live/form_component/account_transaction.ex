@@ -2,7 +2,6 @@ defmodule ContaWeb.EntryLive.FormComponent.AccountTransaction do
   use TypedEctoSchema
   import Ecto.Changeset
   require Decimal
-  alias Conta.Command.SetAccount
   alias Conta.Command.AccountTransaction, as: SetAccountTransaction
 
   @primary_key false
@@ -107,48 +106,63 @@ defmodule ContaWeb.EntryLive.FormComponent.AccountTransaction do
     acctrans = apply_changes(changeset)
 
     if get_field(changeset, :breakdown) do
-      %SetAccountTransaction{
-        ledger: acctrans.ledger,
-        on_date: acctrans.on_date,
-        entries:
-          for entry <- acctrans.entries do
-            amount = Money.parse!(entry.amount)
-            change_amount = Money.parse!(entry.change_amount)
-
-            %SetAccountTransaction.Entry{
-              description: entry.description,
-              account_name: String.split(acctrans.account_name, "."),
-              credit: if(Money.negative?(amount), do: amount.amount, else: 0),
-              debit: if(Money.negative?(amount), do: 0, else: amount.amount),
-              change_currency: acctrans.change_currency,
-              change_credit:
-                if(Money.negative?(change_amount), do: change_amount.amount, else: 0),
-              change_debit: if(Money.negative?(change_amount), do: 0, else: change_amount.amount),
-              change_price: acctrans.change_price
-            }
-          end
-      }
+      to_command_breakdown(acctrans)
     else
-      amount = Money.parse!(acctrans.amount)
-
-      %SetAccountTransaction{
-        ledger: acctrans.ledger,
-        on_date: acctrans.on_date,
-        entries: [
-          %SetAccountTransaction.Entry{
-            description: acctrans.description,
-            account_name: String.split(acctrans.account_name, "."),
-            credit: if(Money.negative?(amount), do: amount.amount, else: 0),
-            debit: if(Money.negative?(amount), do: 0, else: amount.amount)
-          },
-          %SetAccountTransaction.Entry{
-            description: acctrans.description,
-            account_name: String.split(acctrans.related_account_name, "."),
-            credit: if(Money.negative?(amount), do: 0, else: amount.amount),
-            debit: if(Money.negative?(amount), do: amount.amount, else: 0)
-          }
-        ]
-      }
+      to_command_simple(acctrans)
     end
+  end
+
+  defp from_money(money, :negative) do
+    if Money.negative?(money), do: money.amount, else: 0
+  end
+
+  defp from_money(money, :positive) do
+    if Money.negative?(money), do: 0, else: money.amount
+  end
+
+  defp to_command_breakdown(acctrans) do
+    %SetAccountTransaction{
+      ledger: acctrans.ledger,
+      on_date: acctrans.on_date,
+      entries:
+        for entry <- acctrans.entries do
+          amount = Money.parse!(entry.amount)
+          change_amount = Money.parse!(entry.change_amount)
+
+          %SetAccountTransaction.Entry{
+            description: entry.description,
+            account_name: String.split(acctrans.account_name, "."),
+            credit: from_money(amount, :negative),
+            debit: from_money(amount, :positive),
+            change_currency: acctrans.change_currency,
+            change_credit: from_money(change_amount, :negative),
+            change_debit: from_money(change_amount, :positive),
+            change_price: acctrans.change_price
+          }
+        end
+    }
+  end
+
+  defp to_command_simple(acctrans) do
+    amount = Money.parse!(acctrans.amount)
+
+    %SetAccountTransaction{
+      ledger: acctrans.ledger,
+      on_date: acctrans.on_date,
+      entries: [
+        %SetAccountTransaction.Entry{
+          description: acctrans.description,
+          account_name: String.split(acctrans.account_name, "."),
+          credit: from_money(amount, :negative),
+          debit: from_money(amount, :positive)
+        },
+        %SetAccountTransaction.Entry{
+          description: acctrans.description,
+          account_name: String.split(acctrans.related_account_name, "."),
+          credit: from_money(amount, :positive),
+          debit: from_money(amount, :negative)
+        }
+      ]
+    }
   end
 end
