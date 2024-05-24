@@ -3,16 +3,17 @@ defmodule ContaBot.Action do
   require Logger
   alias ContaBot.Action.Users
 
-  command("status", description: "Status of the assets")
+  command("graph", description: "Receive a graph for specific data")
+  command("income", description: "Get income for last 6 months")
+  command("invoice", description: "List invoices")
+  command("outcome", description: "Get outcome for last 6 months")
   command("patrimony", description: "Get Patrimony for last 6 months")
   command("pnl", description: "Get Profits & Losses for last 6 months")
-  command("income", description: "Get income for last 6 months")
-  command("outcome", description: "Get outcome for last 6 months")
-  command("transaction", description: "Add account transaction")
-  command("statement", description: "Last entries for a selected account")
-  command("graph", description: "Receive a graph for specific data")
   command("search", description: "Search entries based on description and account name")
   command("shortcut", description: "Run a shortcut code written in Lua/PHP")
+  command("statement", description: "Last entries for a selected account")
+  command("status", description: "Status of the assets")
+  command("transaction", description: "Add account transaction")
 
   defmacro __using__(_opts) do
     quote do

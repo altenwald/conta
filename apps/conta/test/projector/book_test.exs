@@ -82,7 +82,7 @@ defmodule Conta.Projector.BookTest do
     test "create successfully", metadata do
       event =
         %Conta.Event.InvoiceSet{
-          action: :insert,
+          action: "insert",
           invoice_number: 1,
           invoice_date: "2023-12-30",
           type: :service,
@@ -173,7 +173,7 @@ defmodule Conta.Projector.BookTest do
     test "update successfully", metadata do
       event =
         %Conta.Event.InvoiceSet{
-          action: :update,
+          action: "update",
           invoice_number: 1,
           invoice_date: "2023-12-30",
           type: :service,

@@ -29,11 +29,13 @@ defmodule Conta.Command.SetExpense do
     web_hosting_or_platforms
   ]a
 
+  @type currency() :: atom()
+
   typed_embedded_schema do
     field :action, Ecto.Enum, values: ~w[insert update]a
     field :nif, :string
     field :provider_nif, :string
-    field :invoice_number, :integer
+    field :invoice_number, :string
     field :invoice_date, :date
     field :paid_date, :date
     field :due_date, :date
@@ -41,7 +43,7 @@ defmodule Conta.Command.SetExpense do
     field :subtotal_price, :decimal
     field :tax_price, :decimal
     field :total_price, :decimal
-    field :currency, Money.Ecto.Currency.Type
+    field(:currency, Money.Ecto.Currency.Type) :: currency()
     field :comments, :string
     field :payment_method, :string
     embeds_many :attachments, Attachment do

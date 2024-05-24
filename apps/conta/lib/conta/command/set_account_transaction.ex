@@ -1,4 +1,4 @@
-defmodule Conta.Command.AccountTransaction do
+defmodule Conta.Command.SetAccountTransaction do
   use TypedEctoSchema
   import Ecto.Changeset
 
@@ -12,17 +12,17 @@ defmodule Conta.Command.AccountTransaction do
 
       field :description, :string
       field :account_name, {:array, :string}
-      field :credit, Money.Ecto.Amount.Type, default: 0
-      field :debit, Money.Ecto.Amount.Type, default: 0
+      field(:credit, Money.Ecto.Amount.Type, default: 0) :: Money.t()
+      field(:debit, Money.Ecto.Amount.Type, default: 0) :: Money.t()
       field(:change_currency, Money.Ecto.Currency.Type, default: :EUR) :: currency()
-      field :change_credit, Money.Ecto.Amount.Type, default: 0
-      field :change_debit, Money.Ecto.Amount.Type, default: 0
+      field(:change_credit, Money.Ecto.Amount.Type, default: 0) :: Money.t()
+      field(:change_debit, Money.Ecto.Amount.Type, default: 0) :: Money.t()
       field :change_price, :decimal, default: 1.0
     end
   end
 
   @required_fields ~w[on_date]a
-  @optional_fields ~w[ledger]a
+  @optional_fields ~w[ledger id on_date_previous]a
 
   @doc false
   def changeset(model \\ %__MODULE__{}, params) do

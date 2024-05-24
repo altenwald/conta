@@ -60,7 +60,7 @@ defmodule Conta.Projector.Ledger.Account do
     field(:name, {:array, :string})
     field(:ledger, :string)
     field(:type, Ecto.Enum, values: @account_types)
-    field(:currency, Money.Ecto.Currency.Type, default: :EUR)
+    field(:currency, Money.Ecto.Currency.Type, default: :EUR) :: atom()
     field(:notes, :string)
     belongs_to(:parent, __MODULE__, foreign_key: :parent_id)
     has_many(:balances, Balance)

@@ -11,9 +11,9 @@
         <div class="table-wrapper has-mobile-cards">
           <div class="field is-grouped">
             <div class="control">
-              <%= live_patch to: ~p"/ledger/accounts/new", class: "button" do %>
+              <.link patch={~p"/ledger/accounts/new"} class="button">
                 <i class="fas fa-plus-circle"></i>&nbsp;<%= gettext("New Account") %>
-              <% end %>
+              </.link>
             </div>
           </div>
           <.table

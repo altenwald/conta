@@ -6,15 +6,15 @@ defmodule Conta.Event.ExpenseSet do
 
   alias Conta.Event.Common.Company
   alias Conta.Event.Common.PaymentMethod
-  alias Conta.Event.ExpenseCreated.Attachment
-  alias Conta.Event.ExpenseCreated.Provider
+  alias Conta.Event.ExpenseSet.Attachment
+  alias Conta.Event.ExpenseSet.Provider
 
   @primary_key false
 
   @derive Jason.Encoder
   typed_embedded_schema do
     field :action, Ecto.Enum, values: ~w[insert update]a
-    field :invoice_number, :integer
+    field :invoice_number, :string
     field :invoice_date, :date
     field :due_date, :date
     field :category, :string
@@ -26,7 +26,7 @@ defmodule Conta.Event.ExpenseSet do
     embeds_one :company, Company
     embeds_one :payment_method, PaymentMethod
     embeds_one :provider, Provider
-    embeds_many :attachment, Attachment
+    embeds_many :attachments, Attachment
   end
 
   @required_fields ~w[action invoice_number invoice_date category subtotal_price tax_price total_price currency]a

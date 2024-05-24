@@ -29,6 +29,7 @@ defmodule ContaBot.MixProject do
       {:finch, "~> 0.17"},
       {:jason, "~> 1.4"},
       {:gen_state_machine, "~> 3.0"},
+      {:countries, "~> 1.6"},
       {:conta, in_umbrella: true},
       {:doctor, ">= 0.0.0", only: [:dev, :test], runtime: false}
     ]

@@ -10,12 +10,12 @@
         <div class="table-wrapper has-mobile-cards">
           <div class="field is-grouped">
             <div class="control">
-              <%= live_patch to: ~p"/ledger/accounts/#{@account}/entries/new", class: "button" do %>
+              <.link patch={~p"/ledger/accounts/#{@account}/entries/new"} class="button">
                 <div class="icon-text">
                   <span class="icon mr-2"><FontAwesome.circle_plus /></span>
                   <span><%= gettext("New Entry") %></span>
                 </div>
-              <% end %>
+              </.link>
             </div>
           </div>
           <.table

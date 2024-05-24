@@ -4,9 +4,12 @@ defmodule Conta.Projector.Book do
     repo: Conta.Repo,
     name: __MODULE__
 
+  alias Conta.Event.ExpenseSet
   alias Conta.Event.InvoiceSet
   alias Conta.Event.PaymentMethodSet
   alias Conta.Event.TemplateSet
+
+  alias Conta.Projector.Book.Expense
   alias Conta.Projector.Book.Invoice
   alias Conta.Projector.Book.PaymentMethod
   alias Conta.Projector.Book.Template
@@ -40,7 +43,7 @@ defmodule Conta.Projector.Book do
   defp to_invoice_number(year, number) when is_integer(year) and is_binary(number),
     do: "#{year}-#{String.pad_leading(number, 5, "0")}"
 
-  project(%InvoiceSet{action: :insert} = invoice, _metadata, fn multi ->
+  project(%InvoiceSet{action: "insert"} = invoice, _metadata, fn multi ->
     invoice_number = to_invoice_number(invoice.invoice_date, invoice.invoice_number)
 
     changeset =
@@ -63,7 +66,19 @@ defmodule Conta.Projector.Book do
     Ecto.Multi.insert(multi, :invoice, changeset)
   end)
 
-  project(%InvoiceSet{action: :update} = invoice, _metadata, fn multi ->
+  project(%ExpenseSet{action: "insert"} = expense, _metadata, fn multi ->
+    changeset =
+      expense
+      |> Map.from_struct()
+      |> Map.update!(:subtotal_price, &to_integer/1)
+      |> Map.update!(:tax_price, &to_integer/1)
+      |> Map.update!(:total_price, &to_integer/1)
+      |> Expense.changeset()
+
+    Ecto.Multi.insert(multi, :expense, changeset)
+  end)
+
+  project(%InvoiceSet{action: "update"} = invoice, _metadata, fn multi ->
     invoice_number = to_invoice_number(invoice.invoice_date, invoice.invoice_number)
 
     params =
@@ -86,6 +101,20 @@ defmodule Conta.Projector.Book do
 
     changeset = Invoice.changeset(old_invoice, params)
     Ecto.Multi.update(multi, :invoice, changeset)
+  end)
+
+  project(%ExpenseSet{action: "update"} = expense, _metadata, fn multi ->
+    params =
+      expense
+      |> Map.from_struct()
+      |> Map.update!(:subtotal_price, &to_integer/1)
+      |> Map.update!(:tax_price, &to_integer/1)
+      |> Map.update!(:total_price, &to_integer/1)
+
+    old_expense = Conta.Repo.get_by!(Expense, [invoice_number: expense.invoice_number])
+
+    changeset = Expense.changeset(old_expense, params)
+    Ecto.Multi.update(multi, :expense, changeset)
   end)
 
   project(%PaymentMethodSet{} = payment_method, _metadata, fn multi ->

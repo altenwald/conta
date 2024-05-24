@@ -2,7 +2,7 @@ defmodule ContaWeb.EntryLive.FormComponent.AccountTransaction do
   use TypedEctoSchema
   import Ecto.Changeset
   require Decimal
-  alias Conta.Command.AccountTransaction, as: SetAccountTransaction
+  alias Conta.Command.SetAccountTransaction
 
   @primary_key false
 
@@ -93,10 +93,10 @@ defmodule ContaWeb.EntryLive.FormComponent.AccountTransaction do
   end
 
   @required_fields ~w[description account_name amount]a
-  @optional_fields ~w[change_currency change_credit change_debit change_price]a
+  @optional_fields ~w[change_currency change_amount change_price]a
 
   @doc false
-  def changeset_entries(model \\ %__MODULE__{}, params) do
+  def changeset_entries(model \\ %__MODULE__.Entry{}, params) do
     model
     |> cast(params, @required_fields ++ @optional_fields)
     |> validate_required(@required_fields)

@@ -2,8 +2,8 @@ defmodule Conta.Ledger do
   import Conta.Commanded.Application
   import Ecto.Query, only: [from: 2]
 
-  alias Conta.Command.AccountTransaction
   alias Conta.Command.SetAccount
+  alias Conta.Command.SetAccountTransaction
   alias Conta.Command.SetInvoice
 
   alias Conta.Projector.Ledger.Account
@@ -20,23 +20,23 @@ defmodule Conta.Ledger do
   end
 
   def create_account_transaction(on_date, entries, ledger \\ "default") do
-    %AccountTransaction{ledger: ledger, on_date: on_date, entries: entries}
+    %SetAccountTransaction{ledger: ledger, on_date: on_date, entries: entries}
     |> dispatch()
   end
 
   def new_account_transaction(account_name, ledger \\ "default") do
-    %AccountTransaction{
+    %SetAccountTransaction{
       ledger: ledger,
       on_date: Date.utc_today(),
       entries: [
-        %AccountTransaction.Entry{account_name: account_name},
-        %AccountTransaction.Entry{}
+        %SetAccountTransaction.Entry{account_name: account_name},
+        %SetAccountTransaction.Entry{}
       ]
     }
   end
 
   def entry(description, account_name, credit, debit, change_currency, change_credit, change_debit, change_price) do
-    %AccountTransaction.Entry{
+    %SetAccountTransaction.Entry{
       description: description,
       account_name: account_name,
       credit: credit,
@@ -203,10 +203,10 @@ defmodule Conta.Ledger do
       case return["type"] || "transaction" do
         "transaction" ->
           data
-          |> AccountTransaction.changeset()
+          |> SetAccountTransaction.changeset()
           |> Conta.EctoHelpers.traverse_errors()
           |> case do
-            %AccountTransaction{} = command ->
+            %SetAccountTransaction{} = command ->
               dispatch(command)
 
             {:error, _} = error ->

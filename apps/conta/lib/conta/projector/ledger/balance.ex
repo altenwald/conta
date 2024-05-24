@@ -1,14 +1,14 @@
 defmodule Conta.Projector.Ledger.Balance do
-  use Ecto.Schema
+  use TypedEctoSchema
   import Ecto.Changeset
   alias Conta.Projector.Ledger.Account
 
   @primary_key {:id, :binary_id, autogenerate: true}
   @foreign_key_type :binary_id
 
-  schema "ledger_balances" do
-    field :currency, Money.Ecto.Currency.Type
-    field :amount, Money.Ecto.Amount.Type
+  typed_schema "ledger_balances" do
+    field(:currency, Money.Ecto.Currency.Type) :: atom()
+    field(:amount, Money.Ecto.Amount.Type) :: Money.t()
     belongs_to :account, Account
 
     timestamps(type: :utc_datetime_usec)

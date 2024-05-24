@@ -1,4 +1,4 @@
-defmodule Conta.Event.ExpenseCreated.Attachment do
+defmodule Conta.Event.ExpenseSet.Attachment do
   use TypedEctoSchema
   import Ecto.Changeset
 

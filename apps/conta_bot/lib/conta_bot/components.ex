@@ -153,6 +153,12 @@ defmodule ContaBot.Components do
     |> escape_markdown()
   end
 
+  def currency_fmt(value) when is_integer(value) do
+    value
+    |> Money.new()
+    |> currency_fmt()
+  end
+
   def currency_fmt(value) do
     value
     |> to_string()

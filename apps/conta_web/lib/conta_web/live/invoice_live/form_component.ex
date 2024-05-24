@@ -293,7 +293,7 @@ defmodule ContaWeb.InvoiceLive.FormComponent do
        |> put_flash(:info, gettext("Invoice modified successfully"))
        |> push_patch(to: socket.assigns.patch)}
     else
-      Logger.debug("changeset errors: #{inspect(changeset.erorrs)}")
+      Logger.debug("changeset errors: #{inspect(changeset.errors)}")
       changeset = Map.put(changeset, :action, :validate)
       {:noreply, assign_form(socket, changeset)}
     end

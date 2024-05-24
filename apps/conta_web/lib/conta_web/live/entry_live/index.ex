@@ -2,7 +2,6 @@ defmodule ContaWeb.EntryLive.Index do
   use ContaWeb, :live_view
 
   alias Conta.Ledger
-  alias Conta.Projector.Ledger.Entry
   alias ContaWeb.EntryLive.FormComponent.AccountTransaction
 
   @impl true
@@ -44,17 +43,9 @@ defmodule ContaWeb.EntryLive.Index do
   end
 
   @impl true
-  def handle_info({ContaWeb.EntryLive.FormComponent, {:saved, entry}}, socket) do
+  def handle_info({ContaWeb.EntryLive.FormComponent, {:saved, _entry}}, socket) do
     account = socket.assigns.account
     {:noreply, stream(socket, :ledger_entries, list_entries_by_account(account))}
-  end
-
-  @impl true
-  def handle_event("delete", %{"id" => id}, socket) do
-    entry = Ledger.get_entry!(id)
-    {:ok, _} = Ledger.delete_entry(entry)
-
-    {:noreply, stream_delete(socket, :ledger_entries, entry)}
   end
 
   defp description(text) when is_binary(text) and byte_size(text) < 15, do: text

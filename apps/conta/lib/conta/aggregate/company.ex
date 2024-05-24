@@ -154,14 +154,16 @@ defmodule Conta.Aggregate.Company do
 
         command
         |> Map.from_struct()
+        |> Map.put(:category, to_string(command.category))
         |> Map.put(:provider, provider)
+        |> Map.put(:attachments, process_attachments(command))
         |> Map.put(:payment_method, process_payment_method(company.payment_methods[payment_method]))
         |> Map.put(:company, Map.take(company, ~w[nif name address postcode city state country details]a))
         |> ExpenseSet.changeset()
     end
   end
 
-  defp validate_duplicate_invoice_number({:error, _} = error, _company, _command), do: error
+  # defp validate_duplicate_invoice_number({:error, _} = error, _company, _command), do: error
 
   defp validate_duplicate_invoice_number(nil, %__MODULE__{} = company, %SetInvoice{} = command) do
     invoice_year = command.invoice_date.year
@@ -208,6 +210,17 @@ defmodule Conta.Aggregate.Company do
   defp process_details(%_{details: nil}), do: []
   defp process_details(%_{details: details}), do: Enum.map(details, &Map.from_struct/1)
 
+  defp process_attachments(%_{attachments: []}), do: []
+  defp process_attachments(%_{attachments: nil}), do: []
+
+  defp process_attachments(%_{attachments: attachments}) do
+    for attachment <- attachments do
+      attachment
+      |> Map.from_struct()
+      |> Map.update!(:file, &Base.encode64/1)
+    end
+  end
+
   defp process_payment_method(nil), do: nil
   defp process_payment_method(payment) do
     payment
@@ -226,14 +239,15 @@ defmodule Conta.Aggregate.Company do
     %__MODULE__{company | template_names: template_names}
   end
 
-  def apply(%__MODULE__{} = company, %InvoiceSet{action: :insert} = event) do
+  def apply(%__MODULE__{} = company, %InvoiceSet{action: action} = event) when action in ["insert", :insert] do
     year = to_date(event.invoice_date).year
     invoice_number = event.invoice_number
     invoice_numbers = Map.update(company.invoice_numbers, year, MapSet.new([invoice_number]), &MapSet.put(&1, invoice_number))
     %__MODULE__{company | invoice_numbers: invoice_numbers}
   end
 
-  def apply(%__MODULE__{} = company, %InvoiceSet{action: :update}), do: company
+  def apply(%__MODULE__{} = company, %InvoiceSet{action: action}) when action in ["update", :update],
+    do: company
 
   def apply(%__MODULE__{} = company, %ExpenseSet{}), do: company
 

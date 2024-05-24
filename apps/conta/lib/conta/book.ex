@@ -6,10 +6,21 @@ defmodule Conta.Book do
   alias Conta.Projector.Book.Template
   alias Conta.Repo
 
-  def list_invoices do
+  def list_invoices(limit \\ :infinity)
+
+  def list_invoices(:infinity) do
     from(
       i in Invoice,
       order_by: [desc: fragment("extract(year from ?)", i.invoice_date), desc: i.invoice_number]
+    )
+    |> Repo.all()
+  end
+
+  def list_invoices(limit) when is_integer(limit) do
+    from(
+      i in Invoice,
+      order_by: [desc: fragment("extract(year from ?)", i.invoice_date), desc: i.invoice_number],
+      limit: ^limit
     )
     |> Repo.all()
   end
@@ -58,7 +69,7 @@ defmodule Conta.Book do
     do: get_set_invoice(get_invoice!(id))
 
   def get_set_invoice(%Invoice{} = invoice) do
-    {_year, invoice_number} = String.split("-")
+    [_year, invoice_number] = String.split(invoice.invoice_number, "-", parts: 2)
     invoice_number = String.to_integer(invoice_number)
 
     %SetInvoice{
@@ -110,12 +121,7 @@ defmodule Conta.Book do
   end
 
   def get_last_invoice_number(year) when is_integer(year) do
-    year
-    |> to_string()
-    |> get_last_invoice_number()
-  end
-
-  def get_last_invoice_number(year) when is_binary(year) do
+    year_str = to_string(year)
     from(
       i in Invoice,
       where: fragment("extract(year from ?) = ?", i.invoice_date, ^year),
@@ -126,7 +132,7 @@ defmodule Conta.Book do
     |> Repo.one()
     |> case do
       nil -> 0
-      <<^year::binary-size(4), "-", value::binary>> -> String.to_integer(value)
+      <<^year_str::binary-size(4), "-", value::binary>> -> String.to_integer(value)
     end
   end
 end

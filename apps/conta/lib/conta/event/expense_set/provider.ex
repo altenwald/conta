@@ -1,4 +1,4 @@
-defmodule Conta.Event.ExpenseCreated.Provider do
+defmodule Conta.Event.ExpenseSet.Provider do
   use TypedEctoSchema
   import Ecto.Changeset
 

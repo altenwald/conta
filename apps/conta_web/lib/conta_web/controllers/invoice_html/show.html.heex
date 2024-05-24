@@ -155,7 +155,7 @@
               <%= if @invoice.comments do %>
                 <br />
               <% end %>
-            <% %_{name: name, holder: holder, method: :bank, details: details} -> %>
+            <% %_{holder: holder, method: :bank, details: details} -> %>
               <%= gettext("Make a transfer wire to the following account:") %><br />
               <%= details %><br />
               <%= if holder do %>

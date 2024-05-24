@@ -132,14 +132,16 @@ defmodule ContaBot.Action.Shortcut do
   end
 
   def handle_by_type(%_{type: :date, name: name}, input, context) do
-    if Date.from_iso8601(input) do
-      context
-      |> store_put_param(name, input)
-      |> show_next_input()
-    else
-      context
-      |> answer("Invalid date")
-      |> show_next_input()
+    case Date.from_iso8601(input) do
+      {:ok, _} ->
+        context
+        |> store_put_param(name, input)
+        |> show_next_input()
+
+      {:error, _} ->
+        context
+        |> answer("Invalid date")
+        |> show_next_input()
     end
   end
 

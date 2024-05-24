@@ -2,8 +2,6 @@ defmodule ContaWeb.InvoiceLive.Index do
   use ContaWeb, :live_view
 
   alias Conta.Book
-  alias Conta.Command.SetInvoice
-  alias Conta.Projector.Book.Invoice
 
   @impl true
   def mount(_params, _session, socket) do
@@ -44,13 +42,5 @@ defmodule ContaWeb.InvoiceLive.Index do
   @impl true
   def handle_info({ContaWeb.InvoiceLive.FormComponent, {:saved, invoice}}, socket) do
     {:noreply, stream_insert(socket, :books_invoices, invoice)}
-  end
-
-  @impl true
-  def handle_event("delete", %{"id" => id}, socket) do
-    invoice = Book.get_invoice!(id)
-    {:ok, _} = Book.delete_invoice(invoice)
-
-    {:noreply, stream_delete(socket, :books_invoices, invoice)}
   end
 end

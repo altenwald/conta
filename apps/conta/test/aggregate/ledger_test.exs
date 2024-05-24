@@ -1,8 +1,8 @@
 defmodule Conta.Aggregate.LedgerTest do
   use ExUnit.Case
   alias Conta.Aggregate.Ledger
-  alias Conta.Command.AccountTransaction
   alias Conta.Command.SetAccount
+  alias Conta.Command.SetAccountTransaction
   alias Conta.Event.AccountCreated
   alias Conta.Event.AccountModified
   alias Conta.Event.AccountRenamed
@@ -212,17 +212,17 @@ defmodule Conta.Aggregate.LedgerTest do
   describe "ledger create transaction" do
     test "basic successfully" do
       command =
-        %AccountTransaction{
+        %SetAccountTransaction{
           ledger: "default",
           on_date: ~D[2024-01-31],
           entries: [
-            %AccountTransaction.Entry{
+            %SetAccountTransaction.Entry{
               description: "Albert Heijn",
               account_name: ["Assets", "Cash"],
-              credit: 500,
+              credit: 5_00,
               debit: 0
             },
-            %AccountTransaction.Entry{
+            %SetAccountTransaction.Entry{
               description: "Albert Heijn",
               account_name: ["Expenses", "Supermarket"],
               credit: 0,
@@ -245,32 +245,32 @@ defmodule Conta.Aggregate.LedgerTest do
             "bd625868-3bd3-4f2c-9cab-8d8b73018ed1" => %Ledger.Account{
               name: ["Assets"],
               type: :assets,
-              currency: "EUR",
-              balances: %{"EUR" => 100_00, "USD" => 100_00}
+              currency: :EUR,
+              balances: %{EUR: 100_00, USD: 100_00}
             },
             "ab0c9ece-4aa5-48d5-ae08-7e89bd104fde" => %Ledger.Account{
               name: ["Assets", "Cash"],
               type: :assets,
-              currency: "EUR",
-              balances: %{"EUR" => 100_00}
+              currency: :EUR,
+              balances: %{EUR: 100_00}
             },
             "569eb02b-da2c-42c8-ad89-c7ba1618c451" => %Ledger.Account{
               name: ["Assets", "PayPal"],
               type: :assets,
-              currency: "USD",
-              balances: %{"USD" => 100_00}
+              currency: :USD,
+              balances: %{USD: 100_00}
             },
             "7c708316-43ed-4130-9c66-a1e063d10374" => %Ledger.Account{
               name: ["Expenses"],
               type: :expenses,
-              currency: "EUR",
-              balances: %{"EUR" => 50_00}
+              currency: :EUR,
+              balances: %{EUR: 50_00}
             },
             "4151bcd1-de24-48fc-a8de-e18d2aae0eb7" => %Ledger.Account{
               name: ["Expenses", "Supermarket"],
               type: :expenses,
-              currency: "EUR",
-              balances: %{"EUR" => 50_00}
+              currency: :EUR,
+              balances: %{EUR: 50_00}
             }
           }
         }
@@ -311,32 +311,32 @@ defmodule Conta.Aggregate.LedgerTest do
           "bd625868-3bd3-4f2c-9cab-8d8b73018ed1" => %Ledger.Account{
             name: ["Assets"],
             type: :assets,
-            currency: "EUR",
-            balances: %{"EUR" => 95_00, "USD" => 100_00}
+            currency: :EUR,
+            balances: %{EUR: 95_00, USD: 100_00}
           },
           "ab0c9ece-4aa5-48d5-ae08-7e89bd104fde" => %Ledger.Account{
             name: ["Assets", "Cash"],
             type: :assets,
-            currency: "EUR",
-            balances: %{"EUR" => 95_00}
+            currency: :EUR,
+            balances: %{EUR: 95_00}
           },
           "569eb02b-da2c-42c8-ad89-c7ba1618c451" => %Ledger.Account{
             name: ["Assets", "PayPal"],
             type: :assets,
-            currency: "USD",
-            balances: %{"USD" => 100_00}
+            currency: :USD,
+            balances: %{USD: 100_00}
           },
           "7c708316-43ed-4130-9c66-a1e063d10374" => %Ledger.Account{
             name: ["Expenses"],
             type: :expenses,
-            currency: "EUR",
-            balances: %{"EUR" => 55_00}
+            currency: :EUR,
+            balances: %{EUR: 55_00}
           },
           "4151bcd1-de24-48fc-a8de-e18d2aae0eb7" => %Ledger.Account{
             name: ["Expenses", "Supermarket"],
             type: :expenses,
-            currency: "EUR",
-            balances: %{"EUR" => 55_00}
+            currency: :EUR,
+            balances: %{EUR: 55_00}
           }
         }
       } == ledger
@@ -344,11 +344,11 @@ defmodule Conta.Aggregate.LedgerTest do
 
     test "different currencies successfully" do
       command =
-        %Conta.Command.AccountTransaction{
+        %SetAccountTransaction{
           ledger: "default",
           on_date: ~D[2024-01-04],
           entries: [
-            %Conta.Command.AccountTransaction.Entry{
+            %SetAccountTransaction.Entry{
               id: nil,
               description: "Walmart",
               account_name: ["Expenses", "Supermarket"],
@@ -359,7 +359,7 @@ defmodule Conta.Aggregate.LedgerTest do
               change_debit: 500,
               change_price: 1
             },
-            %Conta.Command.AccountTransaction.Entry{
+            %SetAccountTransaction.Entry{
               id: nil,
               description: "Walmart",
               account_name: ["Assets", "PayPal"],
@@ -387,32 +387,32 @@ defmodule Conta.Aggregate.LedgerTest do
             "bd625868-3bd3-4f2c-9cab-8d8b73018ed1" => %Ledger.Account{
               name: ["Assets"],
               type: :assets,
-              currency: "EUR",
-              balances: %{"EUR" => 100_00, "USD" => 100_00}
+              currency: :EUR,
+              balances: %{EUR: 100_00, USD: 100_00}
             },
             "ab0c9ece-4aa5-48d5-ae08-7e89bd104fde" => %Ledger.Account{
               name: ["Assets", "Cash"],
               type: :assets,
-              currency: "EUR",
-              balances: %{"EUR" => 100_00}
+              currency: :EUR,
+              balances: %{EUR: 100_00}
             },
             "569eb02b-da2c-42c8-ad89-c7ba1618c451" => %Ledger.Account{
               name: ["Assets", "PayPal"],
               type: :assets,
-              currency: "USD",
-              balances: %{"USD" => 100_00}
+              currency: :USD,
+              balances: %{USD: 100_00}
             },
             "7c708316-43ed-4130-9c66-a1e063d10374" => %Ledger.Account{
               name: ["Expenses"],
               type: :expenses,
-              currency: "EUR",
-              balances: %{"EUR" => 50_00}
+              currency: :EUR,
+              balances: %{EUR: 50_00}
             },
             "4151bcd1-de24-48fc-a8de-e18d2aae0eb7" => %Ledger.Account{
               name: ["Expenses", "Supermarket"],
               type: :expenses,
-              currency: "EUR",
-              balances: %{"EUR" => 50_00}
+              currency: :EUR,
+              balances: %{EUR: 50_00}
             }
           }
         }
@@ -453,32 +453,32 @@ defmodule Conta.Aggregate.LedgerTest do
           "bd625868-3bd3-4f2c-9cab-8d8b73018ed1" => %Ledger.Account{
             name: ["Assets"],
             type: :assets,
-            currency: "EUR",
-            balances: %{"EUR" => 100_00, "USD" => 95_00}
+            currency: :EUR,
+            balances: %{EUR: 100_00, USD: 95_00}
           },
           "ab0c9ece-4aa5-48d5-ae08-7e89bd104fde" => %Ledger.Account{
             name: ["Assets", "Cash"],
             type: :assets,
-            currency: "EUR",
-            balances: %{"EUR" => 100_00}
+            currency: :EUR,
+            balances: %{EUR: 100_00}
           },
           "569eb02b-da2c-42c8-ad89-c7ba1618c451" => %Ledger.Account{
             name: ["Assets", "PayPal"],
             type: :assets,
-            currency: "USD",
-            balances: %{"USD" => 95_00}
+            currency: :USD,
+            balances: %{USD: 95_00}
           },
           "7c708316-43ed-4130-9c66-a1e063d10374" => %Ledger.Account{
             name: ["Expenses"],
             type: :expenses,
-            currency: "EUR",
-            balances: %{"EUR" => 54_75}
+            currency: :EUR,
+            balances: %{EUR: 54_75}
           },
           "4151bcd1-de24-48fc-a8de-e18d2aae0eb7" => %Ledger.Account{
             name: ["Expenses", "Supermarket"],
             type: :expenses,
-            currency: "EUR",
-            balances: %{"EUR" => 54_75}
+            currency: :EUR,
+            balances: %{EUR: 54_75}
           }
         }
       } == ledger

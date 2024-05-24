@@ -3,8 +3,8 @@ defmodule Conta.Aggregate.Ledger do
 
   alias Conta.Aggregate.Ledger.Account
 
-  alias Conta.Command.AccountTransaction
   alias Conta.Command.SetAccount
+  alias Conta.Command.SetAccountTransaction
   alias Conta.Command.SetShortcut
 
   alias Conta.Event.AccountCreated
@@ -13,12 +13,20 @@ defmodule Conta.Aggregate.Ledger do
   alias Conta.Event.ShortcutSet
   alias Conta.Event.TransactionCreated
 
+  @type account_name() :: [String.t()]
+  @type account_id() :: String.t()
+
+  @type t() :: %__MODULE__{
+    name: String.t(),
+    accounts: %{account_id() => Account.t()},
+    account_names: %{required(account_name()) => account_id()},
+  }
   defstruct name: nil,
             accounts: %{},
             account_names: %{},
             shortcuts: MapSet.new()
 
-  @valid_currencies ~w[EUR USD SEK GBP]a
+  @valid_currencies Map.keys(Money.Currency.all())
 
   def execute(_ledger, %SetAccount{currency: currency})
       when currency not in @valid_currencies do
@@ -42,7 +50,7 @@ defmodule Conta.Aggregate.Ledger do
 
       :else ->
         command
-        |> Map.take(~w[name type currency notes ledger]a)
+        |> Map.from_struct()
         |> Map.put(:id, Ecto.UUID.generate())
         |> AccountCreated.changeset()
     end
@@ -56,8 +64,7 @@ defmodule Conta.Aggregate.Ledger do
         account_modified =
           account
           |> Map.from_struct()
-          |> Map.merge(Map.take(account, ~w[id ledger name]a))
-          |> then(&struct(AccountModified, &1))
+          |> AccountModified.changeset()
         params = Map.from_struct(command)
 
         [
@@ -89,13 +96,13 @@ defmodule Conta.Aggregate.Ledger do
     end
   end
 
-  def execute(_ledger, %AccountTransaction{entries: entries}) when length(entries) < 2 do
+  def execute(_ledger, %SetAccountTransaction{entries: entries}) when length(entries) < 2 do
     {:error, :not_enough_entries}
   end
 
   def execute(
         %__MODULE__{} = ledger,
-        %AccountTransaction{entries: entries} = transaction
+        %SetAccountTransaction{entries: entries} = transaction
       ) do
     cond do
       not valid_date?(transaction.on_date) ->
@@ -117,12 +124,11 @@ defmodule Conta.Aggregate.Ledger do
 
             entry =
               entry
-              |> Map.take(
-                ~w[description account_name credit debit change_currency change_credit change_debit change_price]a
-              )
+              |> Map.from_struct()
               |> Map.put(:balance, account.balances[currency])
               |> Map.put(:currency, currency)
-              |> then(&struct!(TransactionCreated.Entry, &1))
+              |> TransactionCreated.Entry.changeset()
+              |> Conta.EctoHelpers.traverse_errors()
 
             {entry, ledger}
           end)
@@ -202,7 +208,7 @@ defmodule Conta.Aggregate.Ledger do
 
   def apply(%__MODULE__{} = ledger, %AccountModified{} = event) do
     params = Map.take(event, ~w[id type currency notes]a)
-    account = struct(ledger.accounts[event.id], params)
+    account = Account.changeset(ledger.accounts[event.id], params)
     accounts = Map.put(ledger.accounts, account.id, account)
     %__MODULE__{ledger | accounts: accounts}
   end
@@ -231,8 +237,8 @@ defmodule Conta.Aggregate.Ledger do
   def apply(%__MODULE__{} = ledger, %AccountCreated{} = event) do
     account =
       event
-      |> Map.take(~w[id name type currency notes]a)
-      |> then(&struct!(Account, &1))
+      |> Map.from_struct()
+      |> Account.changeset()
 
     add_account(ledger, account)
   end
