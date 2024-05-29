@@ -50,7 +50,7 @@ defmodule Conta.DataCase do
 
   """
   def errors_on(changeset) do
-    {:error, errors} = Conta.EctoHelpers.traverse_errors(changeset)
+    {:error, errors} = Conta.EctoHelpers.get_result(changeset)
     errors
   end
 end

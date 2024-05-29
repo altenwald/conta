@@ -204,7 +204,7 @@ defmodule Conta.Ledger do
         "transaction" ->
           data
           |> SetAccountTransaction.changeset()
-          |> Conta.EctoHelpers.traverse_errors()
+          |> Conta.EctoHelpers.get_result()
           |> case do
             %SetAccountTransaction{} = command ->
               dispatch(command)
@@ -216,7 +216,7 @@ defmodule Conta.Ledger do
         "invoice" ->
           data
           |> SetInvoice.changeset()
-          |> Conta.EctoHelpers.traverse_errors()
+          |> Conta.EctoHelpers.get_result()
           |> case do
             %SetInvoice{} = command ->
               dispatch(command)

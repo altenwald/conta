@@ -41,6 +41,6 @@ defmodule Conta.Event.ExpenseSet do
     |> cast_embed(:company, required: true)
     |> cast_embed(:attachments)
     |> validate_required(@required_fields)
-    |> traverse_errors()
+    |> get_result()
   end
 end

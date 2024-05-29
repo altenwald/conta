@@ -1,11 +1,10 @@
-defmodule Conta.Event.ContactRemove do
+defmodule Conta.Command.RemoveContact do
   use TypedEctoSchema
   import Conta.EctoHelpers
   import Ecto.Changeset
 
   @primary_key false
 
-  @derive Jason.Encoder
   typed_embedded_schema do
     field :company_nif, :string
     field :nif, :string

@@ -28,7 +28,7 @@ defmodule Conta.Event.ShortcutSet do
     |> cast(params, @required_fields ++ @optional_fields)
     |> cast_embed(:params, with: &changeset_params/2)
     |> validate_required(@required_fields)
-    |> traverse_errors()
+    |> get_result()
   end
 
   @required_fields ~w[name type]a

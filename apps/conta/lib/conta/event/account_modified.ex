@@ -23,7 +23,7 @@ defmodule Conta.Event.AccountModified do
     model
     |> cast(params, @required_fields ++ @optional_fields)
     |> validate_required(@required_fields)
-    |> traverse_errors()
+    |> get_result()
   end
 
   def changed_anything?(model, params) do

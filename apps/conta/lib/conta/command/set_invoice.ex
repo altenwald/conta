@@ -42,7 +42,7 @@ defmodule Conta.Command.SetInvoice do
     |> cast(params, @required_fields ++ @optional_fields)
     |> cast_embed(:details, required: true, with: &changeset_details/2)
     |> validate_required(@required_fields)
-    |> validate_if_required(:client_nif, [:destination_country])
+    |> validate_required_unless_empty(:client_nif, [:destination_country])
   end
 
   @required_fields ~w[description tax base_price tax_price total_price]a

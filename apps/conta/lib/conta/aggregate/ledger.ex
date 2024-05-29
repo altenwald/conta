@@ -128,7 +128,7 @@ defmodule Conta.Aggregate.Ledger do
               |> Map.put(:balance, account.balances[currency])
               |> Map.put(:currency, currency)
               |> TransactionCreated.Entry.changeset()
-              |> Conta.EctoHelpers.traverse_errors()
+              |> Conta.EctoHelpers.get_result()
 
             {entry, ledger}
           end)

@@ -1,7 +1,14 @@
 defmodule Conta.EctoHelpers do
+  @moduledoc """
+  Helpers for Ecto.
+  """
   import Ecto.Changeset
 
-  def validate_if_required(changeset, field, required_fields) do
+  @doc """
+  If the field passed as parameter isn't empty (see `empty?/1`) then
+  the fields passed as third parameter are required.
+  """
+  def validate_required_unless_empty(changeset, field, required_fields) do
     if empty?(get_field(changeset, field)) do
       changeset
     else
@@ -9,16 +16,26 @@ defmodule Conta.EctoHelpers do
     end
   end
 
+  @doc """
+  Get true only if it's `nil`, or an empty list, or an empty map,
+  or an empty string.
+  """
   def empty?(nil), do: true
+  def empty?([]), do: true
+  def empty?(%{} = map) when map_size(map) == 0, do: true
   def empty?(str) when is_binary(str) do
     String.trim(str) == ""
   end
 
-  def traverse_errors(%Ecto.Changeset{valid?: true} = changeset) do
+  @doc """
+  Applied to a changeset (`Ecto.Changeset`) struct it's resolving to
+  a schema struct or an error tuple.
+  """
+  def get_result(%Ecto.Changeset{valid?: true} = changeset) do
     apply_changes(changeset)
   end
 
-  def traverse_errors(changeset) do
+  def get_result(changeset) do
     errors =
       traverse_errors(changeset, fn {msg, opts} ->
         Regex.replace(~r"%{(\w+)}", msg, fn _, key ->

@@ -23,6 +23,6 @@ defmodule Conta.Event.PaymentMethodSet do
     model
     |> cast(params, @required_fields ++ @optional_fields)
     |> validate_required(@required_fields)
-    |> traverse_errors()
+    |> get_result()
   end
 end

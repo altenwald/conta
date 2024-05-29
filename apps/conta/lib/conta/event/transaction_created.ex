@@ -22,6 +22,6 @@ defmodule Conta.Event.TransactionCreated do
     |> cast(params, @required_fields ++ @optional_fields)
     |> cast_embed(:entries)
     |> validate_required(@required_fields)
-    |> traverse_errors()
+    |> get_result()
   end
 end

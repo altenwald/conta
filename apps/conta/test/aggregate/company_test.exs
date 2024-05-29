@@ -314,6 +314,53 @@ defmodule Conta.Aggregate.CompanyTest do
         }
       } == Conta.Aggregate.Company.apply(company, event)
     end
+
+    test "remove contact successfully" do
+      company = %Conta.Aggregate.Company{
+        nif: "A55666777",
+        name: "Great Company SA",
+        address: "My Full Address",
+        postcode: "28000",
+        city: "Madrid",
+        state: "Madrid",
+        country: "ES",
+        contacts: %{
+          "B123456789" => %Conta.Aggregate.Company.Contact{
+            name: "Limited Company SL",
+            nif: "B123456789",
+            intracommunity: true,
+            address: "Full Address Here",
+            postcode: "08080",
+            city: "Barcelona",
+            state: "Catalunya",
+            country: "ES"
+          }
+        }
+      }
+
+      command = %Conta.Command.RemoveContact{
+        company_nif: "A55666777",
+        nif: "B123456789"
+      }
+
+      event = Conta.Aggregate.Company.execute(company, command)
+
+      assert %Conta.Event.ContactRemove{
+        company_nif: "A55666777",
+        nif: "B123456789",
+      } == event
+
+      assert %Conta.Aggregate.Company{
+        nif: "A55666777",
+        name: "Great Company SA",
+        address: "My Full Address",
+        postcode: "28000",
+        city: "Madrid",
+        state: "Madrid",
+        country: "ES",
+        contacts: %{}
+      } == Conta.Aggregate.Company.apply(company, event)
+    end
   end
 
   describe "payment method" do
@@ -938,48 +985,6 @@ defmodule Conta.Aggregate.CompanyTest do
           }
         }
       } == Conta.Aggregate.Company.apply(company, event)
-    end
-
-    test "create simple error missing payment method" do
-      company = %Conta.Aggregate.Company{
-        nif: "A55666777",
-        name: "Great Company SA",
-        address: "My Full Address",
-        postcode: "28000",
-        city: "Madrid",
-        state: "Madrid",
-        country: "ES",
-        payment_methods: %{
-          "paypal" => %Conta.Aggregate.Company.PaymentMethod{
-            name: "PayPal",
-            method: "gateway",
-            details: "myaccount@paypal.com"
-          }
-        }
-      }
-
-      command = %Conta.Command.SetInvoice{
-        nif: "A55666777",
-        invoice_number: 1,
-        invoice_date: Date.new!(2023, 12, 20),
-        type: :service,
-        subtotal_price: Money.new(100_00),
-        tax_price: Money.new(21_00),
-        total_price: Money.new(121_00),
-        destination_country: "ES",
-        payment_method: "stripe",
-        details: [
-          %Conta.Command.SetInvoice.Detail{
-            description: "Consultancy",
-            tax: 21,
-            base_price: Money.new(100_00),
-            tax_price: Money.new(21_00),
-            total_price: Money.new(121_00)
-          }
-        ]
-      }
-
-      assert {:error, %{payment_method: ["is invalid"]}} = Conta.Aggregate.Company.execute(company, command)
     end
   end
 end

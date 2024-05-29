@@ -42,6 +42,6 @@ defmodule Conta.Event.InvoiceSet do
     |> cast_embed(:company, required: true)
     |> cast_embed(:details, required: true)
     |> validate_required(@required_fields)
-    |> traverse_errors()
+    |> get_result()
   end
 end

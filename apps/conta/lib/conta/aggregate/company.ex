@@ -2,6 +2,7 @@ defmodule Conta.Aggregate.Company do
   alias Conta.Aggregate.Company.Contact
   alias Conta.Aggregate.Company.PaymentMethod
 
+  alias Conta.Command.RemoveContact
   alias Conta.Command.SetCompany
   alias Conta.Command.SetContact
   alias Conta.Command.SetExpense
@@ -10,6 +11,7 @@ defmodule Conta.Aggregate.Company do
   alias Conta.Command.SetTemplate
 
   alias Conta.Event.CompanySet
+  alias Conta.Event.ContactRemove
   alias Conta.Event.ContactSet
   alias Conta.Event.ExpenseSet
   alias Conta.Event.InvoiceSet
@@ -60,6 +62,15 @@ defmodule Conta.Aggregate.Company do
   def execute(%__MODULE__{}, %SetContact{} = command) do
     params = Map.from_struct(command)
     ContactSet.changeset(params)
+  end
+
+  def execute(%__MODULE__{contacts: contacts}, %RemoveContact{nif: nif} = command) when is_map_key(contacts, nif) do
+    params = Map.from_struct(command)
+    ContactRemove.changeset(params)
+  end
+
+  def execute(%__MODULE__{}, %RemoveContact{}) do
+    {:error, :contact_not_found}
   end
 
   def execute(%__MODULE__{}, %SetPaymentMethod{} = command) do
@@ -255,6 +266,10 @@ defmodule Conta.Aggregate.Company do
     |> Map.from_struct()
     |> then(&struct(Contact, &1))
     |> then(&%__MODULE__{company | contacts: Map.put(contacts, nif, &1)})
+  end
+
+  def apply(%__MODULE__{contacts: contacts} = company, %ContactRemove{nif: nif}) do
+    %__MODULE__{company | contacts: Map.delete(contacts, nif)}
   end
 
   def apply(%__MODULE__{payment_methods: payment_methods} = company, %PaymentMethodSet{slug: slug} = event) do
