@@ -33,7 +33,7 @@ defmodule ContaBot.Action.Patrimony do
   end
 
   @impl ContaBot.Action
-  def handle(:init, context) do
+  def handle({:init, _command}, context) do
     options =
       for currency <- Conta.Ledger.list_used_currencies() do
         name = Money.Currency.name(currency)

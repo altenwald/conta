@@ -82,19 +82,19 @@ defmodule Conta.Projector.BookTest do
     test "create successfully", metadata do
       event =
         %Conta.Event.InvoiceSet{
-          action: "insert",
+          action: :insert,
           invoice_number: 1,
-          invoice_date: "2023-12-30",
+          invoice_date: ~D"2023-12-30",
           type: :service,
           subtotal_price: 100_00,
           tax_price: 21_00,
           total_price: 121_00,
           destination_country: "ES",
-          payment_method: %{
-            method: "gateway",
+          payment_method: %Conta.Event.Common.PaymentMethod{
+            method: :gateway,
             details: "myaccount@paypal.com"
           },
-          client: %{
+          client: %Conta.Event.InvoiceSet.Client{
             name: "My client",
             nif: "B123456789",
             address: "My client's address",
@@ -104,7 +104,7 @@ defmodule Conta.Projector.BookTest do
             country: "ES"
           },
           details: [
-            %{
+            %Conta.Event.InvoiceSet.Detail{
               description: "Consultancy",
               tax: 21,
               base_price: 100_00,
@@ -112,7 +112,7 @@ defmodule Conta.Projector.BookTest do
               total_price: 121_00
             }
           ],
-          company: %{
+          company: %Conta.Event.Common.Company{
             nif: "A55666777",
             name: "Great Company SA",
             address: "My Full Address",
@@ -173,19 +173,19 @@ defmodule Conta.Projector.BookTest do
     test "update successfully", metadata do
       event =
         %Conta.Event.InvoiceSet{
-          action: "update",
+          action: :update,
           invoice_number: 1,
-          invoice_date: "2023-12-30",
+          invoice_date: ~D"2023-12-30",
           type: :service,
           subtotal_price: 100_00,
           tax_price: 21_00,
           total_price: 121_00,
           destination_country: "ES",
-          payment_method: %{
+          payment_method: %Conta.Event.Common.PaymentMethod{
             method: "gateway",
             details: "myaccount@paypal.com"
           },
-          client: %{
+          client: %Conta.Event.InvoiceSet.Client{
             name: "My client",
             nif: "B123456789",
             address: "My client's address",
@@ -195,7 +195,7 @@ defmodule Conta.Projector.BookTest do
             country: "ES"
           },
           details: [
-            %{
+            %Conta.Event.InvoiceSet.Detail{
               description: "Consultancy",
               tax: 21,
               base_price: 200_00,
@@ -203,7 +203,7 @@ defmodule Conta.Projector.BookTest do
               total_price: 242_00
             }
           ],
-          company: %{
+          company: %Conta.Event.Common.Company{
             nif: "A55666777",
             name: "Great Company SA",
             address: "My Full Address",

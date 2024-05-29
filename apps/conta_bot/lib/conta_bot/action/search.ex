@@ -33,7 +33,7 @@ defmodule ContaBot.Action.Search do
   end
 
   @impl ContaBot.Action
-  def handle(:init, context) do
+  def handle({:init, _command}, context) do
     answer_me(context, "Write the text to search...")
   end
 

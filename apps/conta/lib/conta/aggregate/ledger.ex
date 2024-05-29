@@ -108,11 +108,11 @@ defmodule Conta.Aggregate.Ledger do
       not valid_date?(transaction.on_date) ->
         {:error, :invalid_date}
 
-      not valid_entries?(entries, ledger) ->
-        {:error, :invalid_entries}
-
       not valid_accounts?(entries, ledger) ->
         {:error, :invalid_account}
+
+      not valid_entries?(entries, ledger) ->
+        {:error, :invalid_entries}
 
       :else ->
         {entries, _accounts} =

@@ -35,11 +35,15 @@ defmodule ContaBot.Action do
       def answer_me(context, prompt, opts \\ []) do
         ContaBot.Components.answer_me(context, name(), prompt, opts)
       end
+
+      def match_me(regex) do
+        ContaBot.Action.match_me(__MODULE__, regex)
+      end
     end
   end
 
   @type event() ::
-          :init
+          {:init, String.t()}
           | {:event_sticky, String.t()}
           | {:event, String.t()}
           | {:callback, String.t()}
@@ -49,7 +53,8 @@ defmodule ContaBot.Action do
 
   def handle({:command, command, params}, context) do
     if Users.granted_user?(params.from.username) do
-      handle(:init, to_string(command), context)
+      command = to_string(command)
+      handle({:init, command}, command, context)
     else
       answer(context, "You're not allowed to ask me anything. Sorry.")
     end
@@ -92,10 +97,32 @@ defmodule ContaBot.Action do
     Code.ensure_loaded(module)
     Logger.debug("requested command #{inspect(following)} - trying #{module}")
 
-    if function_exported?(module, :handle, 2) do
-      module.handle(event, context)
-    else
-      answer(context, "Command not found. Sorry.")
+    cond do
+      function_exported?(module, :handle, 2) ->
+        module.handle(event, context)
+
+      module = get_match_module(following) ->
+        module.handle(event, context)
+
+      :else ->
+        answer(context, "Command not found. Sorry.")
+    end
+  end
+
+  def match_me(module, regex) do
+    key = {__MODULE__, :match_me}
+    matches = :persistent_term.get(key, nil) || %{}
+    :persistent_term.put(key, Map.put(matches, module, regex))
+  end
+
+  def get_match_module(command) do
+    key = {__MODULE__, :match_me}
+    matches = :persistent_term.get(key, nil) || %{}
+    f = fn {_module, regex} -> Regex.match?(regex, command) end
+
+    if match = Enum.find(matches, f) do
+      {module, _regex} = match
+      module
     end
   end
 

@@ -3,7 +3,7 @@ defmodule ContaBot.Action.Shortcut do
   require Logger
 
   @impl ContaBot.Action
-  def handle(:init, context) do
+  def handle({:init, _command}, context) do
     options =
       for shortcut <- Conta.Ledger.list_shortcuts() do
         [

@@ -29,6 +29,11 @@ defmodule Conta.Book do
     Repo.get!(Invoice, id)
   end
 
+  def get_invoice!(year, number) when is_integer(year) and is_integer(number) do
+    invoice_number = "#{year}-#{String.pad_leading(to_string(number), 5, "0")}"
+    Repo.get_by!(Invoice, invoice_number: invoice_number)
+  end
+
   def list_payment_methods(nif \\ nil)
 
   def list_payment_methods(nil) do

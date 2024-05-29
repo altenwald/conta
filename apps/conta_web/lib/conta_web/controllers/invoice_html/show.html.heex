@@ -6,10 +6,14 @@
   <% end %>
   <div class="column is-7">
     <img
+      :if={@template.logo_mime_type != "image/svg" and @template.logo != nil}
       class="invoice-logo"
       src={get_logo(assigns[:base_path], @template)}
       alt={@invoice.company.name}
     />
+    <div :if={@template.logo_mime_type == "image/svg"} class="column is-8">
+      <%= raw(@template.logo) %>
+    </div>
     <br />
     <h1 class="invoice-title">
       <%= gettext("INVOICE") %>

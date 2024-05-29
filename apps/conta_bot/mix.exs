@@ -31,6 +31,7 @@ defmodule ContaBot.MixProject do
       {:gen_state_machine, "~> 3.0"},
       {:countries, "~> 1.6"},
       {:conta, in_umbrella: true},
+      {:conta_web, in_umbrella: true},
       {:doctor, ">= 0.0.0", only: [:dev, :test], runtime: false}
     ]
   end

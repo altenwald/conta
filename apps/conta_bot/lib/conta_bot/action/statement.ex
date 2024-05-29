@@ -27,7 +27,7 @@ defmodule ContaBot.Action.Statement do
   end
 
   @impl ContaBot.Action
-  def handle(:init, context) do
+  def handle({:init, _command}, context) do
     choose_account(context, "statement", "Choose an account", false, "")
   end
 

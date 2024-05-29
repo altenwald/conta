@@ -2,6 +2,8 @@ import Config
 
 config :conta, event_stores: [Conta.EventStore]
 
+config :conta, Conta.EventStore, serializer: Conta.Commanded.Serializer
+
 config :conta, ecto_repos: [Conta.Repo]
 
 # Configures the mailer

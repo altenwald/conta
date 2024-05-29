@@ -3,7 +3,7 @@ defmodule ContaBot.Action.Graph do
   require Logger
 
   @impl ContaBot.Action
-  def handle(:init, context) do
+  def handle({:init, _command}, context) do
     options = [
       {"Patrimony", "graph patrimony"},
       {"Income", "graph income"},

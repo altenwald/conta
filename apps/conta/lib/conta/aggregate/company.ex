@@ -239,15 +239,14 @@ defmodule Conta.Aggregate.Company do
     %__MODULE__{company | template_names: template_names}
   end
 
-  def apply(%__MODULE__{} = company, %InvoiceSet{action: action} = event) when action in ["insert", :insert] do
+  def apply(%__MODULE__{} = company, %InvoiceSet{action: :insert} = event) do
     year = to_date(event.invoice_date).year
     invoice_number = event.invoice_number
     invoice_numbers = Map.update(company.invoice_numbers, year, MapSet.new([invoice_number]), &MapSet.put(&1, invoice_number))
     %__MODULE__{company | invoice_numbers: invoice_numbers}
   end
 
-  def apply(%__MODULE__{} = company, %InvoiceSet{action: action}) when action in ["update", :update],
-    do: company
+  def apply(%__MODULE__{} = company, %InvoiceSet{action: :update}), do: company
 
   def apply(%__MODULE__{} = company, %ExpenseSet{}), do: company
 

@@ -34,10 +34,9 @@ defmodule Conta.Projector.Stats do
       |> Enum.map(& &1.account_name)
       |> Enum.uniq()
       |> Enum.map(&Repo.get_by!(Account, name: &1))
-      |> Enum.map(&{&1.name, &1})
-      |> Map.new()
+      |> Map.new(&{&1.name, &1})
 
-    on_date = Date.from_iso8601!(transaction.on_date)
+    on_date = transaction.on_date
 
     transaction.entries
     |> Enum.with_index()

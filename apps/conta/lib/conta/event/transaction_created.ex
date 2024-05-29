@@ -17,10 +17,10 @@ defmodule Conta.Event.TransactionCreated do
   @optional_fields ~w[]a
 
   @doc false
-  def changeset(model \\ %__MODULE__{}, params) do
+  def changeset(model \\ %__MODULE__{}, params) when not is_struct(params) do
     model
     |> cast(params, @required_fields ++ @optional_fields)
-    |> cast_assoc(:entries)
+    |> cast_embed(:entries)
     |> validate_required(@required_fields)
     |> traverse_errors()
   end

@@ -25,7 +25,7 @@ defmodule ContaBot.Action.Users do
   end
 
   @impl ContaBot.Action
-  def handle(:init, context) do
+  def handle({:init, _command}, context) do
     options = [
       {"Add", "users add"},
       {"Remove", "users remove"},

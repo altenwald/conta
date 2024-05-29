@@ -16,10 +16,7 @@ defmodule ContaWeb.InvoiceController do
     |> render(:show)
   end
 
-  def download(conn, %{"id" => id}) do
-    invoice = Book.get_invoice!(id)
-    template = Book.get_template_by_name!(invoice.company.nif, invoice.template)
-
+  def to_pdf(invoice, template) do
     content_opts = %{
       view_module: ContaWeb.InvoiceView,
       view_template: "show.html",
@@ -41,7 +38,14 @@ defmodule ContaWeb.InvoiceController do
       |> HtmlSafe.to_iodata()
       |> to_string()
 
-    {:ok, pdf} = ChromicPDF.print_to_pdf({:html, html})
+    ChromicPDF.print_to_pdf({:html, html})
+  end
+
+  def download(conn, %{"id" => id}) do
+    invoice = Book.get_invoice!(id)
+    template = Book.get_template_by_name!(invoice.company.nif, invoice.template)
+
+    {:ok, pdf} = to_pdf(invoice, template)
 
     conn
     |> put_resp_content_type("application/pdf")

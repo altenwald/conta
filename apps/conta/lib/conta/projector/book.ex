@@ -43,7 +43,7 @@ defmodule Conta.Projector.Book do
   defp to_invoice_number(year, number) when is_integer(year) and is_binary(number),
     do: "#{year}-#{String.pad_leading(number, 5, "0")}"
 
-  project(%InvoiceSet{action: "insert"} = invoice, _metadata, fn multi ->
+  project(%InvoiceSet{action: :insert} = invoice, _metadata, fn multi ->
     invoice_number = to_invoice_number(invoice.invoice_date, invoice.invoice_number)
 
     changeset =
@@ -56,29 +56,37 @@ defmodule Conta.Projector.Book do
       |> Map.update!(:details, fn details ->
         for detail <- details do
           detail
+          |> Map.from_struct()
           |> Map.update!(:base_price, &to_integer/1)
           |> Map.update!(:tax_price, &to_integer/1)
           |> Map.update!(:total_price, &to_integer/1)
         end
       end)
+      |> Map.update!(:company, &Map.from_struct/1)
+      |> Map.update(:payment_method, nil, &if(&1 != nil, do: Map.from_struct(&1)))
+      |> Map.update(:client, nil, &if(&1 != nil, do: Map.from_struct(&1)))
       |> Invoice.changeset()
 
     Ecto.Multi.insert(multi, :invoice, changeset)
   end)
 
-  project(%ExpenseSet{action: "insert"} = expense, _metadata, fn multi ->
+  project(%ExpenseSet{action: :insert} = expense, _metadata, fn multi ->
     changeset =
       expense
       |> Map.from_struct()
       |> Map.update!(:subtotal_price, &to_integer/1)
       |> Map.update!(:tax_price, &to_integer/1)
       |> Map.update!(:total_price, &to_integer/1)
+      |> Map.update!(:company, &Map.from_struct/1)
+      |> Map.update!(:attachments, fn attachments -> Enum.map(attachments, &Map.from_struct/1) end)
+      |> Map.update(:payment_method, nil, &if(&1 != nil, do: Map.from_struct(&1)))
+      |> Map.update(:provider, nil, &if(&1 != nil, do: Map.from_struct(&1)))
       |> Expense.changeset()
 
     Ecto.Multi.insert(multi, :expense, changeset)
   end)
 
-  project(%InvoiceSet{action: "update"} = invoice, _metadata, fn multi ->
+  project(%InvoiceSet{action: :update} = invoice, _metadata, fn multi ->
     invoice_number = to_invoice_number(invoice.invoice_date, invoice.invoice_number)
 
     params =
@@ -91,11 +99,15 @@ defmodule Conta.Projector.Book do
       |> Map.update!(:details, fn details ->
         for detail <- details do
           detail
+          |> Map.from_struct()
           |> Map.update!(:base_price, &to_integer/1)
           |> Map.update!(:tax_price, &to_integer/1)
           |> Map.update!(:total_price, &to_integer/1)
         end
       end)
+      |> Map.update!(:company, &Map.from_struct/1)
+      |> Map.update(:payment_method, nil, &if(&1 != nil, do: Map.from_struct(&1)))
+      |> Map.update(:client, nil, &if(&1 != nil, do: Map.from_struct(&1)))
 
     old_invoice = Conta.Repo.get_by!(Invoice, [invoice_number: invoice_number])
 
@@ -103,13 +115,17 @@ defmodule Conta.Projector.Book do
     Ecto.Multi.update(multi, :invoice, changeset)
   end)
 
-  project(%ExpenseSet{action: "update"} = expense, _metadata, fn multi ->
+  project(%ExpenseSet{action: :update} = expense, _metadata, fn multi ->
     params =
       expense
       |> Map.from_struct()
       |> Map.update!(:subtotal_price, &to_integer/1)
       |> Map.update!(:tax_price, &to_integer/1)
       |> Map.update!(:total_price, &to_integer/1)
+      |> Map.update!(:company, &Map.from_struct/1)
+      |> Map.update!(:attachments, fn attachments -> Enum.map(attachments, &Map.from_struct/1) end)
+      |> Map.update(:payment_method, nil, &if(&1 != nil, do: Map.from_struct(&1)))
+      |> Map.update(:provider, nil, &if(&1 != nil, do: Map.from_struct(&1)))
 
     old_expense = Conta.Repo.get_by!(Expense, [invoice_number: expense.invoice_number])
 

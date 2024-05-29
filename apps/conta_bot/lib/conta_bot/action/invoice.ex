@@ -1,6 +1,9 @@
 defmodule ContaBot.Action.Invoice do
   use ContaBot.Action
+
+  alias Conta.Book
   alias Conta.Projector.Book.Invoice
+  alias ContaWeb.InvoiceController
 
   @num_entries 20
 
@@ -9,6 +12,7 @@ defmodule ContaBot.Action.Invoice do
     |> Enum.reverse()
     |> Enum.map(fn %Invoice{} = invoice ->
       """
+      /i#{String.replace(invoice.invoice_number, "-", "")}
       *#{escape_markdown(invoice.invoice_number)} \\-\\- #{escape_markdown(to_string(invoice.invoice_date))}*
       _#{escape_markdown(format_client(invoice))}_
       ```
@@ -38,7 +42,17 @@ defmodule ContaBot.Action.Invoice do
   end
 
   @impl ContaBot.Action
-  def handle(:init, context) do
+  def handle({:init, "invoice"}, context) do
+    match_me(~r"^i[0-9]{9}$")
     answer(context, invoice_output(), parse_mode: "MarkdownV2")
+  end
+
+  def handle({:init, <<"i", year::binary-size(4), id::binary-size(5)>>}, context) do
+    invoice = Book.get_invoice!(String.to_integer(year), String.to_integer(id))
+    template = Book.get_template_by_name!(invoice.company.nif, invoice.template)
+    {:ok, encoded_pdf} = InvoiceController.to_pdf(invoice, template)
+    pdf = Base.decode64!(encoded_pdf)
+    filename = "#{invoice.invoice_number}.pdf"
+    ExGram.send_document(get_chat_id(context), {:file_content, pdf, filename})
   end
 end

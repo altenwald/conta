@@ -4,7 +4,7 @@ defmodule ContaBot.Action.Transaction do
   alias ContaBot.Action.Transaction.Worker
 
   @impl ContaBot.Action
-  def handle(:init, context) do
+  def handle({:init, _command}, context) do
     chat_id = get_chat_id(context)
     :ok = Worker.stop(chat_id)
     {:ok, _pid} = Worker.start(chat_id)

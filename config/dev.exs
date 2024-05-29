@@ -1,7 +1,6 @@
 import Config
 
 config :conta, Conta.EventStore,
-  serializer: Commanded.Serialization.JsonSerializer,
   username: "postgres",
   password: "postgres",
   database: "eventstore_dev",

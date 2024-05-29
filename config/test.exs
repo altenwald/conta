@@ -4,7 +4,6 @@ import Config
 config :bcrypt_elixir, :log_rounds, 1
 
 config :conta, Conta.EventStore,
-  serializer: Commanded.Serialization.JsonSerializer,
   username: "postgres",
   password: "postgres",
   database: "eventstore_test",

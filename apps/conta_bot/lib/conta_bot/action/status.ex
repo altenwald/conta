@@ -27,7 +27,7 @@ defmodule ContaBot.Action.Status do
   end
 
   @impl ContaBot.Action
-  def handle(:init, context) do
+  def handle({:init, _command}, context) do
     options = [
       {"Depth 2 (i.e. Active.Bank)", "status 2"},
       {"Depth 3 (i.e. Active.Bank.ING)", "status 3"}
