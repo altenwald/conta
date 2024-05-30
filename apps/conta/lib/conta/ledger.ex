@@ -88,6 +88,14 @@ defmodule Conta.Ledger do
     |> Repo.all()
   end
 
+  def search_accounts(text) do
+    from(
+      a in Account,
+      where: fragment("POSITION(? IN ARRAY_TO_STRING(?, '.')) > 0", ^text, a.name)
+    )
+    |> Repo.all()
+  end
+
   def list_accounts do
     from(a in Account, order_by: a.name, preload: :balances)
     |> Repo.all()

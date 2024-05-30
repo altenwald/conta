@@ -218,7 +218,7 @@ defmodule ContaBot.Action.Transaction do
       {:ok, data} ->
         entries =
           for entry <- data.entries do
-            struct!(Conta.Command.AccountTransaction.Entry, entry)
+            struct!(Conta.Command.SetAccountTransaction.Entry, entry)
           end
 
         if :ok == Conta.Ledger.create_account_transaction(data.on_date, entries) do
