@@ -14,7 +14,7 @@ defmodule Conta.Event.TransactionCreated do
   end
 
   @required_fields ~w[ledger on_date]a
-  @optional_fields ~w[]a
+  @optional_fields ~w[id]a
 
   @doc false
   def changeset(model \\ %__MODULE__{}, params) when not is_struct(params) do

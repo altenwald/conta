@@ -72,6 +72,11 @@ defmodule Conta.Ledger do
     Repo.get!(Entry, id)
   end
 
+  def get_entries_by_transaction_id(transaction_id) do
+    from(e in Entry, where: e.transaction_id == ^transaction_id, order_by: e.inserted_at)
+    |> Repo.all()
+  end
+
   defp populate_account_virtual(account) do
     case List.pop_at(account.name, -1) do
       {simple_name, []} ->
@@ -166,6 +171,28 @@ defmodule Conta.Ledger do
 
       query -> query
     end
+    |> Repo.all()
+    |> Enum.map(&adjust_currency(&1, account.currency))
+  end
+
+  def list_entries_by_account(%Account{} = account, page, dates_per_page) do
+    dates =
+      from(
+        e in Entry,
+        where: e.account_name == ^account.name,
+        order_by: [desc: e.on_date],
+        group_by: e.on_date,
+        select: e.on_date
+      )
+      |> Repo.all()
+      |> Enum.chunk_every(dates_per_page)
+      |> Enum.at(page - 1, [])
+
+    from(
+      e in Entry,
+      where: e.account_name == ^account.name and e.on_date in ^dates,
+      order_by: [desc: e.on_date, desc: e.inserted_at]
+    )
     |> Repo.all()
     |> Enum.map(&adjust_currency(&1, account.currency))
   end

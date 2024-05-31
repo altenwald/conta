@@ -1,18 +1,18 @@
 <section class="section is-main-section">
+  <.breadcrumbs>
+    <:breadcrumb label={gettext("Dashboard")} href={~p"/"} />
+    <:breadcrumb label={gettext("Accounts")} href={~p"/ledger/accounts"} />
+  </.breadcrumbs>
+
   <div class="card tile is-child has-table has-mobile-sort-spaced">
-    <header class="card-header">
-      <p class="card-header-title">
-        <span class="icon"><i class="fas fa-book"></i></span>
-        <%= gettext("Accounts") %>
-      </p>
-    </header>
     <div class="card-content">
       <div class="b-table has-pagination">
         <div class="table-wrapper has-mobile-cards">
           <div class="field is-grouped">
             <div class="control">
               <.link patch={~p"/ledger/accounts/new"} class="button">
-                <i class="fas fa-plus-circle"></i>&nbsp;<%= gettext("New Account") %>
+                <span class="icon mr-2"><FontAwesome.circle_plus /></span>
+                <span><%= gettext("New Account") %></span>
               </.link>
             </div>
           </div>

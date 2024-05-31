@@ -91,6 +91,7 @@ defmodule ContaWeb.Router do
           live "/", EntryLive.Index, :index
           live "/new", EntryLive.Index, :new
           live "/:id/edit", EntryLive.Index, :edit
+          live "/:id/duplicate", EntryLive.Index, :duplicate
 
           live "/:id", EntryLive.Show, :show
           live "/:id/show/edit", EntryLive.Show, :edit

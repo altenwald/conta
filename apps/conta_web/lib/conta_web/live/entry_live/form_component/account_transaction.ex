@@ -7,6 +7,7 @@ defmodule ContaWeb.EntryLive.FormComponent.AccountTransaction do
   @primary_key false
 
   typed_embedded_schema do
+    field(:transaction_id, :binary_id)
     field(:ledger, :string, default: "default")
     field(:on_date, :date)
     field(:description, :string)
@@ -15,9 +16,10 @@ defmodule ContaWeb.EntryLive.FormComponent.AccountTransaction do
     field(:amount, :decimal)
     field(:breakdown, :boolean, default: false)
 
-    embeds_many :entries, Entry do
+    embeds_many :entries, Entry, primary_key: false do
       @typep currency() :: atom()
 
+      field(:id, :binary_id)
       field(:description, :string)
       field(:account_name, :string)
       field(:amount, :decimal, default: 0)
@@ -33,6 +35,34 @@ defmodule ContaWeb.EntryLive.FormComponent.AccountTransaction do
       "account_name" => "",
       "amount" => ""
     }
+  end
+
+  def edit([%Conta.Projector.Ledger.Entry{} = main_entry | _] = entries) do
+    %__MODULE__{
+      transaction_id: main_entry.transaction_id,
+      on_date: main_entry.on_date,
+      description: main_entry.description,
+      account_name: to_account_name(main_entry.account_name),
+      related_account_name: to_account_name(main_entry.related_account_name),
+      amount: Money.subtract(main_entry.debit, main_entry.credit) |> Money.to_decimal(),
+      breakdown: main_entry.breakdown,
+      entries:
+        for %Conta.Projector.Ledger.Entry{} = entry <- entries do
+          %__MODULE__.Entry{
+            id: entry.id,
+            description: entry.description,
+            account_name: to_account_name(entry.account_name),
+            amount: Money.subtract(entry.debit, entry.credit) |> Money.to_decimal()
+            # TODO missing change information in projection (check Conta.Projector.Ledger.Entry)
+          }
+        end
+    }
+  end
+
+  defp to_account_name(nil), do: nil
+
+  defp to_account_name(account_name) when is_list(account_name) do
+    Enum.join(account_name, ".")
   end
 
   def enable_breakdown(params) do

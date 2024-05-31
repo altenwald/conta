@@ -9,99 +9,106 @@ $modal-content-width: 1024px !default;
 @import "bulma";
 @import "bulma-checkbox";
 
-@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+Mono:wght@100..900&display=swap');
+@import url("https://fonts.googleapis.com/css2?family=Noto+Sans+Mono:wght@100..900&display=swap");
 
 // <weight>: Use a value from 100 to 900
 
-.money {
-    font-family: "Noto Sans Mono", monospace;
-    font-optical-sizing: auto;
-    font-weight: 400;
-    font-style: normal;
-    font-variation-settings:
-      "wdth" 100;
+.money,
+.is-money {
+  font-family: "Noto Sans Mono", monospace;
+  font-optical-sizing: auto;
+  font-weight: 400;
+  font-style: normal;
+  font-variation-settings: "wdth" 100;
 }
 
 .fa-spin {
-    -webkit-animation-name: fa-spin;
-            animation-name: fa-spin;
-    -webkit-animation-delay: var(--fa-animation-delay, 0s);
-            animation-delay: var(--fa-animation-delay, 0s);
-    -webkit-animation-direction: var(--fa-animation-direction, normal);
-            animation-direction: var(--fa-animation-direction, normal);
-    -webkit-animation-duration: var(--fa-animation-duration, 2s);
-            animation-duration: var(--fa-animation-duration, 2s);
-    -webkit-animation-iteration-count: var(--fa-animation-iteration-count, infinite);
-            animation-iteration-count: var(--fa-animation-iteration-count, infinite);
-    -webkit-animation-timing-function: var(--fa-animation-timing, linear);
-            animation-timing-function: var(--fa-animation-timing, linear); }
+  -webkit-animation-name: fa-spin;
+  animation-name: fa-spin;
+  -webkit-animation-delay: var(--fa-animation-delay, 0s);
+  animation-delay: var(--fa-animation-delay, 0s);
+  -webkit-animation-direction: var(--fa-animation-direction, normal);
+  animation-direction: var(--fa-animation-direction, normal);
+  -webkit-animation-duration: var(--fa-animation-duration, 2s);
+  animation-duration: var(--fa-animation-duration, 2s);
+  -webkit-animation-iteration-count: var(--fa-animation-iteration-count, infinite);
+  animation-iteration-count: var(--fa-animation-iteration-count, infinite);
+  -webkit-animation-timing-function: var(--fa-animation-timing, linear);
+  animation-timing-function: var(--fa-animation-timing, linear);
+}
 
 @-webkit-keyframes fa-spin {
   0% {
     -webkit-transform: rotate(0deg);
-            transform: rotate(0deg); }
+    transform: rotate(0deg);
+  }
   100% {
     -webkit-transform: rotate(360deg);
-            transform: rotate(360deg); } }
+    transform: rotate(360deg);
+  }
+}
 
 @keyframes fa-spin {
   0% {
     -webkit-transform: rotate(0deg);
-            transform: rotate(0deg); }
+    transform: rotate(0deg);
+  }
   100% {
     -webkit-transform: rotate(360deg);
-            transform: rotate(360deg); } }
+    transform: rotate(360deg);
+  }
+}
 
 .message.toast {
-    position: fixed;
-    top: 25px;
-    right: 25px;
-    z-index: 1023;
-    animation: slideInRight 0.3s ease-in-out forwards;
-    transform: translateX(110%);
+  position: fixed;
+  top: 25px;
+  right: 25px;
+  z-index: 1023;
+  animation: slideInRight 0.3s ease-in-out forwards;
+  transform: translateX(110%);
 }
 
 .message.toast.close {
-    position: fixed;
-    top: 25px;
-    right: 25px;
-    z-index: 1023;
-    animation: fadeOut 0.5s ease-in-out forwards;
+  position: fixed;
+  top: 25px;
+  right: 25px;
+  z-index: 1023;
+  animation: fadeOut 0.5s ease-in-out forwards;
 }
 
 .modal-card-foot.is-at-right {
-    justify-content: flex-end;
+  justify-content: flex-end;
 }
 
 @keyframes slideInRight {
-    0% {
-        transform: translateX(110%);
-    }
-    75% {
-        transform: translateX(-10%);
-    }
-    100% {
-        transform: translateX(0%);
-    }
+  0% {
+    transform: translateX(110%);
+  }
+  75% {
+    transform: translateX(-10%);
+  }
+  100% {
+    transform: translateX(0%);
+  }
 }
 
 @keyframes slideOutRight {
-    0% {
-        transform: translateX(0%);
-    }
-    25% {
-        transform: translateX(-10%);
-    }
-    100% {
-        transform: translateX(110%);
-    }
+  0% {
+    transform: translateX(0%);
+  }
+  25% {
+    transform: translateX(-10%);
+  }
+  100% {
+    transform: translateX(110%);
+  }
 }
 
 @keyframes fadeOut {
-    0% {
-        opacity: 1;
-    }
-    100% {
-        opacity: 0;
-    }
+  0% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
 }

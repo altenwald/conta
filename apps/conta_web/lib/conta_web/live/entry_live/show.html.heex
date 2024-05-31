@@ -1,11 +1,15 @@
 <section class="section is-main-section">
+  <.breadcrumbs>
+    <:breadcrumb label={gettext("Dashboard")} href={~p"/"} />
+    <:breadcrumb label={gettext("Accounts")} href={~p"/ledger/accounts"} />
+    <:breadcrumb label={Enum.join(@account.name, ".")} href={~p"/ledger/accounts/#{@account}"} />
+    <:breadcrumb
+      label={gettext("Entry")}
+      href={~p"/ledger/accounts/#{@account}/entries/#{@entry}"}
+    />
+  </.breadcrumbs>
+
   <div class="card tile is-child has-table has-mobile-sort-spaced">
-    <header class="card-header">
-      <p class="card-header-title">
-        <span class="icon"><i class="fas fa-book"></i></span>
-        <%= gettext("Entry") %>
-      </p>
-    </header>
     <div class="card-content">
       <div class="b-table has-pagination">
         <div class="table-wrapper has-mobile-cards">
@@ -16,7 +20,12 @@
                 patch={~p"/ledger/accounts/#{@account.id}/entries/#{@entry}/show/edit"}
                 phx-click={JS.push_focus()}
               >
-                <%= gettext("Edit entry") %>
+                <div class="icon-text">
+                  <span class="icon mr-2">
+                    <FontAwesome.pencil />
+                  </span>
+                  <span><%= gettext("Edit entry") %></span>
+                </div>
               </.link>
             </div>
           </div>

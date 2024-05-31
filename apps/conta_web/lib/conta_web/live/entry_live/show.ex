@@ -4,8 +4,9 @@ defmodule ContaWeb.EntryLive.Show do
   alias Conta.Ledger
 
   @impl true
-  def mount(_params, _session, socket) do
-    {:ok, socket}
+  def mount(%{"account_id" => account_id}, _session, socket) do
+    account = Ledger.get_account!(account_id)
+    {:ok, assign(socket, :account, account)}
   end
 
   @impl true
@@ -16,6 +17,6 @@ defmodule ContaWeb.EntryLive.Show do
      |> assign(:entry, Ledger.get_entry!(id))}
   end
 
-  defp page_title(:show), do: "Show Entry"
-  defp page_title(:edit), do: "Edit Entry"
+  defp page_title(:show), do: gettext("Show Entry")
+  defp page_title(:edit), do: gettext("Edit Entry")
 end

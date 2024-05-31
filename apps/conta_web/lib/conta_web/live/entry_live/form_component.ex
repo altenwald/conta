@@ -119,6 +119,7 @@ defmodule ContaWeb.EntryLive.FormComponent do
       "on_date" => Date.utc_today()
     }
 
+    Logger.debug("account transaction: #{inspect(account_transaction)}")
     changeset = FormAccountTransaction.changeset(account_transaction, params)
 
     {:ok,
@@ -192,6 +193,10 @@ defmodule ContaWeb.EntryLive.FormComponent do
 
   def handle_event("save", %{"account_transaction" => params}, socket) do
     save_account_transaction(socket, socket.assigns.action, params)
+  end
+
+  defp save_account_transaction(socket, :duplicate, params) do
+    save_account_transaction(socket, :new, params)
   end
 
   defp save_account_transaction(socket, :new, params) do

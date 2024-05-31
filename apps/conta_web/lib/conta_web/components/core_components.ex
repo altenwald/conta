@@ -135,6 +135,34 @@ defmodule ContaWeb.CoreComponents do
     """
   end
 
+  slot :breadcrumb do
+    attr :href, :string
+    attr :label, :string
+  end
+
+  def breadcrumbs(assigns) do
+    breadcumbs = assigns.breadcrumb
+
+    assigns =
+      assign(assigns,
+        first_breadcrumbs: Enum.drop(breadcumbs, -1),
+        last_breadcrumb: List.last(breadcumbs)
+      )
+
+    ~H"""
+    <nav class="breadcrumb" aria-label="breadcrumbs">
+      <ul>
+        <li :for={breadcrumb <- @first_breadcrumbs}>
+          <a href={breadcrumb.href}><%= breadcrumb.label %></a>
+        </li>
+        <li class="is-active">
+          <a aria-current="page" href={@last_breadcrumb.href}><%= @last_breadcrumb.label %></a>
+        </li>
+      </ul>
+    </nav>
+    """
+  end
+
   slot :inner_block, required: true
 
   def buttons(assigns) do
@@ -596,28 +624,70 @@ defmodule ContaWeb.CoreComponents do
           </th>
         </tr>
       </thead>
-      <tbody id={@id} phx-update={if is_struct(@rows, Phoenix.LiveView.LiveStream), do: "stream"}>
-        <tr :for={{_id, %_{}} = row <- @rows} id={@row_id && @row_id.(row)}>
+      <tbody
+        id={@id}
+        phx-update={if is_struct(@rows, Phoenix.LiveView.LiveStream), do: "stream"}
+        phx-viewport-bottom="next-page"
+      >
+        <tr :for={{id, %_{}} = row <- @rows} id={id}>
           <td :for={col <- @col} class={["is-vcentered", col[:class]]}>
             <%= render_slot(col, @row_item.(row)) %>
           </td>
-          <td>
+          <td :if={@action != []}>
             <%= for action <- @action do %>
               <%= render_slot(action, @row_item.(row)) %>
             <% end %>
           </td>
         </tr>
-        <%= for {id, %{rows: rows, title: title}} <- @rows do %>
-          <tr id={id}>
-            <th colspan={length(@col)}><%= title %></th>
-          </tr>
-          <tr :for={row <- rows} id={@row_id && @row_id.({row.id, row})}>
-            <td :for={col <- @col} class={["is-vcentered", col[:class]]}>
-              <%= render_slot(col, @row_item.({row.id, row})) %>
-            </td>
-          </tr>
-        <% end %>
+        <tr :for={{id, %{title: title, row: row}} <- @rows} id={id}>
+          <th :if={is_nil(row)} colspan={length(@col) + if(@action != [], do: 1, else: 0)}>
+            <%= title %>
+          </th>
+          <td :for={col <- @col} :if={is_nil(title)} class={["is-vcentered", col[:class]]}>
+            <%= render_slot(col, @row_item.({row.id, row})) %>
+          </td>
+          <td :if={@action != [] and is_nil(title)}>
+            <%= for action <- @action do %>
+              <%= render_slot(action, @row_item.({row.id, row})) %>
+            <% end %>
+          </td>
+        </tr>
       </tbody>
+    </table>
+    """
+  end
+
+  @doc ~S"""
+  Renders a very simple table with generic styling.
+
+  ## Examples
+
+      <.simple_table id="users" rows={@users}>
+        <:col :let={user} label="id"><%= user.id %></:col>
+        <:col :let={user} label="username"><%= user.username %></:col>
+      </.simple_table>
+  """
+  attr :id, :string, required: true
+  attr :rows, :list, required: true
+
+  slot :col, required: true do
+    attr :class, :string
+    attr :label, :string
+  end
+
+  def simple_table(assigns) do
+    ~H"""
+    <table class="table is-fullwidth is-striped is-hoverable">
+      <thead>
+        <tr>
+          <th :for={col <- @col}><%= col[:label] %></th>
+        </tr>
+      </thead>
+      <tr :for={row <- @rows} id={row.id}>
+        <td :for={col <- @col} class={["is-vcentered", col[:class]]}>
+          <%= render_slot(col, row) %>
+        </td>
+      </tr>
     </table>
     """
   end

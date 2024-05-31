@@ -1,10 +1,12 @@
 <section class="section is-main-section">
+  <.breadcrumbs>
+    <:breadcrumb label={gettext("Dashboard")} href={~p"/"} />
+    <:breadcrumb label={gettext("Accounts")} href={~p"/ledger/accounts"} />
+    <:breadcrumb label={Enum.join(@account.name, ".")} href={~p"/ledger/accounts/#{@account}"} />
+    <:breadcrumb label={gettext("Entries")} href={~p"/ledger/accounts/#{@account}/entries"} />
+  </.breadcrumbs>
+
   <div class="card tile is-child has-table has-mobile-sort-spaced">
-    <header class="card-header">
-      <p class="card-header-title">
-        <%= gettext("Entries") %>&nbsp; <strong><%= Enum.join(@account.name, ".") %></strong>
-      </p>
-    </header>
     <div class="card-content">
       <div class="b-table has-pagination">
         <div class="table-wrapper has-mobile-cards">
@@ -27,6 +29,40 @@
               end
             }
           >
+            <:action :let={{_id, entry}}>
+              <.link
+                class="button is-light"
+                patch={~p"/ledger/accounts/#{@account}/entries/#{entry.transaction_id}/duplicate"}
+                title={gettext("Duplicate")}
+              >
+                <span class="icon">
+                  <FontAwesome.copy />
+                </span>
+              </.link>
+            </:action>
+            <:action :let={{_id, entry}}>
+              <.link
+                class="button is-light"
+                patch={~p"/ledger/accounts/#{@account}/entries/#{entry}/edit"}
+                title={gettext("Edit")}
+              >
+                <span class="icon">
+                  <FontAwesome.pencil />
+                </span>
+              </.link>
+            </:action>
+            <:action :let={{id, entry}}>
+              <.link
+                phx-click={JS.push("delete", value: %{id: entry.id}) |> hide("##{id}")}
+                class="button is-danger is-light"
+                data-confirm={gettext("Are you sure?")}
+                title={gettext("Delete")}
+              >
+                <span class="icon">
+                  <FontAwesome.trash_can />
+                </span>
+              </.link>
+            </:action>
             <:col :let={{_id, entry}} label={gettext("description")}>
               <span title={entry.description}><%= description(entry.description) %></span>
             </:col>
@@ -43,6 +79,9 @@
               <%= entry.balance %>
             </:col>
           </.table>
+          <div class="column is-full-width has-text-centered">
+            <div class="button is-info" phx-click="next-page"><%= gettext("Load more") %></div>
+          </div>
         </div>
       </div>
     </div>
@@ -50,7 +89,7 @@
 </section>
 
 <.modal
-  :if={@live_action in [:new, :edit]}
+  :if={@live_action in [:new, :edit, :duplicate]}
   id="entry-modal"
   show
   on_cancel={JS.patch(~p"/ledger/accounts/#{@account}/entries")}

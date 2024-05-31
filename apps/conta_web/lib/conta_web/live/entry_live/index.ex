@@ -4,27 +4,79 @@ defmodule ContaWeb.EntryLive.Index do
   alias Conta.Ledger
   alias ContaWeb.EntryLive.FormComponent.AccountTransaction
 
+  @dates_per_page 5
+
   @impl true
   def mount(%{"account_id" => account_id}, _session, socket) do
     account = Ledger.get_account!(account_id)
 
     {:ok,
      socket
-     |> stream(:ledger_entries, list_entries_by_account(account))
-     |> assign(:account, account)}
+     |> assign(account: account, page: 1)
+     |> paginate_entries(1, @dates_per_page)}
   end
 
-  defp list_entries_by_account(account) do
-    account
-    |> Ledger.list_entries_by_account()
-    |> Enum.group_by(& &1.on_date)
-    |> Enum.map(fn {on_date, entries} -> %{id: on_date, title: on_date, rows: entries} end)
-    |> Enum.sort_by(& &1.title, {:desc, Date})
+  defp flat_title_and_entries(entries, on_date \\ nil, acc \\ [])
+
+  defp flat_title_and_entries([], _on_date, rows), do: Enum.reverse(rows)
+
+  defp flat_title_and_entries([%_{on_date: on_date} = entry | entries], on_date, rows) do
+    row = %{id: entry.id, title: nil, row: entry}
+    flat_title_and_entries(entries, on_date, [row | rows])
+  end
+
+  defp flat_title_and_entries([%_{on_date: on_date} | _] = entries, _on_date, rows) do
+    row = %{id: on_date, title: on_date, row: nil}
+    flat_title_and_entries(entries, on_date, [row | rows])
+  end
+
+  defp paginate_entries(socket, new_page, _dates_per_page)
+       when not is_integer(new_page) or new_page <= 0,
+       do: socket
+
+  defp paginate_entries(socket, new_page, dates_per_page) do
+    %{page: cur_page, account: account} = socket.assigns
+
+    entries =
+      account
+      |> Ledger.list_entries_by_account(new_page, dates_per_page)
+      |> flat_title_and_entries()
+
+    {entries, at} =
+      if new_page >= cur_page do
+        {entries, -1}
+      else
+        {Enum.reverse(entries), 0}
+      end
+
+    if match?([_ | _], entries) do
+      socket
+      |> assign(:page, new_page)
+      |> stream(:ledger_entries, entries, at: at)
+    else
+      socket
+    end
+  end
+
+  @impl true
+  def handle_event("next-page", %{}, socket) do
+    {:noreply, paginate_entries(socket, socket.assigns.page + 1, @dates_per_page)}
   end
 
   @impl true
   def handle_params(params, _url, socket) do
     {:noreply, apply_action(socket, socket.assigns.live_action, params)}
+  end
+
+  defp apply_action(socket, :duplicate, %{"id" => transaction_id}) do
+    entries = Ledger.get_entries_by_transaction_id(transaction_id)
+    account_transaction = AccountTransaction.edit(entries)
+
+    socket
+    |> assign(:page_title, gettext("New Entry"))
+    |> assign(:transaction_id, Ecto.UUID.generate())
+    |> assign(:account_transaction, account_transaction)
+    |> assign(:breakdown, account_transaction.breakdown)
   end
 
   defp apply_action(socket, :new, _params) do
@@ -45,7 +97,7 @@ defmodule ContaWeb.EntryLive.Index do
   @impl true
   def handle_info({ContaWeb.EntryLive.FormComponent, {:saved, _entry}}, socket) do
     account = socket.assigns.account
-    {:noreply, stream(socket, :ledger_entries, list_entries_by_account(account))}
+    {:noreply, redirect(socket, to: ~p"/ledger/accounts/#{account}/entries")}
   end
 
   defp description(text) when is_binary(text) and byte_size(text) < 15, do: text
