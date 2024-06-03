@@ -3,6 +3,7 @@ defmodule Conta.Aggregate.Ledger do
 
   alias Conta.Aggregate.Ledger.Account
 
+  alias Conta.Command.RemoveAccountTransaction
   alias Conta.Command.SetAccount
   alias Conta.Command.SetAccountTransaction
   alias Conta.Command.SetShortcut
@@ -12,6 +13,7 @@ defmodule Conta.Aggregate.Ledger do
   alias Conta.Event.AccountRenamed
   alias Conta.Event.ShortcutSet
   alias Conta.Event.TransactionCreated
+  alias Conta.Event.TransactionRemoved
 
   @type account_name() :: [String.t()]
   @type account_id() :: String.t()
@@ -20,6 +22,7 @@ defmodule Conta.Aggregate.Ledger do
     name: String.t(),
     accounts: %{account_id() => Account.t()},
     account_names: %{required(account_name()) => account_id()},
+    shortcuts: MapSet.t(String.t())
   }
   defstruct name: nil,
             accounts: %{},
@@ -117,7 +120,7 @@ defmodule Conta.Aggregate.Ledger do
       :else ->
         {entries, _accounts} =
           Enum.map_reduce(transaction.entries, ledger, fn entry, ledger ->
-            ledger = update_ledger(ledger, entry)
+            ledger = update_ledger(ledger, entry, & &1 + &2)
             account_id = ledger.account_names[entry.account_name]
             account = ledger.accounts[account_id]
             currency = account.currency
@@ -126,7 +129,6 @@ defmodule Conta.Aggregate.Ledger do
               entry
               |> Map.from_struct()
               |> Map.put(:balance, account.balances[currency])
-              |> Map.put(:currency, currency)
               |> TransactionCreated.Entry.changeset()
               |> Conta.EctoHelpers.get_result()
 
@@ -142,6 +144,44 @@ defmodule Conta.Aggregate.Ledger do
     end
   end
 
+  def execute(_ledger, %RemoveAccountTransaction{entries: entries}) when length(entries) < 2 do
+    {:error, :not_enough_entries}
+  end
+
+  def execute(%__MODULE__{} = ledger, %RemoveAccountTransaction{entries: entries} = command) do
+    cond do
+      not valid_accounts?(entries, ledger) ->
+        {:error, :invalid_account}
+
+      not valid_entries?(entries, ledger) ->
+        {:error, :invalid_entries}
+
+      :else ->
+        {entries, _accounts} =
+          Enum.map_reduce(entries, ledger, fn entry, ledger ->
+            ledger = update_ledger(ledger, entry, & &1 - &2)
+            account_id = ledger.account_names[entry.account_name]
+            account = ledger.accounts[account_id]
+            currency = account.currency
+
+            entry =
+              entry
+              |> Map.from_struct()
+              |> Map.put(:balance, account.balances[currency])
+              |> TransactionRemoved.Entry.changeset()
+              |> Conta.EctoHelpers.get_result()
+
+            {entry, ledger}
+          end)
+
+        %TransactionRemoved{
+          id: command.transaction_id,
+          ledger: command.ledger,
+          entries: entries
+        }
+    end
+  end
+
   def execute(_ledger, %SetShortcut{} = command) do
     command
     |> Map.from_struct()
@@ -151,14 +191,14 @@ defmodule Conta.Aggregate.Ledger do
     |> ShortcutSet.changeset()
   end
 
-  defp update_ledger(ledger, entry) do
+  defp update_ledger(ledger, entry, update_f) do
     account_id = ledger.account_names[entry.account_name]
 
     accounts =
       Map.update!(ledger.accounts, account_id, fn account ->
         Map.update!(account, :balances, fn balances ->
           amount = get_amount(to_string(account.type), entry.debit, entry.credit)
-          Map.update(balances, account.currency, amount, &(&1 + amount))
+          Map.update(balances, account.currency, amount, &update_f.(&1, amount))
         end)
       end)
 
@@ -244,7 +284,13 @@ defmodule Conta.Aggregate.Ledger do
   end
 
   def apply(%__MODULE__{} = ledger, %TransactionCreated{entries: entries}) do
-    Enum.reduce(entries, ledger, &update_account_balance(&2, &1))
+    update = & &1 + &2
+    Enum.reduce(entries, ledger, &update_account_balance(&1, &2, update))
+  end
+
+  def apply(%__MODULE__{} = ledger, %TransactionRemoved{entries: entries}) do
+    update = & &1 - &2
+    Enum.reduce(entries, ledger, &update_account_balance(&1, &2, update))
   end
 
   def apply(%__MODULE__{shortcuts: shortcuts} = ledger, %ShortcutSet{name: name}) do
@@ -321,17 +367,17 @@ defmodule Conta.Aggregate.Ledger do
     %__MODULE__{ledger | account_names: account_names}
   end
 
-  defp update_account_balance(ledger, entry) do
+  defp update_account_balance(%_{} = entry, ledger, update_f) do
     account_id = ledger.account_names[entry.account_name]
     account = ledger.accounts[account_id]
-    balance = get_amount(to_string(account.type), entry.debit, entry.credit)
+    amount = get_amount(to_string(account.type), entry.debit, entry.credit)
 
     update_account_hierarchy(
       ledger,
       entry.account_name,
-      %{entry.currency => balance},
+      %{account.currency => amount},
       fn account, {currency, amount} ->
-        balances = Map.update(account.balances, currency, amount, &(&1 + amount))
+        balances = Map.update(account.balances, currency, amount, &update_f.(&1, amount))
         %Account{account | balances: balances}
       end
     )

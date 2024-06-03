@@ -67,9 +67,9 @@ defmodule Conta.Projector.LedgerTest do
     end
 
     test "rename account", metadata do
-      balance1 = build(:balance, %{amount: 100_0})
-      balance2 = build(:balance, %{amount: 90_0})
-      balance3 = build(:balance, %{amount: 10_0})
+      balance1 = build(:balance, %{amount: 100_00})
+      balance2 = build(:balance, %{amount: 90_00})
+      balance3 = build(:balance, %{amount: 10_00})
 
       account1 = insert(:account, %{name: ~w[Assets], balances: [balance1]})
       _account2 = insert(:account, %{name: ~w[Assets Bank], parent_id: account1.id, balances: [balance2]})
@@ -88,15 +88,18 @@ defmodule Conta.Projector.LedgerTest do
         name: ~w[Assets],
         ledger: "default",
         type: :assets,
+        balances: [%Ledger.Balance{amount: %Money{amount: 100_00}}],
         subaccounts: [
           %Ledger.Account{
             name: ~w[Assets Bank],
             ledger: "default",
+            balances: [%Ledger.Balance{amount: %Money{amount: 100_00}}],
             type: :assets,
             subaccounts: [
               %Ledger.Account{
                 name: ~w[Assets Bank Account],
                 ledger: "default",
+                balances: [%Ledger.Balance{amount: %Money{amount: 10_00}}],
                 type: :assets
               }
             ]
@@ -105,6 +108,219 @@ defmodule Conta.Projector.LedgerTest do
       } =
         Repo.get!(Ledger.Account, account1.id)
         |> Repo.preload([:balances, subaccounts: [:balances, subaccounts: :balances]])
+    end
+  end
+
+  describe "transactions" do
+    test "create successfully", metadata do
+      balance1 = build(:balance, %{amount: 100_00})
+      balance2 = build(:balance, %{amount: 90_00})
+      balance3 = build(:balance, %{amount: 90_00})
+      balance4 = build(:balance, %{amount: 50_00})
+      balance5 = build(:balance, %{amount: 50_00})
+
+      account1 = insert(:account, %{name: ~w[Assets], balances: [balance1]})
+      account2 = insert(:account, %{name: ~w[Assets Bank], parent_id: account1.id, balances: [balance2]})
+      account3 = insert(:account, %{name: ~w[Assets Bank Account], parent_id: account2.id, balances: [balance3]})
+      account4 = insert(:account, %{name: ~w[Expenses], type: :expenses, balances: [balance4]})
+      account5 = insert(:account, %{name: ~w[Expenses Groceries], type: :expenses, parent_id: account4.id, balances: [balance5]})
+
+      event = %Conta.Event.TransactionCreated{
+        id: "814d6052-8594-4964-8485-778762d8c701",
+        ledger: "default",
+        on_date: ~D[2024-06-01],
+        entries: [
+          %Conta.Event.TransactionCreated.Entry{
+            description: "Dinner",
+            account_name: ~w[Assets Bank Account],
+            credit: 12_50,
+            debit: 0,
+            balance: 77_50
+          },
+          %Conta.Event.TransactionCreated.Entry{
+            description: "Dinner",
+            account_name: ~w[Expenses Groceries],
+            credit: 0,
+            debit: 12_50,
+            balance: 62_50
+          }
+        ]
+      }
+
+      assert :ok == Ledger.handle(event, metadata)
+
+      [
+        %Ledger.Entry{
+          on_date: ~D[2024-06-01],
+          description: "Dinner",
+          credit: %Money{amount: 12_50, currency: :EUR},
+          debit: %Money{amount: 0, currency: :EUR},
+          balance: %Money{amount: 77_50, currency: :EUR},
+          transaction_id: "814d6052-8594-4964-8485-778762d8c701",
+          account_name: ["Assets", "Bank", "Account"],
+          breakdown: false,
+          related_account_name: ["Expenses", "Groceries"]
+        },
+        %Ledger.Entry{
+          on_date: ~D[2024-06-01],
+          description: "Dinner",
+          credit: %Money{amount: 0, currency: :EUR},
+          debit: %Money{amount: 12_50, currency: :EUR},
+          balance: %Money{amount: 6250, currency: :EUR},
+          transaction_id: "814d6052-8594-4964-8485-778762d8c701",
+          account_name: ["Expenses", "Groceries"],
+          breakdown: false,
+          related_account_name: ["Assets", "Bank", "Account"]
+        }
+      ] = Repo.all(Ledger.Entry)
+
+      assert %Ledger.Account{
+        name: ~w[Assets],
+        balances: [
+          %Ledger.Balance{
+            currency: :EUR,
+            amount: %Money{amount: 87_50}
+          }
+        ]
+      } = Repo.get!(Ledger.Account, account1.id) |> Repo.preload(:balances)
+
+      assert %Ledger.Account{
+        name: ~w[Assets Bank],
+        balances: [
+          %Ledger.Balance{
+            currency: :EUR,
+            amount: %Money{amount: 77_50}
+          }
+        ]
+      } = Repo.get!(Ledger.Account, account2.id) |> Repo.preload(:balances)
+
+      assert %Ledger.Account{
+        name: ~w[Assets Bank Account],
+        balances: [
+          %Ledger.Balance{
+            currency: :EUR,
+            amount: %Money{amount: 77_50}
+          }
+        ]
+      } = Repo.get!(Ledger.Account, account3.id) |> Repo.preload(:balances)
+
+      assert %Ledger.Account{
+        name: ~w[Expenses],
+        balances: [
+          %Ledger.Balance{
+            currency: :EUR,
+            amount: %Money{amount: 62_50}
+          }
+        ]
+      } = Repo.get!(Ledger.Account, account4.id) |> Repo.preload(:balances)
+
+      assert %Ledger.Account{
+        name: ~w[Expenses Groceries],
+        balances: [
+          %Ledger.Balance{
+            currency: :EUR,
+            amount: %Money{amount: 62_50}
+          }
+        ]
+      } = Repo.get!(Ledger.Account, account5.id) |> Repo.preload(:balances)
+    end
+
+    test "remove successfully", metadata do
+      balance1 = build(:balance, %{amount: 100_00})
+      balance2 = build(:balance, %{amount: 90_00})
+      balance3 = build(:balance, %{amount: 90_00})
+      balance4 = build(:balance, %{amount: 50_00})
+      balance5 = build(:balance, %{amount: 50_00})
+
+      account1 = insert(:account, %{name: ~w[Assets], balances: [balance1]})
+      account2 = insert(:account, %{name: ~w[Assets Bank], parent_id: account1.id, balances: [balance2]})
+      account3 = insert(:account, %{name: ~w[Assets Bank Account], parent_id: account2.id, balances: [balance3]})
+      account4 = insert(:account, %{name: ~w[Expenses], type: :expenses, balances: [balance4]})
+      account5 = insert(:account, %{name: ~w[Expenses Supermarket], type: :expenses, parent_id: account4.id, balances: [balance5]})
+
+      leg_a_entry = insert(:entry, %{transaction_id: "f3093f1f-0a55-4356-b925-831035a8bca7"})
+      _leg_b_entry = insert(:entry, %{
+        transaction_id: "f3093f1f-0a55-4356-b925-831035a8bca7",
+        account_name: leg_a_entry.related_account_name,
+        related_account_name: leg_a_entry.account_name,
+        credit: leg_a_entry.debit,
+        debit: leg_a_entry.credit
+      })
+
+      event = %Conta.Event.TransactionRemoved{
+        id: leg_a_entry.transaction_id,
+        ledger: "default",
+        entries: [
+          %Conta.Event.TransactionRemoved.Entry{
+            account_name: account5.name,
+            credit: 0,
+            debit: 10_00,
+            balance: 50_00,
+            currency: :EUR
+          },
+          %Conta.Event.TransactionRemoved.Entry{
+            account_name: account3.name,
+            credit: 10_00,
+            debit: 0,
+            balance: 90_00,
+            currency: :EUR
+          }
+        ]
+      }
+
+      assert :ok == Ledger.handle(event, metadata)
+
+      [] = Repo.all(Ledger.Entry)
+
+      assert %Ledger.Account{
+        name: ~w[Assets],
+        balances: [
+          %Ledger.Balance{
+            currency: :EUR,
+            amount: %Money{amount: 110_00}
+          }
+        ]
+      } = Repo.get!(Ledger.Account, account1.id) |> Repo.preload(:balances)
+
+      assert %Ledger.Account{
+        name: ~w[Assets Bank],
+        balances: [
+          %Ledger.Balance{
+            currency: :EUR,
+            amount: %Money{amount: 100_00}
+          }
+        ]
+      } = Repo.get!(Ledger.Account, account2.id) |> Repo.preload(:balances)
+
+      assert %Ledger.Account{
+        name: ~w[Assets Bank Account],
+        balances: [
+          %Ledger.Balance{
+            currency: :EUR,
+            amount: %Money{amount: 90_00}
+          }
+        ]
+      } = Repo.get!(Ledger.Account, account3.id) |> Repo.preload(:balances)
+
+      assert %Ledger.Account{
+        name: ~w[Expenses],
+        balances: [
+          %Ledger.Balance{
+            currency: :EUR,
+            amount: %Money{amount: 40_00}
+          }
+        ]
+      } = Repo.get!(Ledger.Account, account4.id) |> Repo.preload(:balances)
+
+      assert %Ledger.Account{
+        name: ~w[Expenses Supermarket],
+        balances: [
+          %Ledger.Balance{
+            currency: :EUR,
+            amount: %Money{amount: 40_00}
+          }
+        ]
+      } = Repo.get!(Ledger.Account, account5.id) |> Repo.preload(:balances)
     end
   end
 end

@@ -7,10 +7,6 @@
     </.navbar_dropdown>
     <.navbar_dropdown name={gettext("Books")}>
       <.navbar_item href="/books/invoices"><%= gettext("Invoices") %></.navbar_item>
-      <.navbar_item href="/books/products"><%= gettext("Products") %></.navbar_item>
-      <.navbar_item href="/books/services"><%= gettext("Services") %></.navbar_item>
-      <.navbar_item href="/books/discounts"><%= gettext("Discounts") %></.navbar_item>
-      <.navbar_item href="/books/shipping"><%= gettext("Shipping") %></.navbar_item>
       <.navbar_divider />
       <.navbar_item href="/books/expenses"><%= gettext("Expenses") %></.navbar_item>
     </.navbar_dropdown>
@@ -18,7 +14,9 @@
       <.navbar_item href="/directories/contacts">
         <%= gettext("Clients & Providers") %>
       </.navbar_item>
-      <.navbar_item href="/directories/banks"><%= gettext("Banks") %></.navbar_item>
+      <.navbar_item href="/directories/payment-methods">
+        <%= gettext("Payment Methods") %>
+      </.navbar_item>
     </.navbar_dropdown>
   </.navbar_start>
   <.navbar_end>

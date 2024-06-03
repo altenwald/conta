@@ -1,4 +1,4 @@
-defmodule Conta.Event.TransactionCreated.Entry do
+defmodule Conta.Event.TransactionRemoved.Entry do
   use TypedEctoSchema
   import Ecto.Changeset
 
@@ -8,19 +8,15 @@ defmodule Conta.Event.TransactionCreated.Entry do
 
   @derive Jason.Encoder
   typed_embedded_schema do
-    field :description, :string
     field :account_name, {:array, :string}
     field :credit, :integer, default: 0
     field :debit, :integer, default: 0
     field :balance, :integer, default: 0
-    field(:change_currency, Money.Ecto.Currency.Type, default: :EUR) :: currency()
-    field :change_credit, :integer, default: 0
-    field :change_debit, :integer, default: 0
-    field :change_price, :decimal, default: 1.0
+    field(:currency, Money.Ecto.Currency.Type, default: :EUR) :: currency()
   end
 
-  @required_fields ~w[description account_name balance]a
-  @optional_fields ~w[credit debit change_currency change_credit change_debit change_price]a
+  @required_fields ~w[account_name balance]a
+  @optional_fields ~w[credit debit currency]a
 
   @doc false
   def changeset(model \\ %__MODULE__{}, params) do
