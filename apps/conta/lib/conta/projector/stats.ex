@@ -57,11 +57,11 @@ defmodule Conta.Projector.Stats do
         account_name: entry.account_name,
         year: on_date.year,
         month: on_date.month,
-        currency: entry.currency,
-        balance: entry.credit - entry.debit
+        currency: entry.credit.currency,
+        balance: Money.subtract(entry.credit, entry.debit)
       }
 
-    update = [inc: [balance: entry.credit - entry.debit]]
+    update = [inc: [balance: Money.subtract(entry.credit, entry.debit)]]
     opts = [on_conflict: update, conflict_target: ~w[account_name year month currency]a]
     Ecto.Multi.insert(multi, {:income, idx}, income, opts)
   end
@@ -69,16 +69,17 @@ defmodule Conta.Projector.Stats do
   defp maybe_update_income(multi, _type, _on_date, _idx, _entry), do: multi
 
   defp maybe_update_outcome(multi, :expenses, on_date, idx, entry) do
+    balance = Money.subtract(entry.debit, entry.credit)
     outcome =
       %Outcome{
         account_name: entry.account_name,
         year: on_date.year,
         month: on_date.month,
-        currency: entry.currency,
-        balance: entry.debit - entry.credit
+        currency: entry.credit.currency,
+        balance: balance
       }
 
-    update = [inc: [balance: entry.debit - entry.credit]]
+    update = [inc: [balance: balance]]
     opts = [on_conflict: update, conflict_target: ~w[account_name year month currency]a]
     Ecto.Multi.insert(multi, {:outcome, idx}, outcome, opts)
   end
@@ -87,12 +88,12 @@ defmodule Conta.Projector.Stats do
 
   defp maybe_update_patrimony(multi, type, on_date, idx, entry)
        when type in [:liabilities, :assets] do
-    opts = [year: on_date.year, month: on_date.month, currency: entry.currency]
     # even when liabilities and assets are increased in a different way, we need to
     # compound the data as (assets - liabilities) so if we keep the amount changing
     # the symbol (same for liabilities and assets) we could get the correct value
     # for the patrimony.
-    amount = entry.debit - entry.credit
+    amount = Money.subtract(entry.debit, entry.credit)
+    opts = [year: on_date.year, month: on_date.month, currency: amount.currency]
 
     if Repo.get_by(Patrimony, opts) do
       query =
@@ -100,7 +101,7 @@ defmodule Conta.Projector.Stats do
           p in Patrimony,
           where:
             p.year == ^on_date.year and p.month == ^on_date.month and
-              p.currency == ^entry.currency
+              p.currency == ^amount.currency
         )
 
       updates = [inc: [balance: amount, amount: amount]]
@@ -108,7 +109,7 @@ defmodule Conta.Projector.Stats do
     else
       from(
         p in Patrimony,
-        where: p.currency == ^entry.currency,
+        where: p.currency == ^amount.currency,
         order_by: [desc: p.year, desc: p.month],
         limit: 1
       )
@@ -119,7 +120,7 @@ defmodule Conta.Projector.Stats do
             %Patrimony{
               year: on_date.year,
               month: on_date.month,
-              currency: entry.currency,
+              currency: amount.currency,
               amount: amount,
               balance: amount
             }
@@ -133,9 +134,9 @@ defmodule Conta.Projector.Stats do
             %Patrimony{
               year: on_date.year,
               month: on_date.month,
-              currency: entry.currency,
+              currency: amount.currency,
               amount: amount,
-              balance: patrimony.balance.amount + amount
+              balance: Money.add(patrimony.balance, amount)
             }
 
           update = [inc: [balance: amount, amount: amount]]
@@ -148,15 +149,17 @@ defmodule Conta.Projector.Stats do
   defp maybe_update_patrimony(multi, _type, _on_date, _idx, _entry), do: multi
 
   defp maybe_update_pnl(multi, type, on_date, idx, entry) when type in [:revenue, :expenses] do
-    profits = if type == :revenue, do: entry.credit - entry.debit, else: 0
-    loses = if type == :expenses, do: entry.debit - entry.credit, else: 0
-    balance = profits - loses
+    currency = entry.credit.currency
+    zero = Money.new(0, currency)
+    profits = if type == :revenue, do: Money.subtract(entry.credit, entry.debit), else: zero
+    loses = if type == :expenses, do: Money.subtract(entry.debit, entry.credit), else: zero
+    balance = Money.subtract(profits, loses)
 
     profits_loses =
       %ProfitsLoses{
         year: on_date.year,
         month: on_date.month,
-        currency: entry.currency,
+        currency: balance.currency,
         profits: profits,
         loses: loses,
         balance: balance

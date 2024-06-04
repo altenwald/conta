@@ -115,8 +115,7 @@ defmodule ContaWeb.EntryLive.FormComponent do
   @impl true
   def update(%{account_transaction: account_transaction} = assigns, socket) do
     params = %{
-      "account_name" => Enum.join(assigns.account.name, "."),
-      "on_date" => Date.utc_today()
+      "account_name" => Enum.join(assigns.account.name, ".")
     }
 
     Logger.debug("account transaction: #{inspect(account_transaction)}")
@@ -179,11 +178,15 @@ defmodule ContaWeb.EntryLive.FormComponent do
      )}
   end
 
-  def handle_event("validate", %{"account_transaction" => params}, socket) do
+  def handle_event("validate", %{"account_transaction" => params} = global_params, socket) do
     changeset =
       socket.assigns.account_transaction
       |> FormAccountTransaction.changeset(params)
       |> Map.put(:action, :validate)
+
+    if global_params["_target"] == ~w[account_transaction on_date] do
+      send(self(), {:on_date, Ecto.Changeset.get_field(changeset, :on_date)})
+    end
 
     {:noreply,
      socket

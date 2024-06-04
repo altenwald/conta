@@ -19,6 +19,14 @@
                 </div>
               </.link>
             </div>
+            <div class="control">
+              <.button phx-click="reload">
+                <div class="icon-text">
+                  <span class="icon mr-2"><FontAwesome.recycle /></span>
+                  <span><%= gettext("Reload") %></span>
+                </div>
+              </.button>
+            </div>
           </div>
           <.table
             id="ledger_entries"
@@ -53,7 +61,9 @@
             </:action>
             <:action :let={{id, entry}}>
               <.link
-                phx-click={JS.push("delete", value: %{id: entry.id}) |> hide("##{id}")}
+                phx-click={
+                  JS.push("delete", value: %{id: entry.transaction_id}) |> hide("##{id}")
+                }
                 class="button is-danger is-light"
                 data-confirm={gettext("Are you sure?")}
                 title={gettext("Delete")}

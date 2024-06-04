@@ -1,5 +1,6 @@
 defmodule Conta.Aggregate.Ledger do
   require Logger
+  import Conta.MoneyHelpers
 
   alias Conta.Aggregate.Ledger.Account
 
@@ -174,11 +175,15 @@ defmodule Conta.Aggregate.Ledger do
             {entry, ledger}
           end)
 
-        %TransactionRemoved{
-          id: command.transaction_id,
-          ledger: command.ledger,
-          entries: entries
-        }
+        if Enum.any?(entries, &match?({:error, _}, &1)) do
+          {:error, %{entries: entries}}
+        else
+          %TransactionRemoved{
+            id: command.transaction_id,
+            ledger: command.ledger,
+            entries: entries
+          }
+        end
     end
   end
 
@@ -224,16 +229,24 @@ defmodule Conta.Aggregate.Ledger do
     Enum.reduce(entries, %{}, fn entry, acc ->
       account_id = ledger.account_names[entry.account_name]
       account = ledger.accounts[account_id]
-      balance = entry.debit - entry.credit
-      change_balance = entry.change_debit - entry.change_credit
+      debit = to_money(entry.debit)
+      credit = to_money(entry.credit)
+      balance = Money.subtract(debit, credit)
 
       acc
-      |> Map.update(to_string(account.currency), balance, &(&1 + balance))
-      |> Map.update(to_string(entry.change_currency), change_balance, &(&1 + change_balance))
+      |> Map.update(to_string(account.currency), balance, &Money.add(&1, balance))
+      |> maybe_change_data(entry)
     end)
     |> Map.values()
-    |> Enum.all?(&(&1 == 0))
+    |> Enum.all?(&Money.zero?/1)
   end
+
+  defp maybe_change_data(account, %_{change_debit: debit, change_credit: credit} = entry) do
+    balance = Money.new(debit - credit)
+    Map.update(account, to_string(entry.change_currency), balance, &Money.add(&1, balance))
+  end
+
+  defp maybe_change_data(account, _entry), do: account
 
   defp valid_accounts?(entries, ledger) when is_list(entries) do
     Enum.all?(entries, &is_map_key(ledger.account_names, &1.account_name))
@@ -382,6 +395,12 @@ defmodule Conta.Aggregate.Ledger do
       end
     )
   end
+
+  defp get_amount(type, %Money{amount: debit}, credit),
+    do: get_amount(type, debit, credit)
+
+  defp get_amount(type, debit, %Money{amount: credit}),
+    do: get_amount(type, debit, credit)
 
   defp get_amount("assets", debit, credit), do: debit - credit
   defp get_amount("liabilities", debit, credit), do: credit - debit

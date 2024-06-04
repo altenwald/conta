@@ -1,6 +1,8 @@
 defmodule ContaWeb.EntryLive.Index do
   use ContaWeb, :live_view
 
+  require Logger
+
   alias Conta.Ledger
   alias ContaWeb.EntryLive.FormComponent.AccountTransaction
 
@@ -9,6 +11,9 @@ defmodule ContaWeb.EntryLive.Index do
   @impl true
   def mount(%{"account_id" => account_id}, _session, socket) do
     account = Ledger.get_account!(account_id)
+    account_name = Enum.join(account.name, ".")
+    Phoenix.PubSub.subscribe(Conta.PubSub, "event:transaction_created:#{account_name}")
+    Phoenix.PubSub.subscribe(Conta.PubSub, "event:transaction_removed:#{account_name}")
 
     {:ok,
      socket
@@ -63,14 +68,63 @@ defmodule ContaWeb.EntryLive.Index do
     {:noreply, paginate_entries(socket, socket.assigns.page + 1, @dates_per_page)}
   end
 
+  def handle_event("delete", %{"id" => transaction_id}, socket) do
+    entries = Ledger.get_entries_by_transaction_id(transaction_id)
+
+    command = %Conta.Command.RemoveAccountTransaction{
+      ledger: "default",
+      transaction_id: transaction_id,
+      entries:
+        for entry <- entries do
+          %Conta.Command.RemoveAccountTransaction.Entry{
+            account_name: entry.account_name,
+            credit: entry.credit,
+            debit: entry.debit
+          }
+        end
+    }
+
+    :ok = Conta.Commanded.Application.dispatch(command)
+    {:noreply, reset_view(socket)}
+  end
+
+  def handle_event("reload", _params, socket) do
+    {:noreply, reset_view(socket)}
+  end
+
+  defp reset_view(socket) do
+    dates_per_page = socket.assigns.page * @dates_per_page
+
+    entries =
+      socket.assigns.account
+      |> Ledger.list_entries_by_account(1, dates_per_page)
+      |> flat_title_and_entries()
+
+    stream(socket, :ledger_entries, entries, reset: true)
+  end
+
   @impl true
   def handle_params(params, _url, socket) do
     {:noreply, apply_action(socket, socket.assigns.live_action, params)}
   end
 
   defp apply_action(socket, :duplicate, %{"id" => transaction_id}) do
-    entries = Ledger.get_entries_by_transaction_id(transaction_id)
-    account_transaction = AccountTransaction.edit(entries)
+    account = socket.assigns.account
+
+    account_transaction =
+      transaction_id
+      |> Ledger.get_entries_by_transaction_id()
+      |> Enum.split_with(&(&1.account_name == account.name))
+      |> Tuple.to_list()
+      |> List.flatten()
+      |> AccountTransaction.edit()
+
+    account_transaction =
+      if on_date = socket.assigns[:on_date] do
+        %AccountTransaction{account_transaction | on_date: on_date}
+      else
+        account_transaction
+      end
 
     socket
     |> assign(:page_title, gettext("New Entry"))
@@ -80,10 +134,12 @@ defmodule ContaWeb.EntryLive.Index do
   end
 
   defp apply_action(socket, :new, _params) do
+    on_date = socket.assigns[:on_date] || Date.utc_today()
+
     socket
     |> assign(:page_title, gettext("New Entry"))
     |> assign(:transaction_id, Ecto.UUID.generate())
-    |> assign(:account_transaction, %AccountTransaction{})
+    |> assign(:account_transaction, %AccountTransaction{on_date: on_date})
     |> assign(:breakdown, false)
   end
 
@@ -95,9 +151,19 @@ defmodule ContaWeb.EntryLive.Index do
   end
 
   @impl true
-  def handle_info({ContaWeb.EntryLive.FormComponent, {:saved, _entry}}, socket) do
-    account = socket.assigns.account
-    {:noreply, redirect(socket, to: ~p"/ledger/accounts/#{account}/entries")}
+  def handle_info({:on_date, on_date}, socket) do
+    {:noreply, assign(socket, :on_date, on_date)}
+  end
+
+  def handle_info(%{id: id}, socket) do
+    # because we are notifying previously the transaction is committed
+    Process.send_after(self(), {:reset_view, id}, 500)
+    {:noreply, socket}
+  end
+
+  def handle_info({:reset_view, id}, socket) do
+    Logger.debug("refreshing page based on received id #{inspect(id)}")
+    {:noreply, reset_view(socket)}
   end
 
   defp description(text) when is_binary(text) and byte_size(text) < 15, do: text

@@ -284,14 +284,14 @@ defmodule Conta.Aggregate.LedgerTest do
           %TransactionCreated.Entry{
             account_name: ["Assets", "Cash"],
             description: "Albert Heijn",
-            balance: 95_00,
-            credit: 5_00
+            balance: %Money{amount: 95_00},
+            credit: %Money{amount: 5_00}
           },
           %TransactionCreated.Entry{
             account_name: ["Expenses", "Supermarket"],
             description: "Albert Heijn",
-            balance: 55_00,
-            debit: 5_00
+            balance: %Money{amount: 55_00},
+            debit: %Money{amount: 5_00}
           }
         ]
       } = event
@@ -349,7 +349,6 @@ defmodule Conta.Aggregate.LedgerTest do
           on_date: ~D[2024-01-04],
           entries: [
             %SetAccountTransaction.Entry{
-              id: nil,
               description: "Walmart",
               account_name: ["Expenses", "Supermarket"],
               credit: 0,
@@ -360,7 +359,6 @@ defmodule Conta.Aggregate.LedgerTest do
               change_price: 1
             },
             %SetAccountTransaction.Entry{
-              id: nil,
               description: "Walmart",
               account_name: ["Assets", "PayPal"],
               credit: 500,
@@ -426,14 +424,14 @@ defmodule Conta.Aggregate.LedgerTest do
           %TransactionCreated.Entry{
             account_name: ["Expenses", "Supermarket"],
             description: "Walmart",
-            balance: 54_75,
-            debit: 4_75
+            balance: %Money{amount: 54_75},
+            debit: %Money{amount: 4_75}
           },
           %TransactionCreated.Entry{
             account_name: ["Assets", "PayPal"],
             description: "Walmart",
-            balance: 95_00,
-            credit: 5_00
+            balance: %Money{amount: 95_00},
+            credit: %Money{amount: 5_00}
           }
         ]
       } = event

@@ -156,9 +156,19 @@ defmodule Conta.Projector.Ledger do
           related_account_name: related_account_id
         }
 
+      account_name = Enum.join(trans_entry.account_name, ".")
       multi
       |> upsert_account_balances(idx, accounts, account.currency, trans_entry)
       |> Ecto.Multi.insert({:entry, idx}, entry)
+      |> Ecto.Multi.run({:notify, idx}, fn _repo, _data ->
+        event_name = "event:transaction_created:#{account_name}"
+        id = transaction.id
+        Logger.debug("sending broadcast for event #{inspect(event_name)}")
+        case Phoenix.PubSub.broadcast(Conta.PubSub, event_name, %{id: id}) do
+          :ok -> {:ok, nil}
+          error -> error
+        end
+      end)
     end)
   end)
 
@@ -171,9 +181,18 @@ defmodule Conta.Projector.Ledger do
     from(a in Entry, where: a.transaction_id == ^id)
     |> Repo.all()
     |> Enum.reduce(multi, fn entry, multi ->
+      account_name = Enum.join(entry.account_name, ".")
       multi
       |> remove_account_balances(accounts, entry)
+      |> update_entry_balances(accounts, entry)
       |> Ecto.Multi.delete({:remove_entry, entry.id}, entry)
+      |> Ecto.Multi.run({:notify, entry.id}, fn _repo, _data ->
+        event_name = "event:transaction_removed:#{account_name}"
+        case Phoenix.PubSub.broadcast(Conta.PubSub, event_name, %{id: id}) do
+          :ok -> {:ok, nil}
+          error -> error
+        end
+      end)
     end)
   end)
 
@@ -224,8 +243,22 @@ defmodule Conta.Projector.Ledger do
     end)
   end
 
-  defp get_amount(type, credit, debit) when type in ~w[assets expenses]a, do: Money.subtract(debit, credit)
-  defp get_amount(_type, credit, debit), do: Money.subtract(credit, debit)
+  defp get_amount(type, %Money{} = credit, %Money{} = debit)
+    when type in ~w[assets expenses]a,
+    do: Money.subtract(debit, credit)
+
+  defp get_amount(_type, %Money{} = credit, %Money{} = debit),
+    do: Money.subtract(credit, debit)
+
+  defp get_amount(type, credit, debit)
+    when type in ~w[assets expenses]a
+    and is_integer(credit)
+    and is_integer(debit),
+    do: debit - credit
+
+  defp get_amount(_type, credit, debit)
+    when is_integer(credit) and is_integer(debit),
+    do: credit - debit
 
   defp upsert_account_balances(multi, idx, accounts, currency, trans_entry) do
     trans_entry.account_name
@@ -254,5 +287,20 @@ defmodule Conta.Projector.Ledger do
 
   defp to_date(date) when is_binary(date) do
     Date.from_iso8601!(date)
+  end
+
+  defp update_entry_balances(multi, accounts, entry) do
+    account = accounts[entry.account_name]
+    amount = get_amount(account.type, entry.credit, entry.debit)
+
+    query = from(
+      e in Entry,
+      where: e.inserted_at > ^entry.inserted_at,
+      where: e.on_date >= ^entry.on_date,
+      where: e.account_name == ^entry.account_name
+    )
+    updates = [inc: [balance: Money.neg(amount)]]
+
+    Ecto.Multi.update_all(multi, {:update_entry_balances, entry.id}, query, updates)
   end
 end

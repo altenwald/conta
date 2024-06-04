@@ -16,7 +16,7 @@ defmodule ContaWeb.EntryLive.FormComponent.AccountTransaction do
     field(:amount, :decimal)
     field(:breakdown, :boolean, default: false)
 
-    embeds_many :entries, Entry, primary_key: false do
+    embeds_many :entries, Entry, primary_key: false, on_replace: :delete do
       @typep currency() :: atom()
 
       field(:id, :binary_id)
@@ -143,7 +143,7 @@ defmodule ContaWeb.EntryLive.FormComponent.AccountTransaction do
   end
 
   defp from_money(money, :negative) do
-    if Money.negative?(money), do: money.amount, else: 0
+    if Money.negative?(money), do: -money.amount, else: 0
   end
 
   defp from_money(money, :positive) do
@@ -161,13 +161,13 @@ defmodule ContaWeb.EntryLive.FormComponent.AccountTransaction do
 
           %SetAccountTransaction.Entry{
             description: entry.description,
-            account_name: String.split(acctrans.account_name, "."),
+            account_name: String.split(entry.account_name, "."),
             credit: from_money(amount, :negative),
             debit: from_money(amount, :positive),
-            change_currency: acctrans.change_currency,
+            change_currency: entry.change_currency,
             change_credit: from_money(change_amount, :negative),
             change_debit: from_money(change_amount, :positive),
-            change_price: acctrans.change_price
+            change_price: entry.change_price
           }
         end
     }

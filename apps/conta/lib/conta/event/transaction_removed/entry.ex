@@ -9,9 +9,9 @@ defmodule Conta.Event.TransactionRemoved.Entry do
   @derive Jason.Encoder
   typed_embedded_schema do
     field :account_name, {:array, :string}
-    field :credit, :integer, default: 0
-    field :debit, :integer, default: 0
-    field :balance, :integer, default: 0
+    field :credit, Money.Ecto.Amount.Type, default: Money.new(0)
+    field :debit, Money.Ecto.Amount.Type, default: Money.new(0)
+    field :balance, Money.Ecto.Amount.Type, default: Money.new(0)
     field(:currency, Money.Ecto.Currency.Type, default: :EUR) :: currency()
   end
 

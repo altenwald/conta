@@ -95,8 +95,8 @@ defmodule ContaWeb.AccountLive.FormComponent do
     changeset = SetAccount.changeset(socket.assigns.account, account_params)
 
     if changeset.valid? and dispatch(SetAccount.to_command(changeset)) == :ok do
-      #  TODO
-      # notify_parent({:saved, account})
+      notify_parent(:refresh)
+
       message =
         case socket.assigns.action do
           :edit -> gettext("Account updated successfully")
@@ -115,4 +115,6 @@ defmodule ContaWeb.AccountLive.FormComponent do
   defp assign_form(socket, %Ecto.Changeset{} = changeset) do
     assign(socket, :form, to_form(changeset))
   end
+
+  defp notify_parent(msg), do: send(self(), {__MODULE__, msg})
 end

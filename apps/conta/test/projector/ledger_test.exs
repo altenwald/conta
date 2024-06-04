@@ -238,13 +238,47 @@ defmodule Conta.Projector.LedgerTest do
       account4 = insert(:account, %{name: ~w[Expenses], type: :expenses, balances: [balance4]})
       account5 = insert(:account, %{name: ~w[Expenses Supermarket], type: :expenses, parent_id: account4.id, balances: [balance5]})
 
-      leg_a_entry = insert(:entry, %{transaction_id: "f3093f1f-0a55-4356-b925-831035a8bca7"})
+      # Assets.Bank.Account (90_00)
+      # -------------------
+      # Energy bill               Expenses.Supplies        0_00   30_00   120_00
+      # Buy something             Expenses.Supermarket     0_00   10_00   110_00
+      # Carity                    Expenses.Other           0_00   20_00    90_00
+
+      no_changed_line = insert(:entry, %{
+        on_date: ~D[2024-06-01],
+        transaction_id: "f3093f1f-0a55-4356-b925-831035a8bca6",
+        account_name: account3.name,
+        related_account_name: ~w[Expenses Supplies],
+        description: "Energy bill",
+        credit: 30_00,
+        balance: 120_00
+      })
+
+      leg_a_entry = insert(:entry, %{
+        on_date: ~D[2024-06-01],
+        transaction_id: "f3093f1f-0a55-4356-b925-831035a8bca7",
+        account_name: account3.name,
+        related_account_name: account5.name,
+        credit: 10_00,
+        balance: 110_00
+      })
       _leg_b_entry = insert(:entry, %{
+        on_date: ~D[2024-06-01],
         transaction_id: "f3093f1f-0a55-4356-b925-831035a8bca7",
         account_name: leg_a_entry.related_account_name,
         related_account_name: leg_a_entry.account_name,
         credit: leg_a_entry.debit,
         debit: leg_a_entry.credit
+      })
+
+      _changed_line = insert(:entry, %{
+        on_date: ~D[2024-06-01],
+        transaction_id: "f3093f1f-0a55-4356-b925-831035a8bca8",
+        account_name: ~w[Assets Bank Account],
+        related_account_name: ~w[Expenses Other],
+        description: "Carity",
+        credit: 20_00,
+        balance: 90_00
       })
 
       event = %Conta.Event.TransactionRemoved{
@@ -253,16 +287,16 @@ defmodule Conta.Projector.LedgerTest do
         entries: [
           %Conta.Event.TransactionRemoved.Entry{
             account_name: account5.name,
-            credit: 0,
+            credit: leg_a_entry.credit,
             debit: 10_00,
-            balance: 50_00,
+            balance: 40_00,
             currency: :EUR
           },
           %Conta.Event.TransactionRemoved.Entry{
             account_name: account3.name,
             credit: 10_00,
             debit: 0,
-            balance: 90_00,
+            balance: 100_00,
             currency: :EUR
           }
         ]
@@ -270,7 +304,17 @@ defmodule Conta.Projector.LedgerTest do
 
       assert :ok == Ledger.handle(event, metadata)
 
-      [] = Repo.all(Ledger.Entry)
+      assert [^no_changed_line, new_changed_line] =
+        Repo.all(Ledger.Entry) |> Enum.sort_by(& &1.inserted_at, NaiveDateTime)
+
+      assert %Ledger.Entry{
+        account_name: ~w[Assets Bank Account],
+        balance: %Money{amount: 100_00},
+        credit: %Money{amount: 20_00},
+        debit: %Money{amount: 0},
+        description: "Carity",
+        related_account_name: ~w[Expenses Other]
+      } = new_changed_line
 
       assert %Ledger.Account{
         name: ~w[Assets],
@@ -297,7 +341,7 @@ defmodule Conta.Projector.LedgerTest do
         balances: [
           %Ledger.Balance{
             currency: :EUR,
-            amount: %Money{amount: 90_00}
+            amount: %Money{amount: 100_00}
           }
         ]
       } = Repo.get!(Ledger.Account, account3.id) |> Repo.preload(:balances)
