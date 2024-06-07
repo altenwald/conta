@@ -77,7 +77,7 @@ config :logger, :console,
 config :phoenix, :json_library, Jason
 
 config :dart_sass,
-  version: "1.36.0",
+  version: "1.58.0",
   default: [
     args:
       ~w(--load-path=../../../deps/bulma --load-path=../assets/vendor/bulma-checkbox css:../priv/static/assets),
