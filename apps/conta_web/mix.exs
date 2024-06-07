@@ -65,7 +65,7 @@ defmodule ContaWeb.MixProject do
       "assets.build": ["tailwind default", "esbuild default"],
       "assets.deploy": [
         "sass default --no-source-map --style=compressed",
-        "tailwind default --minify",
+        # "tailwind default --minify",
         "esbuild default --minify",
         "phx.digest"
       ]

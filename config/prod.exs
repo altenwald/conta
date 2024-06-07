@@ -6,7 +6,7 @@ import Config
 # which you should run after static files are built and
 # before starting your production server.
 config :conta_web, ContaWeb.Endpoint,
-  url: [host: "example.com", port: 80],
+  url: [host: System.fetch_env!("DOMAIN"), port: 443, scheme: "https"],
   cache_static_manifest: "priv/static/cache_manifest.json"
 
 # Configures Swoosh API Client

@@ -38,6 +38,8 @@ defmodule Conta.Umbrella.MixProject do
         "clean",
         "deps.get",
         "compile",
+        "assets.setup",
+        "assets.deploy",
         "phx.digest",
         "release"
       ]
