@@ -47,6 +47,10 @@ defmodule Conta.Umbrella.MixProject do
   defp releases do
     [
       conta: [
+        steps: [
+          :assemble,
+          :tar
+        ],
         applications: [
           conta: :permanent,
           conta_web: :permanent,

@@ -4,9 +4,9 @@ defmodule ContaWeb.Router do
   import ContaWeb.UserAuth
 
   if Mix.env() == :prod do
-    @host System.get_env("HTTP_HOST") ||
+    @host System.get_env("DOMAIN") ||
             raise("""
-            Need the HTTP_HOST environment variable to be defined in
+            Need the DOMAIN environment variable to be defined in
             the compilation time.
             """)
 

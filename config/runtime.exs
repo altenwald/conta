@@ -63,8 +63,6 @@ if config_env() == :prod do
     domain: System.get_env("MAILGUN_DOMAIN")
 
   config :swoosh, :api_client, Swoosh.ApiClient.Finch
-
-  config :conta, :dns_cluster_query, System.get_env("DNS_CLUSTER_QUERY")
 end
 
 config :conta_bot, :granted_users, String.split(System.get_env("GRANTED_USERS"), ",")
