@@ -299,7 +299,7 @@ defmodule ContaWeb.InvoiceLive.FormComponent do
     end
   end
 
-  defp save_invoice(socket, :new, invoice_params) do
+  defp save_invoice(socket, action, invoice_params) when action in [:new, :duplicate] do
     changeset = SetInvoice.changeset(socket.assigns.set_invoice, invoice_params)
 
     if changeset.valid? and dispatch(SetInvoice.to_command(changeset)) == :ok do

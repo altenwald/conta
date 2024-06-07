@@ -8,7 +8,11 @@ defmodule Conta.Umbrella.MixProject do
       version: "0.1.0",
       start_permanent: Mix.env() == :prod,
       deps: deps(),
-      aliases: aliases()
+      aliases: aliases(),
+      releases: releases(),
+      preferred_cli_env: [
+        release: :prod
+      ]
     ]
   end
 
@@ -27,7 +31,28 @@ defmodule Conta.Umbrella.MixProject do
 
   defp aliases do
     [
-      setup: ["cmd mix setup"]
+      setup: ["cmd mix setup"],
+      release: [
+        "local.hex --force",
+        "local.rebar --force",
+        "clean",
+        "deps.get",
+        "compile",
+        "phx.digest",
+        "release"
+      ]
+    ]
+  end
+
+  defp releases do
+    [
+      conta: [
+        applications: [
+          conta: :permanent,
+          conta_web: :permanent,
+          conta_bot: :permanent
+        ]
+      ]
     ]
   end
 end

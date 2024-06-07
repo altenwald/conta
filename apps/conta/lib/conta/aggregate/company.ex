@@ -1,8 +1,11 @@
 defmodule Conta.Aggregate.Company do
+  require Logger
+
   alias Conta.Aggregate.Company.Contact
   alias Conta.Aggregate.Company.PaymentMethod
 
   alias Conta.Command.RemoveContact
+  alias Conta.Command.RemoveInvoice
   alias Conta.Command.SetCompany
   alias Conta.Command.SetContact
   alias Conta.Command.SetExpense
@@ -11,9 +14,10 @@ defmodule Conta.Aggregate.Company do
   alias Conta.Command.SetTemplate
 
   alias Conta.Event.CompanySet
-  alias Conta.Event.ContactRemove
+  alias Conta.Event.ContactRemoved
   alias Conta.Event.ContactSet
   alias Conta.Event.ExpenseSet
+  alias Conta.Event.InvoiceRemoved
   alias Conta.Event.InvoiceSet
   alias Conta.Event.PaymentMethodSet
   alias Conta.Event.TemplateSet
@@ -66,7 +70,7 @@ defmodule Conta.Aggregate.Company do
 
   def execute(%__MODULE__{contacts: contacts}, %RemoveContact{nif: nif} = command) when is_map_key(contacts, nif) do
     params = Map.from_struct(command)
-    ContactRemove.changeset(params)
+    ContactRemoved.changeset(params)
   end
 
   def execute(%__MODULE__{}, %RemoveContact{}) do
@@ -174,6 +178,26 @@ defmodule Conta.Aggregate.Company do
     end
   end
 
+  def execute(_command, %RemoveInvoice{invoice_date: date})
+    when not is_struct(date, Date),
+    do: {:error, %{invoice_date: ["is invalid"]}}
+
+  def execute(_command, %RemoveInvoice{invoice_number: invoice_number})
+    when not is_integer(invoice_number),
+    do: {:error, %{invoice_date: ["is invalid"]}}
+
+  def execute(%__MODULE__{invoice_numbers: invoice_numbers}, %RemoveInvoice{} = command) do
+    year = command.invoice_date.year
+    if MapSet.member?(invoice_numbers[year], command.invoice_number) do
+      command
+      |> Map.from_struct()
+      |> InvoiceRemoved.changeset()
+    else
+      Logger.debug("invoice_numbers for #{year} are #{inspect(invoice_numbers[year])}")
+      {:error, %{invoice_number: ["not found"]}}
+    end
+  end
+
   # defp validate_duplicate_invoice_number({:error, _} = error, _company, _command), do: error
 
   defp validate_duplicate_invoice_number(nil, %__MODULE__{} = company, %SetInvoice{} = command) do
@@ -259,6 +283,12 @@ defmodule Conta.Aggregate.Company do
 
   def apply(%__MODULE__{} = company, %InvoiceSet{action: :update}), do: company
 
+  def apply(%__MODULE__{invoice_numbers: invoice_numbers} = company, %InvoiceRemoved{} = invoice_removed) do
+    year = invoice_removed.invoice_date.year
+    invoices = MapSet.delete(invoice_numbers[year], invoice_removed.invoice_number)
+    %__MODULE__{company | invoice_numbers: Map.put(invoice_numbers, year, invoices)}
+  end
+
   def apply(%__MODULE__{} = company, %ExpenseSet{}), do: company
 
   def apply(%__MODULE__{contacts: contacts} = company, %ContactSet{nif: nif} = event) do
@@ -268,7 +298,7 @@ defmodule Conta.Aggregate.Company do
     |> then(&%__MODULE__{company | contacts: Map.put(contacts, nif, &1)})
   end
 
-  def apply(%__MODULE__{contacts: contacts} = company, %ContactRemove{nif: nif}) do
+  def apply(%__MODULE__{contacts: contacts} = company, %ContactRemoved{nif: nif}) do
     %__MODULE__{company | contacts: Map.delete(contacts, nif)}
   end
 

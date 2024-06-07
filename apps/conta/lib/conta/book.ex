@@ -1,10 +1,15 @@
 defmodule Conta.Book do
+  import Conta.MoneyHelpers
   import Ecto.Query, only: [from: 2]
+
+  alias Conta.Command.RemoveInvoice
   alias Conta.Command.SetInvoice
   alias Conta.Projector.Book.Invoice
   alias Conta.Projector.Book.PaymentMethod
   alias Conta.Projector.Book.Template
   alias Conta.Repo
+
+  @due_in_days 30
 
   def list_invoices(limit \\ :infinity)
 
@@ -25,9 +30,9 @@ defmodule Conta.Book do
     |> Repo.all()
   end
 
-  def get_invoice!(id) do
-    Repo.get!(Invoice, id)
-  end
+  def get_invoice!(id), do: Repo.get!(Invoice, id)
+
+  def get_invoice(id), do: Repo.get(Invoice, id)
 
   def get_invoice!(year, number) when is_integer(year) and is_integer(number) do
     invoice_number = "#{year}-#{String.pad_leading(to_string(number), 5, "0")}"
@@ -68,6 +73,56 @@ defmodule Conta.Book do
 
   def get_template_by_name!(nif, name) do
     Repo.get_by!(Template, name: name, nif: nif)
+  end
+
+  def get_remove_invoice(id) when is_binary(id),
+    do: get_remove_invoice(get_invoice!(id))
+
+  def get_remove_invoice(%Invoice{} = invoice) do
+    [_year, invoice_number] = String.split(invoice.invoice_number, "-", parts: 2)
+    invoice_number = String.to_integer(invoice_number)
+
+    %RemoveInvoice{
+      nif: invoice.company.nif,
+      invoice_number: invoice_number,
+      invoice_date: invoice.invoice_date
+    }
+  end
+
+  def get_duplicate_invoice(id) when is_binary(id),
+    do: get_duplicate_invoice(get_invoice!(id))
+
+  def get_duplicate_invoice(%Invoice{} = invoice) do
+    invoice_number = get_last_invoice_number() + 1
+
+    %SetInvoice{
+      action: :insert,
+      nif: invoice.company.nif,
+      client_nif: invoice.client && invoice.client.nif,
+      template: invoice.template,
+      invoice_number: invoice_number,
+      invoice_date: Date.utc_today(),
+      due_date: Date.add(Date.utc_today(), @due_in_days),
+      type: invoice.type,
+      subtotal_price: to_money(invoice.subtotal_price) |> Money.to_decimal(),
+      tax_price: to_money(invoice.tax_price) |> Money.to_decimal(),
+      total_price: to_money(invoice.total_price) |> Money.to_decimal(),
+      currency: invoice.currency,
+      comments: invoice.comments,
+      destination_country: invoice.destination_country,
+      payment_method: String.downcase(invoice.payment_method.name),
+      details: for %Invoice.Detail{} = details <- invoice.details do
+        %SetInvoice.Detail{
+          sku: details.sku,
+          description: details.description,
+          tax: details.tax,
+          base_price: to_money(details.base_price) |> Money.to_decimal(),
+          units: details.units,
+          tax_price: to_money(details.tax_price) |> Money.to_decimal(),
+          total_price: to_money(details.total_price) |> Money.to_decimal()
+        }
+      end
+    }
   end
 
   def get_set_invoice(id) when is_binary(id),

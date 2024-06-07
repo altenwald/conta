@@ -3,13 +3,33 @@ defmodule ContaWeb.Router do
 
   import ContaWeb.UserAuth
 
+  if Mix.env() == :prod do
+    @host System.get_env("HTTP_HOST") ||
+            raise("""
+            Need the HTTP_HOST environment variable to be defined in
+            the compilation time.
+            """)
+
+    @content_security_policy "default-src 'self';" <>
+                               "connect-src wss://#{@host};" <>
+                               "img-src 'self' blob:;" <>
+                               "style-src 'self' https://fonts.googleapis.com;" <>
+                               "font-src data: https://fonts.gstatic.com;"
+  else
+    @content_security_policy "default-src 'self' 'unsafe-eval' 'unsafe-inline';" <>
+                               "connect-src ws://localhost:*;" <>
+                               "img-src 'self' blob: data:;" <>
+                               "style-src 'self' https://fonts.googleapis.com;" <>
+                               "font-src data: https://fonts.gstatic.com;"
+  end
+
   pipeline :browser do
     plug :accepts, ["html"]
     plug :fetch_session
     plug :fetch_live_flash
     plug :put_root_layout, html: {ContaWeb.Layouts, :root}
     plug :protect_from_forgery
-    plug :put_secure_browser_headers
+    plug :put_secure_browser_headers, %{"content-security-policy" => @content_security_policy}
     plug :fetch_current_user
   end
 
@@ -18,7 +38,7 @@ defmodule ContaWeb.Router do
     plug :fetch_session
     plug :put_root_layout, html: {ContaWeb.Layouts, :root_print}
     plug :protect_from_forgery
-    plug :put_secure_browser_headers
+    plug :put_secure_browser_headers, %{"content-security-policy" => @content_security_policy}
   end
 
   pipeline :api do
@@ -70,6 +90,7 @@ defmodule ContaWeb.Router do
         live "/", InvoiceLive.Index, :index
         live "/new", InvoiceLive.Index, :new
         live "/:id/edit", InvoiceLive.Index, :edit
+        live "/:id/duplicate", InvoiceLive.Index, :duplicate
 
         scope "/" do
           pipe_through :printer

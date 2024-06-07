@@ -10,12 +10,12 @@ defmodule Conta.Event.TransactionCreated.Entry do
   typed_embedded_schema do
     field :description, :string
     field :account_name, {:array, :string}
-    field :credit, Money.Ecto.Amount.Type, default: Money.new(0)
-    field :debit, Money.Ecto.Amount.Type, default: Money.new(0)
-    field :balance, Money.Ecto.Amount.Type, default: Money.new(0)
+    field(:credit, Money.Ecto.Amount.Type, default: Money.new(0)) :: Money.t()
+    field(:debit, Money.Ecto.Amount.Type, default: Money.new(0)) :: Money.t()
+    field(:balance, Money.Ecto.Amount.Type, default: Money.new(0)) :: Money.t()
     field(:change_currency, Money.Ecto.Currency.Type, default: :EUR) :: currency()
-    field :change_credit, Money.Ecto.Amount.Type, default: Money.new(0)
-    field :change_debit, Money.Ecto.Amount.Type, default: Money.new(0)
+    field(:change_credit, Money.Ecto.Amount.Type, default: Money.new(0)) :: Money.t()
+    field(:change_debit, Money.Ecto.Amount.Type, default: Money.new(0)) :: Money.t()
     field :change_price, :decimal, default: 1.0
   end
 

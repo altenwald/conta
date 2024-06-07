@@ -4,7 +4,10 @@ defmodule Conta.Projector.Book do
     repo: Conta.Repo,
     name: __MODULE__
 
+  require Logger
+
   alias Conta.Event.ExpenseSet
+  alias Conta.Event.InvoiceRemoved
   alias Conta.Event.InvoiceSet
   alias Conta.Event.PaymentMethodSet
   alias Conta.Event.TemplateSet
@@ -43,6 +46,12 @@ defmodule Conta.Projector.Book do
   defp to_invoice_number(year, number) when is_integer(year) and is_binary(number),
     do: "#{year}-#{String.pad_leading(number, 5, "0")}"
 
+  project(%InvoiceRemoved{} = invoice_removed, _metadata, fn multi ->
+    invoice_number = to_invoice_number(invoice_removed.invoice_date, invoice_removed.invoice_number)
+    invoice = Conta.Repo.get_by(Invoice, invoice_number: invoice_number)
+    Ecto.Multi.delete(multi, :delete_invoice, invoice)
+  end)
+
   project(%InvoiceSet{action: :insert} = invoice, _metadata, fn multi ->
     invoice_number = to_invoice_number(invoice.invoice_date, invoice.invoice_number)
 
@@ -67,7 +76,17 @@ defmodule Conta.Projector.Book do
       |> Map.update(:client, nil, &if(&1 != nil, do: Map.from_struct(&1)))
       |> Invoice.changeset()
 
-    Ecto.Multi.insert(multi, :invoice, changeset)
+    multi
+    |> Ecto.Multi.insert(:invoice, changeset)
+    |> Ecto.Multi.run(:notify, fn _repo, data ->
+      event_name = "event:invoice_set"
+      invoice = data[:invoice]
+      Logger.debug("sending broadcast for event #{inspect(event_name)}")
+      case Phoenix.PubSub.broadcast(Conta.PubSub, event_name, {:invoice_set, invoice}) do
+        :ok -> {:ok, nil}
+        error -> error
+      end
+    end)
   end)
 
   project(%ExpenseSet{action: :insert} = expense, _metadata, fn multi ->

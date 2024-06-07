@@ -34,6 +34,29 @@
                 </span>
               </.link>
             </:action>
+            <:action :let={{_id, invoice}}>
+              <.link
+                class="button is-light"
+                patch={~p"/books/invoices/#{invoice}/duplicate"}
+                title={gettext("Duplicate")}
+              >
+                <span class="icon">
+                  <FontAwesome.copy />
+                </span>
+              </.link>
+            </:action>
+            <:action :let={{id, invoice}}>
+              <.link
+                phx-click={JS.push("delete", value: %{id: invoice.id, dom_id: id})}
+                class="button is-danger is-light"
+                data-confirm={gettext("Are you sure?")}
+                title={gettext("Delete")}
+              >
+                <span class="icon">
+                  <FontAwesome.trash_can />
+                </span>
+              </.link>
+            </:action>
             <:col :let={{_id, invoice}} label={gettext("date")}>
               <%= invoice.invoice_number %>
             </:col>
@@ -64,7 +87,7 @@
 </section>
 
 <.modal
-  :if={@live_action in [:new, :edit]}
+  :if={@live_action in [:new, :edit, :duplicate]}
   id="invoice-modal"
   show
   on_cancel={JS.patch(~p"/books/invoices")}

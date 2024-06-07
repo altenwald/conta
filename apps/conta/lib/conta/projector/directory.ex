@@ -4,7 +4,7 @@ defmodule Conta.Projector.Directory do
     repo: Conta.Repo,
     name: __MODULE__
 
-  alias Conta.Event.ContactRemove
+  alias Conta.Event.ContactRemoved
   alias Conta.Event.ContactSet
   alias Conta.Projector.Directory.Contact
   alias Conta.Repo
@@ -22,7 +22,7 @@ defmodule Conta.Projector.Directory do
     Ecto.Multi.insert(multi, :contact, changeset, opts)
   end)
 
-  project(%ContactRemove{} = event, _metadata, fn multi ->
+  project(%ContactRemoved{} = event, _metadata, fn multi ->
     clauses = Map.from_struct(event)
     if contact = Repo.get_by(Contact, clauses) do
       Ecto.Multi.delete(multi, :contact, contact)

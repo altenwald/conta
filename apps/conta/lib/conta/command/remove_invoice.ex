@@ -1,23 +1,25 @@
-defmodule Conta.Event.ContactRemove do
+defmodule Conta.Command.RemoveInvoice do
   use TypedEctoSchema
-  import Conta.EctoHelpers
   import Ecto.Changeset
 
   @primary_key false
 
-  @derive Jason.Encoder
   typed_embedded_schema do
-    field :company_nif, :string
     field :nif, :string
+    field :invoice_number, :integer
+    field :invoice_date, :date
   end
 
-  @fields ~w[company_nif nif]a
+  @fields ~w[nif invoice_date invoice_number]a
 
   @doc false
   def changeset(model \\ %__MODULE__{}, params) do
     model
     |> cast(params, @fields)
     |> validate_required(@fields)
-    |> get_result()
+  end
+
+  def to_command(changeset) do
+    apply_changes(changeset)
   end
 end
