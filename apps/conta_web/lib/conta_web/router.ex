@@ -16,10 +16,10 @@ defmodule ContaWeb.Router do
                                "style-src 'self' https://fonts.googleapis.com;" <>
                                "font-src data: https://fonts.gstatic.com;"
   else
-    @content_security_policy "default-src 'self' 'unsafe-eval' 'unsafe-inline';" <>
+    @content_security_policy "default-src 'self' 'unsafe-eval' 'unsafe-inline' https://cdn.tailwindcss.com;" <>
                                "connect-src ws://localhost:*;" <>
                                "img-src 'self' blob: data:;" <>
-                               "style-src 'self' https://fonts.googleapis.com;" <>
+                               "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;" <>
                                "font-src data: https://fonts.gstatic.com;"
   end
 
@@ -98,6 +98,15 @@ defmodule ContaWeb.Router do
           get "/:id", InvoiceController, :show
           get "/:id/download", InvoiceController, :download
         end
+      end
+
+      scope "/books/expenses/" do
+        live "/", ExpenseLive.Index, :index
+        live "/new", ExpenseLive.Index, :new
+        live "/:id/edit", ExpenseLive.Index, :edit
+        live "/:id/duplicate", ExpenseLive.Index, :duplicate
+
+        get "/:id/download/:attachment_id", ExpenseController, :download
       end
 
       scope "/ledger/accounts/" do

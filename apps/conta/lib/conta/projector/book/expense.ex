@@ -1,6 +1,7 @@
 defmodule Conta.Projector.Book.Expense do
   use TypedEctoSchema
   import Ecto.Changeset
+  alias Conta.Domain.Expense, as: DomainExpense
 
   @primary_key {:id, :binary_id, autogenerate: true}
   @foreign_key_type :binary_id
@@ -11,7 +12,7 @@ defmodule Conta.Projector.Book.Expense do
     field :invoice_number, :string
     field :invoice_date, :date
     field :due_date, :date
-    field :category, :string
+    field :category, Ecto.Enum, values: DomainExpense.categories()
     field :subtotal_price, :integer
     field :tax_price, :integer
     field :total_price, :integer
@@ -58,6 +59,8 @@ defmodule Conta.Projector.Book.Expense do
       field :size, :integer
       timestamps()
     end
+
+    field :num_attachments, :integer, virtual: true
 
     timestamps(type: :utc_datetime_usec)
   end

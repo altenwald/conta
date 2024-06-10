@@ -449,7 +449,7 @@ defmodule ContaWeb.CoreComponents do
 
   attr :rest, :global,
     include: ~w(accept autocomplete capture cols disabled form list max maxlength min minlength
-                pattern placeholder readonly required rows size step)
+                pattern placeholder readonly required rows size step upload files)
 
   slot :inner_block
 
@@ -502,6 +502,51 @@ defmodule ContaWeb.CoreComponents do
     ~H"""
     <.field id={@id} name={@name} label={@label} class="is-horizontal" errors={@errors}>
       <textarea id={@id} name={@name} class={["textarea", @errors != [] && "is-danger"]} {@rest}><%= Phoenix.HTML.Form.normalize_value("textarea", @value) %></textarea>
+    </.field>
+    """
+  end
+
+  def input(%{type: "file"} = assigns) do
+    ~H"""
+    <.field id={@id} name={@name} label={@label} class="is-horizontal" errors={@errors}>
+      <div class="box">
+        <span :if={length(@rest.files) == 0 and length(@rest.upload.entries) == 0}>
+          <%= gettext "There are no attachments" %>
+        </span>
+        <span class="tag is-success" :for={file <- @rest.files}>
+          <%= file["name"] %>
+          <button
+            type="button"
+            class="delete is-small"
+            phx-click="remove"
+            phx-target={@rest."phx-target"}
+            phx-value-id={file["id"]}
+            data={[confirm: gettext("Are you sure?")]}
+          />
+        </span>
+        <span class="tag is-primary" :for={entry <- @rest.upload.entries}>
+          <%= entry.client_name %>
+          <button
+            type="button"
+            class="delete is-small"
+            phx-click="remove"
+            phx-target={@rest."phx-target"}
+            phx-value-ref={entry.ref}
+            data={[confirm: gettext("Are you sure?")]}
+          />
+        </span>
+      </div>
+      <div class="file is-primary">
+        <label class="file-label">
+          <.live_file_input upload={@rest.upload} class="file-input" />
+          <span class="file-cta">
+            <span class="file-icon">
+              <FontAwesome.upload/>
+            </span>
+            <span class="file-label"><%= gettext("Upload") %></span>
+          </span>
+        </label>
+      </div>
     </.field>
     """
   end

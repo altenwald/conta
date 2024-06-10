@@ -149,8 +149,7 @@ defmodule ContaWeb.InvoiceLive.FormComponent do
   end
 
   defp list_currencies do
-    # TODO get more frequent currencies from database entries or put in a specific table/cache
-    frequent = ~w[EUR USD GBP]a
+    frequent = Application.get_env(:conta, :frequent_currencies, [])
 
     currencies =
       Money.Currency.all()
@@ -188,11 +187,17 @@ defmodule ContaWeb.InvoiceLive.FormComponent do
   @impl true
   def update(%{set_invoice: invoice} = assigns, socket) do
     changeset = SetInvoice.changeset(invoice, %{action: :insert})
+    details =
+      invoice.details
+      |> Enum.with_index(&{to_string(&2), Map.from_struct(&1)})
+      |> Map.new()
 
     {:ok,
      socket
      |> assign(assigns)
-     |> assign(params: %{"nif" => assigns.company_nif})
+     |> assign(
+       params: %{"nif" => assigns.company_nif, "details" => details}
+     )
      |> assign_form(changeset)}
   end
 
@@ -285,7 +290,7 @@ defmodule ContaWeb.InvoiceLive.FormComponent do
   end
 
   defp save_invoice(socket, :edit, invoice_params) do
-    changeset = SetInvoice.changeset(socket.assigns.modify_invoice, invoice_params)
+    changeset = SetInvoice.changeset(socket.assigns.set_invoice, invoice_params)
 
     if changeset.valid? and dispatch(SetInvoice.to_command(changeset)) == :ok do
       {:noreply,

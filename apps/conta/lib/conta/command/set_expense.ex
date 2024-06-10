@@ -1,33 +1,9 @@
 defmodule Conta.Command.SetExpense do
   use TypedEctoSchema
   import Ecto.Changeset
+  alias Conta.Domain.Expense
 
   @primary_key false
-
-  @categories ~w[
-    computers
-    bank_fees
-    gasoline
-    shipping_costs
-    representation_expenses
-    accounting_fees
-    printing_and_stationery
-    motor_vehicle_tax
-    professional_literature
-    motor_vehicle_maintenance
-    office_supplies
-    other_vehicle_costs
-    other_general_costs
-    advertising
-    vehicle_insurances
-    general_insurances
-    software
-    subscriptions
-    phone_and_internet
-    transport
-    travel_and_accommodation
-    web_hosting_or_platforms
-  ]a
 
   @type currency() :: atom()
 
@@ -39,14 +15,14 @@ defmodule Conta.Command.SetExpense do
     field :invoice_date, :date
     field :paid_date, :date
     field :due_date, :date
-    field :category, Ecto.Enum, values: @categories
+    field :category, Ecto.Enum, values: Expense.categories()
     field :subtotal_price, :decimal
     field :tax_price, :decimal
     field :total_price, :decimal
-    field(:currency, Money.Ecto.Currency.Type) :: currency()
+    field :currency, :string
     field :comments, :string
     field :payment_method, :string
-    embeds_many :attachments, Attachment do
+    embeds_many :attachments, Attachment, on_replace: :delete do
       field :name, :string
       field :file, :binary
       field :mimetype, :string
@@ -62,7 +38,7 @@ defmodule Conta.Command.SetExpense do
   def changeset(model \\ %__MODULE__{}, params) do
     model
     |> cast(params, @required_fields ++ @optional_fields)
-    |> cast_embed(:attachments, required: true, with: &changeset_attachments/2)
+    |> cast_embed(:attachments, with: &changeset_attachments/2)
     |> validate_required(@required_fields)
   end
 

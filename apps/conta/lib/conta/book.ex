@@ -2,8 +2,11 @@ defmodule Conta.Book do
   import Conta.MoneyHelpers
   import Ecto.Query, only: [from: 2]
 
+  alias Conta.Command.RemoveExpense
   alias Conta.Command.RemoveInvoice
+  alias Conta.Command.SetExpense
   alias Conta.Command.SetInvoice
+  alias Conta.Projector.Book.Expense
   alias Conta.Projector.Book.Invoice
   alias Conta.Projector.Book.PaymentMethod
   alias Conta.Projector.Book.Template
@@ -11,24 +14,61 @@ defmodule Conta.Book do
 
   @due_in_days 30
 
-  def list_invoices(limit \\ :infinity)
-
-  def list_invoices(:infinity) do
-    from(
-      i in Invoice,
-      order_by: [desc: fragment("extract(year from ?)", i.invoice_date), desc: i.invoice_number]
-    )
+  def list_simple_expenses(limit \\ :infinity) do
+    list_simple_expenses_query(limit)
     |> Repo.all()
   end
 
-  def list_invoices(limit) when is_integer(limit) do
+  defp list_simple_expenses_query(:infinity) do
     from(
-      i in Invoice,
-      order_by: [desc: fragment("extract(year from ?)", i.invoice_date), desc: i.invoice_number],
-      limit: ^limit
+      e in Expense,
+      order_by: [
+        desc: e.invoice_date,
+        asc: e.invoice_number
+      ],
+      select: %Expense{
+        id: e.id,
+        invoice_number: e.invoice_number,
+        invoice_date: e.invoice_date,
+        due_date: e.due_date,
+        category: e.category,
+        subtotal_price: e.subtotal_price,
+        tax_price: e.tax_price,
+        total_price: e.total_price,
+        comments: e.comments,
+        currency: e.currency,
+        provider: e.provider,
+        company: e.company,
+        payment_method: e.payment_method,
+        inserted_at: e.inserted_at,
+        updated_at: e.updated_at,
+        num_attachments: fragment("coalesce(array_length(?, 1), 0)", e.attachments)
+      }
     )
+  end
+
+  defp list_simple_expenses_query(limit) when is_integer(limit) do
+    query = list_simple_expenses_query(:infinity)
+    from(e in query, limit: ^limit)
+  end
+
+  def list_invoices(limit \\ :infinity) do
+    list_invoices_query(limit)
     |> Repo.all()
   end
+
+  defp list_invoices_query(:infinity) do
+    from(i in Invoice, order_by: [desc: i.invoice_number])
+  end
+
+  defp list_invoices_query(limit) when is_integer(limit) do
+    query = list_invoices_query(:infinity)
+    from(i in query, limit: ^limit)
+  end
+
+  def get_expense!(id), do: Repo.get!(Expense, id)
+
+  def get_expense(id), do: Repo.get(Expense, id)
 
   def get_invoice!(id), do: Repo.get!(Invoice, id)
 
@@ -75,6 +115,17 @@ defmodule Conta.Book do
     Repo.get_by!(Template, name: name, nif: nif)
   end
 
+  def get_remove_expense(id) when is_binary(id),
+    do: get_remove_expense(get_expense!(id))
+
+  def get_remove_expense(%Expense{} = expense) do
+    %RemoveExpense{
+      nif: expense.company.nif,
+      invoice_number: expense.invoice_number,
+      invoice_date: expense.invoice_date
+    }
+  end
+
   def get_remove_invoice(id) when is_binary(id),
     do: get_remove_invoice(get_invoice!(id))
 
@@ -86,6 +137,27 @@ defmodule Conta.Book do
       nif: invoice.company.nif,
       invoice_number: invoice_number,
       invoice_date: invoice.invoice_date
+    }
+  end
+
+  def get_duplicate_expense(id) when is_binary(id),
+    do: get_duplicate_expense(get_expense!(id))
+
+  def get_duplicate_expense(%Expense{} = expense) do
+    %SetExpense{
+      action: :insert,
+      nif: expense.company.nif,
+      provider_nif: expense.provider.nif,
+      invoice_number: expense.invoice_number,
+      invoice_date: Date.utc_today(),
+      due_date: Date.add(Date.utc_today(), @due_in_days),
+      category: expense.category,
+      subtotal_price: to_money(expense.subtotal_price) |> Money.to_decimal(),
+      tax_price: to_money(expense.tax_price) |> Money.to_decimal(),
+      total_price: to_money(expense.total_price) |> Money.to_decimal(),
+      currency: expense.currency,
+      comments: expense.comments,
+      payment_method: String.downcase(expense.payment_method.name)
     }
   end
 
@@ -125,6 +197,38 @@ defmodule Conta.Book do
     }
   end
 
+  def get_set_expense(id) when is_binary(id),
+    do: get_set_expense(get_expense!(id))
+
+  def get_set_expense(%Expense{} = expense) do
+    %SetExpense{
+      action: :update,
+      nif: expense.company.nif,
+      provider_nif: expense.provider.nif,
+      invoice_number: expense.invoice_number,
+      invoice_date: expense.invoice_date,
+      due_date: expense.due_date,
+      category: expense.category,
+      subtotal_price: to_money(expense.subtotal_price) |> Money.to_decimal(),
+      tax_price: to_money(expense.tax_price) |> Money.to_decimal(),
+      total_price: to_money(expense.total_price) |> Money.to_decimal(),
+      currency: expense.currency,
+      comments: expense.comments,
+      payment_method: String.downcase(expense.payment_method.name),
+      attachments: for %Expense.Attachment{} = attachment <- expense.attachments do
+        %SetExpense.Attachment{
+          id: attachment.id,
+          name: attachment.name,
+          file: attachment.file,
+          mimetype: attachment.mimetype,
+          size: attachment.size,
+          inserted_at: attachment.inserted_at,
+          updated_at: attachment.updated_at
+        }
+      end
+    }
+  end
+
   def get_set_invoice(id) when is_binary(id),
     do: get_set_invoice(get_invoice!(id))
 
@@ -142,24 +246,34 @@ defmodule Conta.Book do
       paid_date: invoice.paid_date,
       due_date: invoice.due_date,
       type: invoice.type,
-      subtotal_price: invoice.subtotal_price,
-      tax_price: invoice.tax_price,
-      total_price: invoice.total_price,
+      subtotal_price: to_money(invoice.subtotal_price) |> Money.to_decimal(),
+      tax_price: to_money(invoice.tax_price) |> Money.to_decimal(),
+      total_price: to_money(invoice.total_price) |> Money.to_decimal(),
       currency: invoice.currency,
       comments: invoice.comments,
       destination_country: invoice.destination_country,
-      payment_method: invoice.payment_method,
+      payment_method: String.downcase(invoice.payment_method.name),
       details: for %Invoice.Detail{} = details <- invoice.details do
         %SetInvoice.Detail{
+          id: details.id,
           sku: details.sku,
           description: details.description,
           tax: details.tax,
-          base_price: details.base_price,
+          base_price: to_money(details.base_price) |> Money.to_decimal(),
           units: details.units,
-          tax_price: details.tax_price,
-          total_price: details.total_price
+          tax_price: to_money(details.tax_price) |> Money.to_decimal(),
+          total_price: to_money(details.total_price) |> Money.to_decimal()
         }
       end
+    }
+  end
+
+  def new_set_expense do
+    %SetExpense{
+      action: :insert,
+      nif: Application.get_env(:conta, :default_company_nif),
+      invoice_date: Date.utc_today(),
+      currency: Application.get_env(:conta, :frequent_currencies, [nil]) |> hd()
     }
   end
 
@@ -171,6 +285,7 @@ defmodule Conta.Book do
       nif: Application.get_env(:conta, :default_company_nif),
       invoice_number: invoice_number,
       invoice_date: Date.utc_today(),
+      currency: Application.get_env(:conta, :frequent_currencies, [nil]) |> hd()
     }
   end
 

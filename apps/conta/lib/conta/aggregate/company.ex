@@ -5,6 +5,7 @@ defmodule Conta.Aggregate.Company do
   alias Conta.Aggregate.Company.PaymentMethod
 
   alias Conta.Command.RemoveContact
+  alias Conta.Command.RemoveExpense
   alias Conta.Command.RemoveInvoice
   alias Conta.Command.SetCompany
   alias Conta.Command.SetContact
@@ -16,6 +17,7 @@ defmodule Conta.Aggregate.Company do
   alias Conta.Event.CompanySet
   alias Conta.Event.ContactRemoved
   alias Conta.Event.ContactSet
+  alias Conta.Event.ExpenseRemoved
   alias Conta.Event.ExpenseSet
   alias Conta.Event.InvoiceRemoved
   alias Conta.Event.InvoiceSet
@@ -182,6 +184,10 @@ defmodule Conta.Aggregate.Company do
     when not is_struct(date, Date),
     do: {:error, %{invoice_date: ["is invalid"]}}
 
+  def execute(_command, %RemoveExpense{invoice_date: date})
+    when not is_struct(date, Date),
+    do: {:error, %{invoice_date: ["is invalid"]}}
+
   def execute(_command, %RemoveInvoice{invoice_number: invoice_number})
     when not is_integer(invoice_number),
     do: {:error, %{invoice_date: ["is invalid"]}}
@@ -196,6 +202,12 @@ defmodule Conta.Aggregate.Company do
       Logger.debug("invoice_numbers for #{year} are #{inspect(invoice_numbers[year])}")
       {:error, %{invoice_number: ["not found"]}}
     end
+  end
+
+  def execute(_command, %RemoveExpense{} = command) do
+    command
+    |> Map.from_struct()
+    |> ExpenseRemoved.changeset()
   end
 
   # defp validate_duplicate_invoice_number({:error, _} = error, _company, _command), do: error
@@ -290,6 +302,8 @@ defmodule Conta.Aggregate.Company do
   end
 
   def apply(%__MODULE__{} = company, %ExpenseSet{}), do: company
+
+  def apply(%__MODULE__{} = company, %ExpenseRemoved{}), do: company
 
   def apply(%__MODULE__{contacts: contacts} = company, %ContactSet{nif: nif} = event) do
     event

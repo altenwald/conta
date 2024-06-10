@@ -1,0 +1,108 @@
+<section class="section is-main-section">
+  <.breadcrumbs>
+    <:breadcrumb label={gettext("Dashboard")} href={~p"/"} />
+    <:breadcrumb label={gettext("Expenses")} href={~p"/books/expenses"} />
+  </.breadcrumbs>
+
+  <div class="card tile is-child has-table has-mobile-sort-spaced">
+    <div class="card-content">
+      <div class="b-table has-pagination">
+        <div class="table-wrapper has-mobile-cards">
+          <div class="field is-grouped">
+            <div class="control">
+              <.link patch={~p"/books/expenses/new"} class="button">
+                <div class="icon-text">
+                  <span class="icon mr-2"><FontAwesome.circle_plus /></span>
+                  <span><%= gettext("New Expense") %></span>
+                </div>
+              </.link>
+            </div>
+          </div>
+          <.table
+            id="books_expenses"
+            rows={@streams.books_expenses}
+          >
+            <:action :let={{_id, expense}}>
+              <.link
+                :for={idx <- 1..expense.num_attachments}
+                class="button is-info is-light"
+                href={~p"/books/expenses/#{expense}/download/#{idx}"}
+              >
+                <span class="icon">
+                  <FontAwesome.file_invoice />
+                </span>
+              </.link>
+            </:action>
+            <:action :let={{_id, expense}}>
+              <.link
+                class="button is-light"
+                patch={~p"/books/expenses/#{expense}/edit"}
+                title={gettext("Edit")}
+              >
+                <span class="icon">
+                  <FontAwesome.pencil />
+                </span>
+              </.link>
+            </:action>
+            <:action :let={{_id, expense}}>
+              <.link
+                class="button is-light"
+                patch={~p"/books/expenses/#{expense}/duplicate"}
+                title={gettext("Duplicate")}
+              >
+                <span class="icon">
+                  <FontAwesome.copy />
+                </span>
+              </.link>
+            </:action>
+            <:action :let={{id, expense}}>
+              <.link
+                phx-click={JS.push("delete", value: %{id: expense.id, dom_id: id})}
+                class="button is-danger is-light"
+                data-confirm={gettext("Are you sure?")}
+                title={gettext("Delete")}
+              >
+                <span class="icon">
+                  <FontAwesome.trash_can />
+                </span>
+              </.link>
+            </:action>
+            <:col :let={{_id, expense}} label={gettext("date")}>
+              <%= expense.invoice_number %>
+            </:col>
+            <:col :let={{_id, expense}} label={gettext("date")}><%= expense.invoice_date %></:col>
+            <:col :let={{_id, expense}} label={gettext("provider")}>
+              <%= expense.provider.name %>
+            </:col>
+            <:col :let={{_id, expense}} label={gettext("subtotal")} class="has-text-right">
+              <%= Money.new(expense.subtotal_price, expense.currency) %>
+            </:col>
+            <:col :let={{_id, expense}} label={gettext("tax")} class="has-text-right">
+              <%= Money.new(expense.tax_price, expense.currency) %>
+            </:col>
+            <:col :let={{_id, expense}} label={gettext("total")} class="has-text-right">
+              <%= Money.new(expense.total_price, expense.currency) %>
+            </:col>
+          </.table>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<.modal
+  :if={@live_action in [:new, :edit, :duplicate]}
+  id="expense-modal"
+  show
+  on_cancel={JS.patch(~p"/books/expenses")}
+>
+  <.live_component
+    module={ContaWeb.ExpenseLive.FormComponent}
+    id={@set_expense.invoice_number || :new}
+    title={@page_title}
+    action={@live_action}
+    set_expense={@set_expense}
+    company_nif={@company_nif}
+    patch={~p"/books/expenses"}
+  />
+</.modal>

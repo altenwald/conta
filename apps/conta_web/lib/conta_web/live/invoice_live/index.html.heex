@@ -1,10 +1,10 @@
 <section class="section is-main-section">
+  <.breadcrumbs>
+    <:breadcrumb label={gettext("Dashboard")} href={~p"/"} />
+    <:breadcrumb label={gettext("Invoices")} href={~p"/books/invoices"} />
+  </.breadcrumbs>
+
   <div class="card tile is-child has-table has-mobile-sort-spaced">
-    <header class="card-header">
-      <p class="card-header-title">
-        <%= gettext("Invoices") %>&nbsp;
-      </p>
-    </header>
     <div class="card-content">
       <div class="b-table has-pagination">
         <div class="table-wrapper has-mobile-cards">
@@ -42,6 +42,17 @@
               >
                 <span class="icon">
                   <FontAwesome.copy />
+                </span>
+              </.link>
+            </:action>
+            <:action :let={{_id, invoice}}>
+              <.link
+                class="button is-light"
+                patch={~p"/books/invoices/#{invoice}/edit"}
+                title={gettext("Edit")}
+              >
+                <span class="icon">
+                  <FontAwesome.pencil />
                 </span>
               </.link>
             </:action>

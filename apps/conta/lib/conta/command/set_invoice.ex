@@ -22,7 +22,7 @@ defmodule Conta.Command.SetInvoice do
     field :comments, :string
     field :destination_country, :string
     field :payment_method, :string
-    embeds_many :details, Detail do
+    embeds_many :details, Detail, on_replace: :delete do
       field :sku, :string
       field :description, :string
       field :tax, :integer

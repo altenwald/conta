@@ -90,6 +90,8 @@ config :ex_gram, adapter: ExGram.Adapter.Tesla
 
 config :ex_gram, json_engine: Jason
 
+config :conta, frequent_currencies: ~w[EUR USD GBP]a
+
 # Import environment specific config. This must remain at the bottom
 # of this file so it overrides the configuration defined above.
 import_config("#{config_env()}.exs")
