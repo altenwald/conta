@@ -128,7 +128,7 @@ defmodule ContaWeb.ExpenseLive.FormComponent do
       {gettext("Phone and internet"), "phone_and_internet"},
       {gettext("Transport"), "transport"},
       {gettext("Travel and accommodation"), "travel_and_accommodation"},
-      {gettext("Web hosting and platforms"), "web_hosting_and_platforms"},
+      {gettext("Web hosting or platforms"), "web_hosting_or_platforms"},
     ]
   end
 

@@ -22,7 +22,7 @@ defmodule Conta.Domain.Expense do
     phone_and_internet
     transport
     travel_and_accommodation
-    web_hosting_and_platforms
+    web_hosting_or_platforms
   ]a
 
   def categories, do: @categories
