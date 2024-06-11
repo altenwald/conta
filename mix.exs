@@ -5,7 +5,7 @@ defmodule Conta.Umbrella.MixProject do
     [
       name: :conta,
       apps_path: "apps",
-      version: "0.2.0",
+      version: "0.2.1",
       start_permanent: Mix.env() == :prod,
       deps: deps(),
       aliases: aliases(),
@@ -41,7 +41,7 @@ defmodule Conta.Umbrella.MixProject do
         "assets.setup",
         "assets.deploy",
         "phx.digest",
-        "release"
+        "release --overwrite"
       ]
     ]
   end

@@ -58,4 +58,11 @@ document.addEventListener("DOMContentLoaded", () => {
       $target.classList.toggle("is-active");
     });
   });
+
+  document.getElementById("window-print").addEventListener("click", () => {
+    window.print();
+  });
+  document.getElementById("window-close").addEventListener("click", () => {
+    window.close();
+  });
 });

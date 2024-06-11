@@ -8,13 +8,13 @@
           </span>
           &nbsp; <strong><%= gettext("Download") %></strong>
         </.link>
-        <.button type={:light} onclick="javascript:window.print()">
+        <.button type={:light} id="window-print">
           <span class="icon">
             <FontAwesome.print />
           </span>
           &nbsp; <strong><%= gettext("Print") %></strong>
         </.button>
-        <.button type={:light} onclick="javascript:window.close()">
+        <.button type={:light} id="window-close">
           <span class="icon">
             <FontAwesome.xmark />
           </span>
