@@ -48,7 +48,10 @@ defmodule Conta.Projector.Book do
     do: "#{year}-#{String.pad_leading(number, 5, "0")}"
 
   project(%ExpenseRemoved{} = expense_removed, _metadata, fn multi ->
-    expense = Conta.Repo.get_by(Expense, invoice_number: expense_removed.invoice_number, invoice_date: expense_removed.invoice_date)
+    expense = Conta.Repo.get_by(Expense, [
+        invoice_number: expense_removed.invoice_number,
+        invoice_date: expense_removed.invoice_date
+    ])
     Ecto.Multi.delete(multi, :delete_expense, expense)
   end)
 
