@@ -61,12 +61,20 @@ defmodule ContaWeb.MixProject do
     [
       setup: ["deps.get", "assets.setup", "assets.build"],
       test: ["ecto.create --quiet", "ecto.migrate --quiet", "test"],
-      "assets.setup": ["tailwind.install --if-missing", "esbuild.install --if-missing"],
-      "assets.build": ["tailwind default", "esbuild default"],
+      "assets.setup": [
+        # "tailwind.install --if-missing",
+        "esbuild.install --if-missing"
+      ],
+      "assets.build": [
+        # "tailwind default",
+        "esbuild bundle_app",
+        "esbuild bundle_print",
+      ],
       "assets.deploy": [
         "sass default --no-source-map --style=compressed",
         # "tailwind default --minify",
-        "esbuild default --minify",
+        "esbuild bundle_app --minify",
+        "esbuild bundle_print --minify",
         "phx.digest"
       ]
     ]

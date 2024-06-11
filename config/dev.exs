@@ -31,7 +31,8 @@ config :conta_web, ContaWeb.Endpoint,
   debug_errors: true,
   secret_key_base: "WeMdDDXgiQvRkC23rk8y5cvMJaipjR6qJNWqe3t/2Ebvg2rtWNuW/y9IbXJGrIMX",
   watchers: [
-    esbuild: {Esbuild, :install_and_run, [:default, ~w(--sourcemap=inline --watch)]},
+    esbuild_bundle_app: {Esbuild, :install_and_run, [:bundle_app, ~w(--sourcemap=inline --watch)]},
+    esbuild_bundle_print: {Esbuild, :install_and_run, [:bundle_print, ~w(--sourcemap=inline --watch)]},
     # tailwind: {Tailwind, :install_and_run, [:default, ~w(--watch)]},
     sass: {
       DartSass,

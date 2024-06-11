@@ -12,14 +12,14 @@ defmodule ContaWeb.Router do
 
     @content_security_policy "default-src 'self';" <>
                                "connect-src wss://#{@host};" <>
-                               "img-src 'self' blob: data:;" <>
-                               "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;" <>
+                               "img-src 'self' blob:;" <>
+                               "style-src 'self' https://fonts.googleapis.com;" <>
                                "font-src data: https://fonts.gstatic.com;"
   else
     @content_security_policy "default-src 'self' 'unsafe-eval' 'unsafe-inline' https://cdn.tailwindcss.com;" <>
                                "connect-src ws://localhost:*;" <>
-                               "img-src 'self' blob: data:;" <>
-                               "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;" <>
+                               "img-src 'self' blob:;" <>
+                               "style-src 'self' https://fonts.googleapis.com;" <>
                                "font-src data: https://fonts.gstatic.com;"
   end
 
@@ -97,6 +97,8 @@ defmodule ContaWeb.Router do
 
           get "/:id", InvoiceController, :show
           get "/:id/download", InvoiceController, :download
+          get "/:id/logo", InvoiceController, :logo
+          get "/:id/css", InvoiceController, :css
         end
       end
 

@@ -55,4 +55,22 @@ defmodule ContaWeb.InvoiceController do
     )
     |> send_resp(200, Base.decode64!(pdf))
   end
+
+  def logo(conn, %{"id" => id}) do
+    invoice = Book.get_invoice!(id)
+    template = Book.get_template_by_name!(invoice.company.nif, invoice.template)
+
+    conn
+    |> put_resp_content_type(template.logo_mime_type)
+    |> send_resp(200, template.logo)
+  end
+
+  def css(conn, %{"id" => id}) do
+    invoice = Book.get_invoice!(id)
+    template = Book.get_template_by_name!(invoice.company.nif, invoice.template)
+
+    conn
+    |> put_resp_content_type("text/css")
+    |> send_resp(200, template.css || "")
+  end
 end
