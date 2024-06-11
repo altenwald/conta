@@ -187,6 +187,7 @@ defmodule ContaWeb.InvoiceLive.FormComponent do
   @impl true
   def update(%{set_invoice: invoice} = assigns, socket) do
     changeset = SetInvoice.changeset(invoice, %{action: :insert})
+
     details =
       invoice.details
       |> Enum.with_index(&{to_string(&2), Map.from_struct(&1)})
@@ -195,9 +196,7 @@ defmodule ContaWeb.InvoiceLive.FormComponent do
     {:ok,
      socket
      |> assign(assigns)
-     |> assign(
-       params: %{"nif" => assigns.company_nif, "details" => details}
-     )
+     |> assign(params: %{"nif" => assigns.company_nif, "details" => details})
      |> assign_form(changeset)}
   end
 

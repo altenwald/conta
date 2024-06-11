@@ -141,16 +141,38 @@ defmodule Conta.Projector.Ledger do
           {false, related_entry.account_name}
         end
 
+      on_date = to_date(transaction.on_date)
       account = accounts[trans_entry.account_name]
+      amount = get_amount(account.type, trans_entry.credit, trans_entry.debit)
+
+      balance =
+        from(
+          e in Entry,
+          where: e.on_date <= ^on_date and e.account_name == ^trans_entry.account_name,
+          order_by: [desc: e.on_date, desc: e.updated_at],
+          limit: 1,
+          select: e.balance
+        )
+        |> Repo.one()
+        |> case do
+          nil -> Money.new(0)
+          balance -> balance
+        end
+
+      update_newer_entries =
+        from(
+          e in Entry,
+          where: e.on_date > ^on_date and e.account_name == ^trans_entry.account_name
+        )
 
       entry =
         %Entry{
-          on_date: to_date(transaction.on_date),
+          on_date: on_date,
           transaction_id: transaction.id,
           description: trans_entry.description,
           credit: trans_entry.credit,
           debit: trans_entry.debit,
-          balance: trans_entry.balance,
+          balance: Money.add(balance, amount),
           account_name: trans_entry.account_name,
           breakdown: breakdown,
           related_account_name: related_account_id
@@ -160,6 +182,7 @@ defmodule Conta.Projector.Ledger do
       multi
       |> upsert_account_balances(idx, accounts, account.currency, trans_entry)
       |> Ecto.Multi.insert({:entry, idx}, entry)
+      |> Ecto.Multi.update_all({:newer_entries, idx}, update_newer_entries, inc: [balance: amount])
       |> Ecto.Multi.run({:notify, idx}, fn _repo, _data ->
         event_name = "event:transaction_created:#{account_name}"
         id = transaction.id

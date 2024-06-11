@@ -511,9 +511,9 @@ defmodule ContaWeb.CoreComponents do
     <.field id={@id} name={@name} label={@label} class="is-horizontal" errors={@errors}>
       <div class="box">
         <span :if={length(@rest.files) == 0 and length(@rest.upload.entries) == 0}>
-          <%= gettext "There are no attachments" %>
+          <%= gettext("There are no attachments") %>
         </span>
-        <span class="tag is-success" :for={file <- @rest.files}>
+        <span :for={file <- @rest.files} class="tag is-success">
           <%= file["name"] %>
           <button
             type="button"
@@ -524,7 +524,7 @@ defmodule ContaWeb.CoreComponents do
             data={[confirm: gettext("Are you sure?")]}
           />
         </span>
-        <span class="tag is-primary" :for={entry <- @rest.upload.entries}>
+        <span :for={entry <- @rest.upload.entries} class="tag is-primary">
           <%= entry.client_name %>
           <button
             type="button"
@@ -541,7 +541,7 @@ defmodule ContaWeb.CoreComponents do
           <.live_file_input upload={@rest.upload} class="file-input" />
           <span class="file-cta">
             <span class="file-icon">
-              <FontAwesome.upload/>
+              <FontAwesome.upload />
             </span>
             <span class="file-label"><%= gettext("Upload") %></span>
           </span>

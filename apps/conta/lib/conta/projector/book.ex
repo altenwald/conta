@@ -82,17 +82,7 @@ defmodule Conta.Projector.Book do
       |> Map.update(:client, nil, &if(&1 != nil, do: Map.from_struct(&1)))
       |> Invoice.changeset()
 
-    multi
-    |> Ecto.Multi.insert(:invoice, changeset)
-    |> Ecto.Multi.run(:notify, fn _repo, data ->
-      event_name = "event:invoice_set"
-      invoice = data[:invoice]
-      Logger.debug("sending broadcast for event #{inspect(event_name)}")
-      case Phoenix.PubSub.broadcast(Conta.PubSub, event_name, {:invoice_set, invoice}) do
-        :ok -> {:ok, nil}
-        error -> error
-      end
-    end)
+    Ecto.Multi.insert(multi, :invoice, changeset)
   end)
 
   project(%ExpenseSet{action: :insert} = expense, _metadata, fn multi ->
@@ -108,18 +98,7 @@ defmodule Conta.Projector.Book do
       |> Map.update(:provider, nil, &if(&1 != nil, do: Map.from_struct(&1)))
       |> Expense.changeset()
 
-    multi
-    |> Ecto.Multi.insert(:expense, changeset)
-    |> Ecto.Multi.run(:notify, fn _repo, data ->
-      event_name = "event:expense_set"
-      expense = data[:expense]
-      expense = Map.put(expense, :num_attachments, length(expense.attachments))
-      Logger.debug("sending broadcast for event #{inspect(event_name)}")
-      case Phoenix.PubSub.broadcast(Conta.PubSub, event_name, {:expense_set, expense}) do
-        :ok -> {:ok, nil}
-        error -> error
-      end
-    end)
+    Ecto.Multi.insert(multi, :expense, changeset)
   end)
 
   project(%InvoiceSet{action: :update} = invoice, _metadata, fn multi ->
@@ -149,17 +128,7 @@ defmodule Conta.Projector.Book do
 
     changeset = Invoice.changeset(old_invoice, params)
 
-    multi
-    |> Ecto.Multi.update(:invoice, changeset)
-    |> Ecto.Multi.run(:notify, fn _repo, data ->
-      event_name = "event:invoice_set"
-      invoice = data[:invoice]
-      Logger.debug("sending broadcast for event #{inspect(event_name)}")
-      case Phoenix.PubSub.broadcast(Conta.PubSub, event_name, {:invoice_set, invoice}) do
-        :ok -> {:ok, nil}
-        error -> error
-      end
-    end)
+    Ecto.Multi.update(multi, :invoice, changeset)
   end)
 
   project(%ExpenseSet{action: :update} = expense, _metadata, fn multi ->
@@ -178,18 +147,7 @@ defmodule Conta.Projector.Book do
 
     changeset = Expense.changeset(old_expense, params)
 
-    multi
-    |> Ecto.Multi.update(:expense, changeset)
-    |> Ecto.Multi.run(:notify, fn _repo, data ->
-      event_name = "event:expense_set"
-      expense = data[:expense]
-      expense = Map.put(expense, :num_attachments, length(expense.attachments))
-      Logger.debug("sending broadcast for event #{inspect(event_name)}")
-      case Phoenix.PubSub.broadcast(Conta.PubSub, event_name, {:expense_set, expense}) do
-        :ok -> {:ok, nil}
-        error -> error
-      end
-    end)
+    Ecto.Multi.update(multi, :expense, changeset)
   end)
 
   project(%PaymentMethodSet{} = payment_method, _metadata, fn multi ->
@@ -225,6 +183,24 @@ defmodule Conta.Projector.Book do
     opts = [on_conflict: [set: update], conflict_target: [:name]]
     Ecto.Multi.insert(multi, :template, changeset, opts)
   end)
+
+  @impl Commanded.Projections.Ecto
+  def after_update(%InvoiceSet{}, _metadata, changes) do
+    event_name = "event:invoice_set"
+    invoice = changes[:invoice]
+    Logger.debug("sending broadcast for event #{inspect(event_name)}")
+    Phoenix.PubSub.broadcast(Conta.PubSub, event_name, {:invoice_set, invoice})
+  end
+
+  def after_update(%ExpenseSet{}, _metadata, changes) do
+    event_name = "event:expense_set"
+    expense = changes[:expense]
+    expense = Map.put(expense, :num_attachments, length(expense.attachments))
+    Logger.debug("sending broadcast for event #{inspect(event_name)}")
+    Phoenix.PubSub.broadcast(Conta.PubSub, event_name, {:expense_set, expense})
+  end
+
+  def after_update(_event, _metadata, _changes), do: :ok
 
   defp translate_logo(%{logo: nil} = params), do: params
 

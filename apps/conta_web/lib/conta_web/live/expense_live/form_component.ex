@@ -128,7 +128,7 @@ defmodule ContaWeb.ExpenseLive.FormComponent do
       {gettext("Phone and internet"), "phone_and_internet"},
       {gettext("Transport"), "transport"},
       {gettext("Travel and accommodation"), "travel_and_accommodation"},
-      {gettext("Web hosting or platforms"), "web_hosting_or_platforms"},
+      {gettext("Web hosting or platforms"), "web_hosting_or_platforms"}
     ]
   end
 
@@ -178,14 +178,16 @@ defmodule ContaWeb.ExpenseLive.FormComponent do
     expense_params =
       consume_uploaded_entries(socket, :attachments, fn %{path: path}, entry ->
         content = File.read!(path)
-        {:ok, %{
-          "file" => content,
-          "mimetype" => entry.client_type,
-          "name" => entry.client_name,
-          "size" => byte_size(content)
-        }}
+
+        {:ok,
+         %{
+           "file" => content,
+           "mimetype" => entry.client_type,
+           "name" => entry.client_name,
+           "size" => byte_size(content)
+         }}
       end)
-      |> then(& &1 ++ socket.assigns.attachments)
+      |> then(&(&1 ++ socket.assigns.attachments))
       |> Enum.with_index()
       |> Enum.map(fn {data, key} -> {key, data} end)
       |> Map.new()
@@ -199,7 +201,7 @@ defmodule ContaWeb.ExpenseLive.FormComponent do
   end
 
   def handle_event("remove", %{"id" => id}, socket) do
-    attachments = Enum.reject(socket.assigns.attachments, & &1["id"] == id)
+    attachments = Enum.reject(socket.assigns.attachments, &(&1["id"] == id))
     {:noreply, assign(socket, :attachments, attachments)}
   end
 

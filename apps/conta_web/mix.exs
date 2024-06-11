@@ -68,7 +68,7 @@ defmodule ContaWeb.MixProject do
       "assets.build": [
         # "tailwind default",
         "esbuild bundle_app",
-        "esbuild bundle_print",
+        "esbuild bundle_print"
       ],
       "assets.deploy": [
         "sass default --no-source-map --style=compressed",

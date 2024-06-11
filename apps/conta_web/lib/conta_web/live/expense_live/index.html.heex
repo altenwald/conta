@@ -18,10 +18,7 @@
               </.link>
             </div>
           </div>
-          <.table
-            id="books_expenses"
-            rows={@streams.books_expenses}
-          >
+          <.table id="books_expenses" rows={@streams.books_expenses}>
             <:action :let={{_id, expense}}>
               <.link
                 :for={idx <- 1..expense.num_attachments}
