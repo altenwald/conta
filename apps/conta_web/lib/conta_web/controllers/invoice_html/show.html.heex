@@ -1,12 +1,16 @@
 <div class="columns is-multiline is-mobile">
   <%= if @invoice.template do %>
+    <%= if assigns[:embedded] do %>
+    <style type="text/css"><%= @template.css %></style>
+    <% else %>
     <link phx-track-static rel="stylesheet" href={~p"/books/invoices/#{@invoice.id}/css"} />
+    <% end %>
   <% end %>
   <div class="column is-7">
     <img
       :if={@template.logo}
       class="invoice-logo"
-      src={get_logo(assigns[:base_path], @invoice.id, @template)}
+      src={get_logo(assigns[:base_path], @invoice.id, assigns[:embedded], @template)}
       alt={@invoice.company.name}
     />
     <br />

@@ -21,7 +21,8 @@ defmodule ContaWeb.InvoiceController do
       view_module: ContaWeb.InvoiceView,
       view_template: "show.html",
       invoice: invoice,
-      template: template
+      template: template,
+      embedded: true
     }
 
     layout_opts = %{
