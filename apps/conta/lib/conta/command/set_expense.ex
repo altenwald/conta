@@ -5,8 +5,6 @@ defmodule Conta.Command.SetExpense do
 
   @primary_key false
 
-  @type currency() :: atom()
-
   typed_embedded_schema do
     field :action, Ecto.Enum, values: ~w[insert update]a
     field :nif, :string

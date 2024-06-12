@@ -63,6 +63,9 @@ defmodule Conta.Aggregate.Ledger do
   # update account
   def execute(%__MODULE__{} = ledger, %SetAccount{} = command) do
     cond do
+      not valid_parent?(command.name, ledger) ->
+        {:error, :invalid_parent_account}
+
       account = ledger.accounts[command.id] ->
         Logger.info("update existing account #{account.name}")
         account_modified =
@@ -89,9 +92,6 @@ defmodule Conta.Aggregate.Ledger do
           [] -> {:error, :no_changes}
           events -> events
         end
-
-      not valid_parent?(command.name, ledger) ->
-        {:error, :invalid_parent_account}
 
       # id wasn't found
       :else ->
@@ -169,8 +169,12 @@ defmodule Conta.Aggregate.Ledger do
               entry
               |> Map.from_struct()
               |> Map.put(:balance, account.balances[currency])
+              |> Map.put(:currency, currency)
               |> TransactionRemoved.Entry.changeset()
               |> Conta.EctoHelpers.get_result()
+              |> then(&Map.put(&1, :credit, to_money(&1.credit, currency)))
+              |> then(&Map.put(&1, :debit, to_money(&1.debit, currency)))
+              |> then(&Map.put(&1, :balance, to_money(&1.balance, currency)))
 
             {entry, ledger}
           end)
@@ -229,24 +233,24 @@ defmodule Conta.Aggregate.Ledger do
     Enum.reduce(entries, %{}, fn entry, acc ->
       account_id = ledger.account_names[entry.account_name]
       account = ledger.accounts[account_id]
-      debit = to_money(entry.debit)
-      credit = to_money(entry.credit)
+      debit = to_money(entry.debit, account.currency)
+      credit = to_money(entry.credit, account.currency)
       balance = Money.subtract(debit, credit)
 
       acc
       |> Map.update(to_string(account.currency), balance, &Money.add(&1, balance))
-      |> maybe_change_data(entry)
+      |> add_change_data(entry)
     end)
     |> Map.values()
     |> Enum.all?(&Money.zero?/1)
   end
 
-  defp maybe_change_data(account, %_{change_debit: debit, change_credit: credit} = entry) do
-    balance = Money.new(debit - credit)
+  defp add_change_data(account, entry) do
+    debit = to_money(entry.change_debit, entry.change_currency)
+    credit = to_money(entry.change_credit, entry.change_currency)
+    balance = Money.subtract(debit, credit)
     Map.update(account, to_string(entry.change_currency), balance, &Money.add(&1, balance))
   end
-
-  defp maybe_change_data(account, _entry), do: account
 
   defp valid_accounts?(entries, ledger) when is_list(entries) do
     Enum.all?(entries, &is_map_key(ledger.account_names, &1.account_name))

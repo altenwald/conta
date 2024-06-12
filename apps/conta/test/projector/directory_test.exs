@@ -93,7 +93,7 @@ defmodule Conta.Projector.DirectoryTest do
         nif: nif
       } = insert(:contact)
 
-      event = %Conta.Event.ContactRemove{
+      event = %Conta.Event.ContactRemoved{
         company_nif: company_nif,
         nif: nif
       }

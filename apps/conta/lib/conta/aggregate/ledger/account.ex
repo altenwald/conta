@@ -2,18 +2,17 @@ defmodule Conta.Aggregate.Ledger.Account do
   use TypedEctoSchema
   import Ecto.Changeset
   import Conta.EctoHelpers
+  alias Conta.MoneyHelpers
 
   @account_types ~w[assets liabilities equity revenue expenses]a
 
   @primary_key false
 
-  @type currency() :: atom()
-
   typed_embedded_schema do
     field :id, :binary_id, primary_key: true
     field :name, {:array, :string}
     field :type, Ecto.Enum, values: @account_types
-    field(:currency, Money.Currency.Ecto.Type) :: currency()
+    field(:currency, Money.Currency.Ecto.Type) :: MoneyHelpers.currency()
     field :notes, :string
     field :balances, :map, default: %{}
   end

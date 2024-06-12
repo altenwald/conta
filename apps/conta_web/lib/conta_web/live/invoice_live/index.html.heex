@@ -68,11 +68,13 @@
                 </span>
               </.link>
             </:action>
-            <:col :let={{_id, invoice}} label={gettext("date")}>
+            <:col :let={{_id, invoice}} label={gettext("Invoice Number")}>
               <%= invoice.invoice_number %>
             </:col>
-            <:col :let={{_id, invoice}} label={gettext("date")}><%= invoice.invoice_date %></:col>
-            <:col :let={{_id, invoice}} label={gettext("client")}>
+            <:col :let={{_id, invoice}} label={gettext("Invoice Date")}>
+              <%= invoice.invoice_date %>
+            </:col>
+            <:col :let={{_id, invoice}} label={gettext("Client")}>
               <%= if(client = invoice.client,
                 do: client.name,
                 else:
@@ -81,13 +83,24 @@
                   )
               ) %>
             </:col>
-            <:col :let={{_id, invoice}} label={gettext("subtotal")} class="has-text-right">
+            <:col :let={{_id, invoice}} label={gettext("Paid?")} class="has-text-centered">
+              <%= if invoice.paid_date do %>
+                <span class="icon is-small has-text-success">
+                  <FontAwesome.check />
+                </span>
+              <% else %>
+                <span class="icon is-small has-text-danger">
+                  <FontAwesome.xmark />
+                </span>
+              <% end %>
+            </:col>
+            <:col :let={{_id, invoice}} label={gettext("Subtotal")} class="has-text-right">
               <%= Money.new(invoice.subtotal_price, invoice.currency) %>
             </:col>
-            <:col :let={{_id, invoice}} label={gettext("tax")} class="has-text-right">
+            <:col :let={{_id, invoice}} label={gettext("Tax")} class="has-text-right">
               <%= Money.new(invoice.tax_price, invoice.currency) %>
             </:col>
-            <:col :let={{_id, invoice}} label={gettext("total")} class="has-text-right">
+            <:col :let={{_id, invoice}} label={gettext("Total")} class="has-text-right">
               <%= Money.new(invoice.total_price, invoice.currency) %>
             </:col>
           </.table>

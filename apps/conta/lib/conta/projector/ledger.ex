@@ -159,11 +159,7 @@ defmodule Conta.Projector.Ledger do
           balance -> balance
         end
 
-      update_newer_entries =
-        from(
-          e in Entry,
-          where: e.on_date > ^on_date and e.account_name == ^trans_entry.account_name
-        )
+      Logger.debug("previous balance #{inspect(balance)}")
 
       entry =
         %Entry{
@@ -178,20 +174,12 @@ defmodule Conta.Projector.Ledger do
           related_account_name: related_account_id
         }
 
-      account_name = Enum.join(trans_entry.account_name, ".")
+      updated_at = NaiveDateTime.utc_now()
+
       multi
       |> upsert_account_balances(idx, accounts, account.currency, trans_entry)
+      |> update_entry_balances(idx, trans_entry.account_name, on_date, updated_at, amount)
       |> Ecto.Multi.insert({:entry, idx}, entry)
-      |> Ecto.Multi.update_all({:newer_entries, idx}, update_newer_entries, inc: [balance: amount])
-      |> Ecto.Multi.run({:notify, idx}, fn _repo, _data ->
-        event_name = "event:transaction_created:#{account_name}"
-        id = transaction.id
-        Logger.debug("sending broadcast for event #{inspect(event_name)}")
-        case Phoenix.PubSub.broadcast(Conta.PubSub, event_name, %{id: id}) do
-          :ok -> {:ok, nil}
-          error -> error
-        end
-      end)
     end)
   end)
 
@@ -204,18 +192,13 @@ defmodule Conta.Projector.Ledger do
     from(a in Entry, where: a.transaction_id == ^id)
     |> Repo.all()
     |> Enum.reduce(multi, fn entry, multi ->
-      account_name = Enum.join(entry.account_name, ".")
+      account = accounts[entry.account_name]
+      amount = get_amount(account.type, entry.credit, entry.debit)
+
       multi
       |> remove_account_balances(accounts, entry)
-      |> update_entry_balances(accounts, entry)
+      |> update_entry_balances(entry.id, entry.account_name, entry.on_date, entry.updated_at, Money.neg(amount))
       |> Ecto.Multi.delete({:remove_entry, entry.id}, entry)
-      |> Ecto.Multi.run({:notify, entry.id}, fn _repo, _data ->
-        event_name = "event:transaction_removed:#{account_name}"
-        case Phoenix.PubSub.broadcast(Conta.PubSub, event_name, %{id: id}) do
-          :ok -> {:ok, nil}
-          error -> error
-        end
-      end)
     end)
   end)
 
@@ -228,6 +211,31 @@ defmodule Conta.Projector.Ledger do
       Ecto.Multi.insert(multi, :shortcut_create, data)
     end
   end)
+
+  @impl Commanded.Projections.Ecto
+  def after_update(%TransactionCreated{}, _metadata, changes) do
+    changes
+    |> Enum.filter(fn {key, _} -> match?({:entry, _idx}, key) end)
+    |> Enum.map(fn {_, entry} -> {Enum.join(entry.account_name, "."), entry.transaction_id} end)
+    |> Enum.uniq()
+    |> Enum.each(fn {account_name, transaction_id} ->
+      event_name = "event:transaction_created:#{account_name}"
+      Logger.debug("sending broadcast for event #{inspect(event_name)}")
+      Phoenix.PubSub.broadcast(Conta.PubSub, event_name, %{id: transaction_id})
+    end)
+  end
+
+  def after_update(%TransactionRemoved{}, _metadata, changes) do
+    changes
+    |> Map.keys()
+    |> Enum.filter(&match?({:remove_account_balance, _, _}, &1))
+    |> Enum.each(fn {:remove_account_balance, entry_id, account_name} ->
+      event_name = "event:transaction_removed:#{Enum.join(account_name, ".")}"
+      Phoenix.PubSub.broadcast(Conta.PubSub, event_name, %{id: entry_id})
+    end)
+  end
+
+  def after_update(_event, _metadata, _changes), do: :ok
 
   defp get_acc_name_cond(account_name, currency) do
     [name | names] = account_names(account_name)
@@ -312,18 +320,21 @@ defmodule Conta.Projector.Ledger do
     Date.from_iso8601!(date)
   end
 
-  defp update_entry_balances(multi, accounts, entry) do
-    account = accounts[entry.account_name]
-    amount = get_amount(account.type, entry.credit, entry.debit)
+  defp update_entry_balances(multi, entry_id, account_name, on_date, updated_at, amount) do
+    query =
+      from(
+        e in Entry,
+        where: e.account_name == ^account_name,
+        where: e.on_date > ^on_date or (e.on_date == ^on_date and e.updated_at > ^updated_at)
+      )
 
-    query = from(
-      e in Entry,
-      where: e.inserted_at > ^entry.inserted_at,
-      where: e.on_date >= ^entry.on_date,
-      where: e.account_name == ^entry.account_name
+    Logger.debug(
+      "adding amount #{inspect(amount)} greater than or equal to #{on_date}" <>
+      " and greater than #{updated_at} for #{Enum.join(account_name, ".")}"
     )
-    updates = [inc: [balance: Money.neg(amount)]]
 
-    Ecto.Multi.update_all(multi, {:update_entry_balances, entry.id}, query, updates)
+    updates = [inc: [balance: amount]]
+
+    Ecto.Multi.update_all(multi, {:update_newer_entries_balances, entry_id}, query, updates)
   end
 end

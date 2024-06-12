@@ -163,7 +163,7 @@ defmodule Conta.Ledger do
     from(
       e in Entry,
       where: e.account_name == ^account.name,
-      order_by: [desc: e.on_date, desc: e.inserted_at]
+      order_by: [desc: e.on_date, desc: e.updated_at]
     )
     |> case do
       query when limit != nil ->
@@ -191,7 +191,7 @@ defmodule Conta.Ledger do
     from(
       e in Entry,
       where: e.account_name == ^account.name and e.on_date in ^dates,
-      order_by: [desc: e.on_date, desc: e.inserted_at]
+      order_by: [desc: e.on_date, desc: e.updated_at]
     )
     |> Repo.all()
     |> Enum.map(&adjust_currency(&1, account.currency))
@@ -202,7 +202,7 @@ defmodule Conta.Ledger do
       e in Entry,
       where: fragment("? ~ ?", e.description, ^text),
       or_where: fragment("ARRAY_TO_STRING(?, '.') ~ ?", e.account_name, ^text),
-      order_by: [desc: e.on_date],
+      order_by: [desc: e.on_date, desc: e.updated_at],
       limit: ^limit
     )
     |> Repo.all()

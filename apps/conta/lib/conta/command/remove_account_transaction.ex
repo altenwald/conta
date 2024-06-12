@@ -2,6 +2,7 @@ defmodule Conta.Command.RemoveAccountTransaction do
   use TypedEctoSchema
   import Conta.EctoHelpers
   import Ecto.Changeset
+  alias Conta.MoneyHelpers
 
   @primary_key false
 
@@ -10,8 +11,11 @@ defmodule Conta.Command.RemoveAccountTransaction do
     field :transaction_id, :binary_id
     embeds_many :entries, Entry, primary_key: false do
       field :account_name, {:array, :string}
-      field(:credit, Money.Ecto.Amount.Type, default: 0) :: Money.t()
-      field(:debit, Money.Ecto.Amount.Type, default: 0) :: Money.t()
+      field(:credit, Money.Ecto.Amount.Type, default: Money.new(0)) :: Money.t()
+      field(:debit, Money.Ecto.Amount.Type, default: Money.new(0)) :: Money.t()
+      field(:change_currency, Money.Ecto.Currency.Type, default: :EUR) :: MoneyHelpers.currency()
+      field(:change_credit, Money.Ecto.Amount.Type, default: 0) :: Money.t()
+      field(:change_debit, Money.Ecto.Amount.Type, default: 0) :: Money.t()
     end
   end
 
@@ -28,7 +32,7 @@ defmodule Conta.Command.RemoveAccountTransaction do
   end
 
   @required_fields ~w[account_name]a
-  @optional_fields ~w[credit debit]a
+  @optional_fields ~w[credit debit change_currency change_credit change_debit]a
 
   @doc false
   def changeset_entries(model, params) do

@@ -125,6 +125,9 @@ defmodule Conta.Projector.LedgerTest do
       account4 = insert(:account, %{name: ~w[Expenses], type: :expenses, balances: [balance4]})
       account5 = insert(:account, %{name: ~w[Expenses Groceries], type: :expenses, parent_id: account4.id, balances: [balance5]})
 
+      insert(:entry, %{on_date: ~D[2024-05-31], account_name: account3.name, debit: 90_00, balance: 90_00, description: "initial"})
+      insert(:entry, %{on_date: ~D[2024-05-31], account_name: account5.name, debit: 50_00, balance: 50_00, description: "initial"})
+
       event = %Conta.Event.TransactionCreated{
         id: "814d6052-8594-4964-8485-778762d8c701",
         ledger: "default",
@@ -172,7 +175,7 @@ defmodule Conta.Projector.LedgerTest do
           breakdown: false,
           related_account_name: ["Assets", "Bank", "Account"]
         }
-      ] = Repo.all(Ledger.Entry)
+      ] = Repo.all(Ledger.Entry) |> Enum.reject(& &1.description == "initial")
 
       assert %Ledger.Account{
         name: ~w[Assets],
@@ -240,11 +243,21 @@ defmodule Conta.Projector.LedgerTest do
 
       # Assets.Bank.Account (90_00)
       # -------------------
+      # Initial                   ---                    150_00    0_00   150_00
       # Energy bill               Expenses.Supplies        0_00   30_00   120_00
       # Buy something             Expenses.Supermarket     0_00   10_00   110_00
       # Carity                    Expenses.Other           0_00   20_00    90_00
 
-      no_changed_line = insert(:entry, %{
+      initial = %Conta.Projector.Ledger.Entry{} = insert(:entry, %{
+        on_date: ~D[2024-05-31],
+        transaction_id: "f3093f1f-0a55-4356-b925-831035a8bca5",
+        account_name: account3.name,
+        description: "initial",
+        debit: 150_00,
+        balance: 150_00
+      })
+
+      no_changed_line = %Conta.Projector.Ledger.Entry{} = insert(:entry, %{
         on_date: ~D[2024-06-01],
         transaction_id: "f3093f1f-0a55-4356-b925-831035a8bca6",
         account_name: account3.name,
@@ -254,7 +267,7 @@ defmodule Conta.Projector.LedgerTest do
         balance: 120_00
       })
 
-      leg_a_entry = insert(:entry, %{
+      leg_a_entry = %Conta.Projector.Ledger.Entry{} = insert(:entry, %{
         on_date: ~D[2024-06-01],
         transaction_id: "f3093f1f-0a55-4356-b925-831035a8bca7",
         account_name: account3.name,
@@ -262,7 +275,7 @@ defmodule Conta.Projector.LedgerTest do
         credit: 10_00,
         balance: 110_00
       })
-      _leg_b_entry = insert(:entry, %{
+      _leg_b_entry = %Conta.Projector.Ledger.Entry{} = insert(:entry, %{
         on_date: ~D[2024-06-01],
         transaction_id: "f3093f1f-0a55-4356-b925-831035a8bca7",
         account_name: leg_a_entry.related_account_name,
@@ -271,7 +284,7 @@ defmodule Conta.Projector.LedgerTest do
         debit: leg_a_entry.credit
       })
 
-      _changed_line = insert(:entry, %{
+      _changed_line = %Conta.Projector.Ledger.Entry{} = insert(:entry, %{
         on_date: ~D[2024-06-01],
         transaction_id: "f3093f1f-0a55-4356-b925-831035a8bca8",
         account_name: ~w[Assets Bank Account],
@@ -304,7 +317,7 @@ defmodule Conta.Projector.LedgerTest do
 
       assert :ok == Ledger.handle(event, metadata)
 
-      assert [^no_changed_line, new_changed_line] =
+      assert [^initial, ^no_changed_line, new_changed_line] =
         Repo.all(Ledger.Entry) |> Enum.sort_by(& &1.inserted_at, NaiveDateTime)
 
       assert %Ledger.Entry{

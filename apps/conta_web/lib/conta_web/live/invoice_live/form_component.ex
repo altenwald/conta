@@ -28,6 +28,7 @@ defmodule ContaWeb.InvoiceLive.FormComponent do
             <.input field={@form[:invoice_number]} type="number" label={gettext("Invoice Number")} />
             <.input field={@form[:invoice_date]} type="date" label={gettext("Invoice Date")} />
             <.input field={@form[:due_date]} type="date" label={gettext("Due Date")} />
+            <.input field={@form[:paid_date]} type="date" label={gettext("Paid Date")} />
             <.input
               field={@form[:type]}
               type="select"

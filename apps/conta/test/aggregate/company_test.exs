@@ -345,7 +345,7 @@ defmodule Conta.Aggregate.CompanyTest do
 
       event = Conta.Aggregate.Company.execute(company, command)
 
-      assert %Conta.Event.ContactRemove{
+      assert %Conta.Event.ContactRemoved{
         company_nif: "A55666777",
         nif: "B123456789",
       } == event

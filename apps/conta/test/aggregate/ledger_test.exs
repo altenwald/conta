@@ -1,12 +1,14 @@
 defmodule Conta.Aggregate.LedgerTest do
   use ExUnit.Case
   alias Conta.Aggregate.Ledger
+  alias Conta.Command.RemoveAccountTransaction
   alias Conta.Command.SetAccount
   alias Conta.Command.SetAccountTransaction
   alias Conta.Event.AccountCreated
   alias Conta.Event.AccountModified
   alias Conta.Event.AccountRenamed
   alias Conta.Event.TransactionCreated
+  alias Conta.Event.TransactionRemoved
 
   describe "ledger create account execute" do
     test "create account successfully" do
@@ -53,6 +55,9 @@ defmodule Conta.Aggregate.LedgerTest do
     test "modify account data successfully" do
       command =
         %SetAccount{
+          # because we don't provide id, the aggregate search for it,
+          # this way we don't need to know the ID unless we want to change
+          # the name of the account.
           name: ["Assets"],
           type: :expenses,
           currency: :EUR,
@@ -100,6 +105,98 @@ defmodule Conta.Aggregate.LedgerTest do
           }
         }
       } = ledger
+    end
+
+    test "cannot find parent modifying account" do
+      command =
+        %SetAccount{
+          id: "83dfbfb4-c7f0-4403-b656-b8ed4228f7bc",
+          name: ["Assets", "Bank", "Account"],
+          type: :expenses,
+          currency: :EUR,
+          notes: "these are our assets",
+          ledger: "default"
+        }
+
+      ledger = %Ledger{
+        name: "default",
+        account_names: %{["Assets"] => "83dfbfb4-c7f0-4403-b656-b8ed4228f7bc"},
+        accounts: %{
+          "83dfbfb4-c7f0-4403-b656-b8ed4228f7bc" => %Ledger.Account{
+            id: "83dfbfb4-c7f0-4403-b656-b8ed4228f7bc",
+            name: ["Assets"],
+            type: :assets,
+            currency: "EUR",
+            notes: nil,
+            balances: %{}
+          }
+        }
+      }
+
+      assert {:error, :invalid_parent_account} = Ledger.execute(ledger, command)
+    end
+
+    test "incorrect id changed into new account and existing name change into modify account" do
+      command =
+        %SetAccount{
+          id: "00000000-0000-0000-0000-000000000000",
+          name: ["Assets"],
+          type: :expenses,
+          currency: :EUR,
+          notes: "these are our assets",
+          ledger: "default"
+        }
+
+      ledger = %Ledger{
+        name: "default",
+        account_names: %{["Assets"] => "83dfbfb4-c7f0-4403-b656-b8ed4228f7bc"},
+        accounts: %{
+          "83dfbfb4-c7f0-4403-b656-b8ed4228f7bc" => %Ledger.Account{
+            id: "83dfbfb4-c7f0-4403-b656-b8ed4228f7bc",
+            name: ["Assets"],
+            type: :assets,
+            currency: "EUR",
+            notes: nil,
+            balances: %{}
+          }
+        }
+      }
+
+      assert [event] = Ledger.execute(ledger, command)
+
+      assert %AccountModified{
+        id: "83dfbfb4-c7f0-4403-b656-b8ed4228f7bc",
+        type: :expenses,
+        currency: :EUR,
+        notes: "these are our assets"
+      } == event
+    end
+
+    test "no changes modifying account" do
+      command =
+        %SetAccount{
+          name: ["Assets"],
+          type: :assets,
+          currency: :EUR,
+          ledger: "default"
+        }
+
+      ledger = %Ledger{
+        name: "default",
+        account_names: %{["Assets"] => "83dfbfb4-c7f0-4403-b656-b8ed4228f7bc"},
+        accounts: %{
+          "83dfbfb4-c7f0-4403-b656-b8ed4228f7bc" => %Ledger.Account{
+            id: "83dfbfb4-c7f0-4403-b656-b8ed4228f7bc",
+            name: ["Assets"],
+            type: :assets,
+            currency: "EUR",
+            notes: nil,
+            balances: %{}
+          }
+        }
+      }
+
+      assert {:error, :no_changes} = Ledger.execute(ledger, command)
     end
 
     test "rename account successfully" do
@@ -194,6 +291,14 @@ defmodule Conta.Aggregate.LedgerTest do
       } = ledger
     end
 
+    test "missing ledger fail for set account" do
+      assert {:error, :missing_ledger} = Ledger.execute(nil, %SetAccount{currency: :EUR, ledger: nil})
+    end
+
+    test "invalid currency for set account" do
+      assert {:error, :invalid_currency} = Ledger.execute(nil, %SetAccount{currency: :no_currency})
+    end
+
     test "create account failure" do
       command =
         %SetAccount{
@@ -274,6 +379,7 @@ defmodule Conta.Aggregate.LedgerTest do
             }
           }
         }
+
       event = Ledger.execute(ledger, command)
 
       assert %TransactionCreated{
@@ -480,6 +586,143 @@ defmodule Conta.Aggregate.LedgerTest do
           }
         }
       } == ledger
+    end
+
+    test "not enough entries" do
+      assert {:error, :not_enough_entries} = Ledger.execute(nil, %SetAccountTransaction{entries: []})
+    end
+  end
+
+  describe "ledger remove transaction" do
+    test "basic successfully" do
+      ledger =
+        %Ledger{
+          name: "default",
+          account_names: %{
+            ["Assets"] => "bd625868-3bd3-4f2c-9cab-8d8b73018ed1",
+            ["Assets", "Cash"] => "ab0c9ece-4aa5-48d5-ae08-7e89bd104fde",
+            ["Assets", "PayPal"] => "569eb02b-da2c-42c8-ad89-c7ba1618c451",
+            ["Expenses"] => "7c708316-43ed-4130-9c66-a1e063d10374",
+            ["Expenses", "Supermarket"] => "4151bcd1-de24-48fc-a8de-e18d2aae0eb7"
+          },
+          accounts: %{
+            "bd625868-3bd3-4f2c-9cab-8d8b73018ed1" => %Ledger.Account{
+              name: ["Assets"],
+              type: :assets,
+              currency: :EUR,
+              balances: %{EUR: 100_00, USD: 100_00}
+            },
+            "ab0c9ece-4aa5-48d5-ae08-7e89bd104fde" => %Ledger.Account{
+              name: ["Assets", "Cash"],
+              type: :assets,
+              currency: :EUR,
+              balances: %{EUR: 100_00}
+            },
+            "569eb02b-da2c-42c8-ad89-c7ba1618c451" => %Ledger.Account{
+              name: ["Assets", "PayPal"],
+              type: :assets,
+              currency: :USD,
+              balances: %{USD: 100_00}
+            },
+            "7c708316-43ed-4130-9c66-a1e063d10374" => %Ledger.Account{
+              name: ["Expenses"],
+              type: :expenses,
+              currency: :EUR,
+              balances: %{EUR: 50_00}
+            },
+            "4151bcd1-de24-48fc-a8de-e18d2aae0eb7" => %Ledger.Account{
+              name: ["Expenses", "Supermarket"],
+              type: :expenses,
+              currency: :EUR,
+              balances: %{EUR: 50_00}
+            }
+          }
+        }
+
+      command = %RemoveAccountTransaction{
+        transaction_id: "f4bd5f91-f62c-4f19-9479-2595b7403262",
+        entries: [
+          %RemoveAccountTransaction.Entry{
+            account_name: ~w[Assets PayPal],
+            credit: 11_00,
+            change_currency: :EUR,
+            change_credit: 10_00
+          },
+          %RemoveAccountTransaction.Entry{
+            account_name: ~w[Expenses Supermarket],
+            debit: 10_00,
+            change_currency: :USD,
+            change_debit: 11_00
+          }
+        ]
+      }
+
+      assert %TransactionRemoved{
+        ledger: "default",
+        entries: [
+          %TransactionRemoved.Entry{
+            account_name: ["Assets", "PayPal"],
+            credit: %Money{amount: 11_00, currency: :USD},
+            debit: %Money{amount: 0, currency: :USD},
+            balance: %Money{amount: 111_00, currency: :USD},
+            currency: :USD
+          },
+          %TransactionRemoved.Entry{
+            account_name: ["Expenses", "Supermarket"],
+            credit: %Money{amount: 0},
+            debit: %Money{amount: 10_00},
+            balance: %Money{amount: 40_00},
+            currency: :EUR
+          }
+        ]
+      } = event = Ledger.execute(ledger, command)
+
+      assert %Ledger{
+        name: "default",
+        account_names: %{
+          ["Assets"] => "bd625868-3bd3-4f2c-9cab-8d8b73018ed1",
+          ["Assets", "Cash"] => "ab0c9ece-4aa5-48d5-ae08-7e89bd104fde",
+          ["Assets", "PayPal"] => "569eb02b-da2c-42c8-ad89-c7ba1618c451",
+          ["Expenses"] => "7c708316-43ed-4130-9c66-a1e063d10374",
+          ["Expenses", "Supermarket"] => "4151bcd1-de24-48fc-a8de-e18d2aae0eb7"
+        },
+        accounts: %{
+          "bd625868-3bd3-4f2c-9cab-8d8b73018ed1" => %Ledger.Account{
+            name: ["Assets"],
+            type: :assets,
+            currency: :EUR,
+            balances: %{EUR: 100_00, USD: 111_00}
+          },
+          "ab0c9ece-4aa5-48d5-ae08-7e89bd104fde" => %Ledger.Account{
+            name: ["Assets", "Cash"],
+            type: :assets,
+            currency: :EUR,
+            balances: %{EUR: 100_00}
+          },
+          "569eb02b-da2c-42c8-ad89-c7ba1618c451" => %Ledger.Account{
+            name: ["Assets", "PayPal"],
+            type: :assets,
+            currency: :USD,
+            balances: %{USD: 111_00}
+          },
+          "7c708316-43ed-4130-9c66-a1e063d10374" => %Ledger.Account{
+            name: ["Expenses"],
+            type: :expenses,
+            currency: :EUR,
+            balances: %{EUR: 40_00}
+          },
+          "4151bcd1-de24-48fc-a8de-e18d2aae0eb7" => %Ledger.Account{
+            name: ["Expenses", "Supermarket"],
+            type: :expenses,
+            currency: :EUR,
+            balances: %{EUR: 40_00}
+          }
+        }
+      } = Ledger.apply(ledger, event)
+    end
+
+    test "not enough entries" do
+      assert {:error, :not_enough_entries} = Ledger.execute(nil, %RemoveAccountTransaction{entries: []})
     end
   end
 end
