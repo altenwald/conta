@@ -48,6 +48,7 @@ defmodule Conta.Projector.Book.Invoice do
       # gateway (i.e. paypal or stripe)
       @methods ~w[cash bank gateway]a
 
+      field :slug, :string
       field :method, Ecto.Enum, values: @methods
       field :details, :string, default: ""
       field :name, :string
@@ -84,8 +85,8 @@ defmodule Conta.Projector.Book.Invoice do
   @doc false
   def changeset_payment_method(model, params) do
     model
-    |> cast(params, ~w[method details name holder]a)
-    |> validate_required([:method])
+    |> cast(params, ~w[slug name method details holder]a)
+    |> validate_required(~w[name method]a)
   end
 
   @required_fields ~w[name nif country]a

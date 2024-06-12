@@ -91,6 +91,8 @@ defmodule Conta.Projector.BookTest do
           total_price: 121_00,
           destination_country: "ES",
           payment_method: %Conta.Event.Common.PaymentMethod{
+            slug: "paypal",
+            name: "PayPal",
             method: :gateway,
             details: "myaccount@paypal.com"
           },
@@ -182,6 +184,8 @@ defmodule Conta.Projector.BookTest do
           total_price: 121_00,
           destination_country: "ES",
           payment_method: %Conta.Event.Common.PaymentMethod{
+            slug: "paypal",
+            name: "PayPal",
             method: "gateway",
             details: "myaccount@paypal.com"
           },
@@ -287,6 +291,8 @@ defmodule Conta.Projector.BookTest do
         invoice_date: ~D[2023-12-30],
         invoice_number: "2023-00001",
         payment_method: %Conta.Projector.Book.Invoice.PaymentMethod{
+          slug: "paypal",
+          name: "PayPal",
           method: :gateway,
           details: "myaccount@paypal.com"
         },

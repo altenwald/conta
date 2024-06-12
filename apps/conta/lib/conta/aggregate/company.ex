@@ -210,8 +210,6 @@ defmodule Conta.Aggregate.Company do
     |> ExpenseRemoved.changeset()
   end
 
-  # defp validate_duplicate_invoice_number({:error, _} = error, _company, _command), do: error
-
   defp validate_duplicate_invoice_number(nil, %__MODULE__{} = company, %SetInvoice{} = command) do
     invoice_year = command.invoice_date.year
     invoice_numbers = company.invoice_numbers[invoice_year] || MapSet.new()

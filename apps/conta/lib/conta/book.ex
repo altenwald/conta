@@ -157,7 +157,7 @@ defmodule Conta.Book do
       total_price: to_money(expense.total_price) |> Money.to_decimal(),
       currency: expense.currency,
       comments: expense.comments,
-      payment_method: String.downcase(expense.payment_method.name)
+      payment_method: expense.payment_method.slug
     }
   end
 
@@ -182,7 +182,7 @@ defmodule Conta.Book do
       currency: invoice.currency,
       comments: invoice.comments,
       destination_country: invoice.destination_country,
-      payment_method: String.downcase(invoice.payment_method.name),
+      payment_method: invoice.payment_method.slug,
       details: for %Invoice.Detail{} = details <- invoice.details do
         %SetInvoice.Detail{
           sku: details.sku,
@@ -214,7 +214,7 @@ defmodule Conta.Book do
       total_price: to_money(expense.total_price) |> Money.to_decimal(),
       currency: expense.currency,
       comments: expense.comments,
-      payment_method: String.downcase(expense.payment_method.name),
+      payment_method: expense.payment_method.slug,
       attachments: for %Expense.Attachment{} = attachment <- expense.attachments do
         %SetExpense.Attachment{
           id: attachment.id,
@@ -252,7 +252,7 @@ defmodule Conta.Book do
       currency: invoice.currency,
       comments: invoice.comments,
       destination_country: invoice.destination_country,
-      payment_method: String.downcase(invoice.payment_method.name),
+      payment_method: invoice.payment_method.slug,
       details: for %Invoice.Detail{} = details <- invoice.details do
         %SetInvoice.Detail{
           id: details.id,

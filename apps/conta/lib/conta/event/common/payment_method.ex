@@ -6,6 +6,7 @@ defmodule Conta.Event.Common.PaymentMethod do
 
   @derive Jason.Encoder
   typed_embedded_schema do
+    field :slug, :string
     field :name, :string
     field :method, :string
     field :details, :string
@@ -13,7 +14,7 @@ defmodule Conta.Event.Common.PaymentMethod do
   end
 
   @required_fields ~w[name method]a
-  @optional_fields ~w[details holder]a
+  @optional_fields ~w[slug details holder]a
 
   @doc false
   def changeset(model \\ %__MODULE__{}, params) do
