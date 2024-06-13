@@ -64,20 +64,22 @@
                 </span>
               </.link>
             </:action>
-            <:col :let={{_id, expense}} label={gettext("date")}>
+            <:col :let={{_id, expense}} label={gettext("Invoice Number")}>
               <%= expense.invoice_number %>
             </:col>
-            <:col :let={{_id, expense}} label={gettext("date")}><%= expense.invoice_date %></:col>
-            <:col :let={{_id, expense}} label={gettext("provider")}>
+            <:col :let={{_id, expense}} label={gettext("Invoice Date")}>
+              <%= expense.invoice_date %>
+            </:col>
+            <:col :let={{_id, expense}} label={gettext("Provider")}>
               <%= expense.provider.name %>
             </:col>
-            <:col :let={{_id, expense}} label={gettext("subtotal")} class="has-text-right">
+            <:col :let={{_id, expense}} label={gettext("Subtotal")} class="has-text-right">
               <%= Money.new(expense.subtotal_price, expense.currency) %>
             </:col>
-            <:col :let={{_id, expense}} label={gettext("tax")} class="has-text-right">
+            <:col :let={{_id, expense}} label={gettext("Tax")} class="has-text-right">
               <%= Money.new(expense.tax_price, expense.currency) %>
             </:col>
-            <:col :let={{_id, expense}} label={gettext("total")} class="has-text-right">
+            <:col :let={{_id, expense}} label={gettext("Total")} class="has-text-right">
               <%= Money.new(expense.total_price, expense.currency) %>
             </:col>
           </.table>

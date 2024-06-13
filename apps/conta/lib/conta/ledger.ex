@@ -56,6 +56,23 @@ defmodule Conta.Ledger do
     end
   end
 
+  def get_account_by_parent_id(parent_id) do
+    from(a in Account, where: a.parent_id == ^parent_id)
+    |> Repo.all()
+  end
+
+  def get_account_name_chunk_with_id!(account_name) do
+    Enum.reduce(1..(length(account_name) - 1)//1, [account_name], fn idx, acc ->
+      {parent, _} = Enum.split(account_name, -idx)
+      [parent | acc]
+    end)
+    |> Enum.map(fn name ->
+      {:ok, account} = get_account_by_name(name)
+      name = name |> Enum.reverse() |> hd()
+      {name, account.id}
+    end)
+  end
+
   def get_account_command!(id) do
     Repo.get!(Account, id)
     |> Map.from_struct()

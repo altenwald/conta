@@ -2,7 +2,11 @@
   <.breadcrumbs>
     <:breadcrumb label={gettext("Dashboard")} href={~p"/"} />
     <:breadcrumb label={gettext("Accounts")} href={~p"/ledger/accounts"} />
-    <:breadcrumb label={Enum.join(@account.name, ".")} href={~p"/ledger/accounts/#{@account}"} />
+    <:breadcrumb
+      :for={{name, id} <- Ledger.get_account_name_chunk_with_id!(@account.name)}
+      label={name}
+      href={~p"/ledger/accounts/#{id}"}
+    />
   </.breadcrumbs>
 
   <div class="card tile is-child has-table has-mobile-sort-spaced">
@@ -24,29 +28,48 @@
                 </div>
               </.link>
             </div>
+            <div class="control">
+              <.link class="button is-info" href={~p"/ledger/accounts/#{@account.id}/entries"}>
+                <div class="icon-text">
+                  <span class="icon mr-2">
+                    <FontAwesome.folder_open />
+                  </span>
+                  <span><%= gettext("Entries") %></span>
+                </div>
+              </.link>
+            </div>
           </div>
           <section class="section">
-            <.field class="is-horizontal" label={gettext("Account name")}>
-              <%= @account.name %>
-            </.field>
-            <.field class="is-horizontal" label={gettext("Ledger")}>
-              <%= @account.ledger %>
-            </.field>
-            <.field class="is-horizontal" label={gettext("Type")}>
-              <%= @account.type %>
-            </.field>
-            <.field class="is-horizontal" label={gettext("currency")}>
-              <%= Money.Currency.name(@account.currency) %> (<%= Money.Currency.symbol(
-                @account.currency
-              ) %>)
-            </.field>
-            <.field class="is-horizontal" label={gettext("notes")}>
-              <%= @account.notes || gettext("No notes") %>
-            </.field>
-            <.field class="is-horizontal" label={gettext("balances")}>
+            <.input
+              type="static"
+              label={gettext("Account name")}
+              value={Enum.join(@account.name, ".")}
+            />
+            <.input type="static" label={gettext("Ledger")} value={@account.ledger} />
+            <.input type="static" label={gettext("Type")} value={@account.type} />
+            <.input
+              type="static"
+              label={gettext("Currency")}
+              value={get_currency(@account.currency)}
+            />
+            <.input
+              type="static"
+              label={gettext("Notes")}
+              value={@account.notes || gettext("No notes")}
+            />
+            <.field class="is-horizontal" label={gettext("Balances")}>
               <.simple_table id="balances" rows={@account.balances}>
                 <:col :let={balance} class="has-text-right is-money" label={gettext("Amount")}>
                   <%= %Money{balance.amount | currency: balance.currency} %>
+                </:col>
+              </.simple_table>
+            </.field>
+            <.field :if={@subaccounts != []} class="is-horizontal" label={gettext("Subaccounts")}>
+              <.simple_table id="subaccounts" rows={@subaccounts}>
+                <:col :let={account} label={gettext("Name")}>
+                  <.link href={~p"/ledger/accounts/#{account}"}>
+                    <%= Enum.join(account.name, ".") %>
+                  </.link>
                 </:col>
               </.simple_table>
             </.field>

@@ -436,7 +436,7 @@ defmodule ContaWeb.CoreComponents do
   attr :type, :string,
     default: "text",
     values: ~w(checkbox color date datetime-local email file hidden month number password
-               range radio search select tel text textarea time url week)
+               range radio search select tel text textarea time url week static)
 
   attr :field, Phoenix.HTML.FormField,
     doc: "a form field struct retrieved from the form, for example: @form[:email]"
@@ -547,6 +547,19 @@ defmodule ContaWeb.CoreComponents do
           </span>
         </label>
       </div>
+    </.field>
+    """
+  end
+
+  def input(%{type: "static"} = assigns) do
+    ~H"""
+    <.field label={@label} class="is-horizontal">
+      <input
+        type="text"
+        value={Phoenix.HTML.Form.normalize_value("text", @value)}
+        class="input is-static"
+        {@rest}
+      />
     </.field>
     """
   end

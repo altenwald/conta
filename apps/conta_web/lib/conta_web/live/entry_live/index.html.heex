@@ -2,7 +2,11 @@
   <.breadcrumbs>
     <:breadcrumb label={gettext("Dashboard")} href={~p"/"} />
     <:breadcrumb label={gettext("Accounts")} href={~p"/ledger/accounts"} />
-    <:breadcrumb label={Enum.join(@account.name, ".")} href={~p"/ledger/accounts/#{@account}"} />
+    <:breadcrumb
+      :for={{name, id} <- Ledger.get_account_name_chunk_with_id!(@account.name)}
+      label={name}
+      href={~p"/ledger/accounts/#{id}"}
+    />
     <:breadcrumb label={gettext("Entries")} href={~p"/ledger/accounts/#{@account}/entries"} />
   </.breadcrumbs>
 
@@ -19,7 +23,7 @@
                 </div>
               </.link>
             </div>
-            <div class="control">
+            <div :if={assigns[:streams] != nil and @streams.ledger_entries != nil} class="control">
               <.button phx-click="reload">
                 <div class="icon-text">
                   <span class="icon mr-2"><FontAwesome.recycle /></span>
@@ -28,7 +32,14 @@
               </.button>
             </div>
           </div>
+          <div
+            :if={is_nil(assigns[:streams]) or is_nil(@streams.ledger_entries)}
+            class="notification is-warning has-text-centered"
+          >
+            <%= gettext("There are no entries here!") %>
+          </div>
           <.table
+            :if={assigns[:streams] != nil and @streams.ledger_entries != nil}
             id="ledger_entries"
             rows={@streams.ledger_entries}
             row_click={
@@ -89,7 +100,10 @@
               <%= entry.balance %>
             </:col>
           </.table>
-          <div class="column is-full-width has-text-centered">
+          <div
+            :if={assigns[:streams] != nil and @streams.ledger_entries != nil}
+            class="column is-full-width has-text-centered"
+          >
             <div class="button is-info" phx-click="next-page"><%= gettext("Load more") %></div>
           </div>
         </div>

@@ -13,7 +13,13 @@ defmodule ContaWeb.AccountLive.Show do
     {:noreply,
      socket
      |> assign(:page_title, page_title(socket.assigns.live_action))
-     |> assign(:account, Ledger.get_account!(id))}
+     |> assign(:account, Ledger.get_account!(id))
+     |> assign(:subaccounts, Ledger.get_account_by_parent_id(id))}
+  end
+
+  defp get_currency(currency) do
+    Money.Currency.name(currency) <>
+      " (" <> Money.Currency.symbol(currency) <> ")"
   end
 
   defp page_title(:show), do: "Show Account"
