@@ -350,4 +350,41 @@ defmodule Conta.Accounts do
       {:error, :user, changeset, _} -> {:error, changeset}
     end
   end
+
+  ## API
+
+  @doc """
+  Creates a new api token for a user and first we dispose all of the previous
+  api token generated for the same user.
+
+  The token returned must be saved somewhere safe.
+  This token cannot be recovered from the database.
+  """
+  def create_user_api_token(user) do
+    from(ut in UserToken, where: ut.user_id == ^user.id and ut.context == ^"api-token")
+    |> Repo.delete_all()
+
+    {encoded_token, user_token} = UserToken.build_email_token(user, "api-token")
+    Repo.insert!(user_token)
+    encoded_token
+  end
+
+  @doc """
+  Fetches the user by API token.
+  """
+  def fetch_user_by_api_token(token) do
+    with {:ok, query} <- UserToken.verify_email_token_query(token, "api-token"),
+         %User{} = user <- Repo.one(query) do
+      {:ok, user}
+    else
+      _ -> :error
+    end
+  end
+
+  @doc """
+  Ask if there's an available token and when it was generated.
+  """
+  def fetch_api_token_by_user(user) do
+    Repo.get_by(UserToken, user_id: user.id, context: "api-token")
+  end
 end

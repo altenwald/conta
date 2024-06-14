@@ -118,6 +118,26 @@ defmodule ContaWeb.UserAuthTest do
     end
   end
 
+  describe "fetch_api_user/2" do
+    test "authenticates user from api-key", %{conn: conn, user: user} do
+      user_token = Accounts.create_user_api_token(user)
+
+      conn =
+        conn
+        |> put_req_header("authorization", "Bearer #{user_token}")
+        |> UserAuth.fetch_api_user([])
+
+      assert conn.assigns.current_user.id == user.id
+    end
+
+    test "does not authenticate if data is missing", %{conn: conn, user: user} do
+      _ = Accounts.create_user_api_token(user)
+      conn = UserAuth.fetch_api_user(conn, [])
+      refute get_session(conn, :user_token)
+      refute conn.assigns[:current_user]
+    end
+  end
+
   describe "on_mount :mount_current_user" do
     test "assigns current_user based on a valid user_token", %{conn: conn, user: user} do
       user_token = Accounts.generate_user_session_token(user)

@@ -43,6 +43,7 @@ defmodule ContaWeb.Router do
 
   pipeline :api do
     plug :accepts, ["json"]
+    plug :fetch_api_user
   end
 
   # Enable LiveDashboard and Swoosh mailbox preview in development
@@ -74,6 +75,25 @@ defmodule ContaWeb.Router do
     end
 
     post "/signin", UserSessionController, :create
+  end
+
+  scope "/api/v1", ContaWeb.Api do
+    pipe_through [:api]
+
+    scope "/books/", Book do
+      resources "/invoices", Invoice, only: [:index, :show, :create, :update, :delete]
+      resources "/expenses", Expense, only: [:index, :show, :create, :update, :delete]
+      get "/expenses/:id/download/:attachment_id", Expense, :download
+    end
+
+    scope "/ledger/", Ledger do
+      resources "/accounts", Account, only: [:index, :show, :create, :update, :delete]
+    end
+
+    scope "/automation/", Automation do
+      resources "/shortcuts", Shortcut, only: [:index, :show, :create, :update, :delete]
+      get "/shortcuts/:id/run", Shortcut, :run
+    end
   end
 
   scope "/", ContaWeb do

@@ -87,6 +87,44 @@ defmodule ContaWeb.UserLive.Settings do
                   </:actions>
                 </.simple_form>
               </div>
+              <div class="box">
+                <div class="content">
+                  <h2 class="is-size-4 mb-3"><%= gettext("API Token") %></h2>
+                  <p :if={@api_token}>
+                    <strong>
+                      <%= gettext("Last token was generated %{date}.", date: @api_token.inserted_at) %>
+                    </strong>
+                  </p>
+                  <p :if={@api_token}>
+                    <strong>
+                      <%= gettext(
+                        "It will expire at %{expires}",
+                        expires: Accounts.UserToken.when_it_expires(@api_token)
+                      ) %>
+                    </strong>
+                  </p>
+                  <p>
+                    <%= gettext(
+                      "You MUST save the token generated because it is not stored in the database."
+                    ) %>
+                  </p>
+                  <p :if={assigns[:token]}>
+                    <strong><%= @token %></strong>
+                  </p>
+                  <p>
+                    <button
+                      type="button"
+                      class={["button", if(@api_token, do: "is-danger", else: "is-primary")]}
+                      phx-click="generate_token"
+                    >
+                      <%= gettext("Generate") %>
+                    </button>
+                  </p>
+                  <p>
+                    <%= gettext("If a new token is generated the previous one will be removed.") %>
+                  </p>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -112,6 +150,7 @@ defmodule ContaWeb.UserLive.Settings do
     user = socket.assigns.current_user
     email_changeset = Accounts.change_user_email(user)
     password_changeset = Accounts.change_user_password(user)
+    api_token = Accounts.fetch_api_token_by_user(user)
 
     socket =
       socket
@@ -121,6 +160,7 @@ defmodule ContaWeb.UserLive.Settings do
       |> assign(:email_form, to_form(email_changeset))
       |> assign(:password_form, to_form(password_changeset))
       |> assign(:trigger_submit, false)
+      |> assign(:api_token, api_token)
 
     {:ok, socket}
   end
@@ -185,5 +225,12 @@ defmodule ContaWeb.UserLive.Settings do
       {:error, changeset} ->
         {:noreply, assign(socket, password_form: to_form(changeset))}
     end
+  end
+
+  def handle_event("generate_token", _params, socket) do
+    user = socket.assigns.current_user
+    token = Accounts.create_user_api_token(user)
+    api_token = Accounts.fetch_api_token_by_user(user)
+    {:noreply, assign(socket, token: token, api_token: api_token)}
   end
 end

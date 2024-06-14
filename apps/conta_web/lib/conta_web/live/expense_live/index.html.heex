@@ -21,7 +21,7 @@
           <.table id="books_expenses" rows={@streams.books_expenses}>
             <:action :let={{_id, expense}}>
               <.link
-                :for={idx <- 1..expense.num_attachments}
+                :for={idx <- 1..expense.num_attachments//1}
                 class="button is-info is-light"
                 href={~p"/books/expenses/#{expense}/download/#{idx}"}
               >

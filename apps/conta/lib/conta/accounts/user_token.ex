@@ -8,6 +8,7 @@ defmodule Conta.Accounts.UserToken do
 
   # It is very important to keep the reset password token expiry short,
   # since someone with access to the email may take over the account.
+  @api_token_validity_in_days 365
   @reset_password_validity_in_days 1
   @confirm_validity_in_days 7
   @change_email_validity_in_days 7
@@ -128,8 +129,16 @@ defmodule Conta.Accounts.UserToken do
     end
   end
 
+  defp days_for_context("api-token"), do: @api_token_validity_in_days
   defp days_for_context("confirm"), do: @confirm_validity_in_days
   defp days_for_context("reset_password"), do: @reset_password_validity_in_days
+
+  @doc """
+  Let us know when the token will expire (or expired).
+  """
+  def when_it_expires(%__MODULE__{context: context, inserted_at: inserted_at}) do
+    NaiveDateTime.add(inserted_at, days_for_context(context), :day)
+  end
 
   @doc """
   Checks if the token is valid and returns its underlying lookup query.

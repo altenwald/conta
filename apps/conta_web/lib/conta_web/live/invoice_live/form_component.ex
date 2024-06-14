@@ -290,27 +290,20 @@ defmodule ContaWeb.InvoiceLive.FormComponent do
   end
 
   defp save_invoice(socket, :edit, invoice_params) do
-    changeset = SetInvoice.changeset(socket.assigns.set_invoice, invoice_params)
-
-    if changeset.valid? and dispatch(SetInvoice.to_command(changeset)) == :ok do
-      {:noreply,
-       socket
-       |> put_flash(:info, gettext("Invoice modified successfully"))
-       |> push_patch(to: socket.assigns.patch)}
-    else
-      Logger.debug("changeset errors: #{inspect(changeset.errors)}")
-      changeset = Map.put(changeset, :action, :validate)
-      {:noreply, assign_form(socket, changeset)}
-    end
+    save_invoice(socket, gettext("Invoice modified successfully"), invoice_params)
   end
 
   defp save_invoice(socket, action, invoice_params) when action in [:new, :duplicate] do
+    save_invoice(socket, gettext("Invoice created successfully"), invoice_params)
+  end
+
+  defp save_invoice(socket, message, invoice_params) do
     changeset = SetInvoice.changeset(socket.assigns.set_invoice, invoice_params)
 
     if changeset.valid? and dispatch(SetInvoice.to_command(changeset)) == :ok do
       {:noreply,
        socket
-       |> put_flash(:info, gettext("Invoice created successfully"))
+       |> put_flash(:info, message)
        |> push_patch(to: socket.assigns.patch)}
     else
       Logger.debug("changeset errors: #{inspect(changeset.errors)}")

@@ -7,6 +7,7 @@ defmodule Conta.Projector.Book.Invoice do
 
   @currencies Enum.map(Map.keys(Money.Currency.all()), &{&1, to_string(&1)})
 
+  @derive {Jason.Encoder, only: ~w[id invoice_number invoice_date template paid_date due_date type subtotal_price tax_price total_price currency comments destination_country client company payment_method details inserted_at updated_at]a}
   typed_schema "book_invoices" do
     field :template, :string, default: "default"
     field :invoice_number, :string
@@ -22,6 +23,8 @@ defmodule Conta.Projector.Book.Invoice do
     field :destination_country, :string
 
     embeds_one :client, Client, on_replace: :delete do
+      @derive {Jason.Encoder, only: ~w[name nif intracommunity address postcode city state country]a}
+
       field :name, :string
       field :nif, :string
       field :intracommunity, :boolean, default: false
@@ -33,6 +36,8 @@ defmodule Conta.Projector.Book.Invoice do
     end
 
     embeds_one :company, Company, on_replace: :delete do
+      @derive {Jason.Encoder, only: ~w[name nif address postcode city state country details]a}
+
       field :name, :string
       field :nif, :string
       field :address, :string
@@ -44,6 +49,8 @@ defmodule Conta.Projector.Book.Invoice do
     end
 
     embeds_one :payment_method, PaymentMethod, on_replace: :delete do
+      @derive {Jason.Encoder, only: ~w[slug name method details holder]a}
+
       # methods are cash, bank (i.e. wire transfer) and
       # gateway (i.e. paypal or stripe)
       @methods ~w[cash bank gateway]a
@@ -56,6 +63,8 @@ defmodule Conta.Projector.Book.Invoice do
     end
 
     embeds_many :details, Detail, on_replace: :delete do
+      @derive {Jason.Encoder, ~w[sku description tax base_price units tax_price total_price]a}
+
       field :sku, :string
       field :description, :string
       field :tax, :integer

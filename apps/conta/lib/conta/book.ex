@@ -14,12 +14,12 @@ defmodule Conta.Book do
 
   @due_in_days 30
 
-  def list_simple_expenses(limit \\ :infinity) do
-    list_simple_expenses_query(limit)
+  def list_simple_expenses(limit \\ :infinity, offset \\ 0) do
+    list_simple_expenses_query(limit, offset)
     |> Repo.all()
   end
 
-  defp list_simple_expenses_query(:infinity) do
+  defp list_simple_expenses_query(:infinity, _offset) do
     from(
       e in Expense,
       order_by: [
@@ -47,23 +47,23 @@ defmodule Conta.Book do
     )
   end
 
-  defp list_simple_expenses_query(limit) when is_integer(limit) do
-    query = list_simple_expenses_query(:infinity)
-    from(e in query, limit: ^limit)
+  defp list_simple_expenses_query(limit, offset) when is_integer(limit) and is_integer(offset) do
+    query = list_simple_expenses_query(:infinity, 0)
+    from(e in query, limit: ^limit, offset: ^offset)
   end
 
-  def list_invoices(limit \\ :infinity) do
-    list_invoices_query(limit)
+  def list_invoices(limit \\ :infinity, offset \\ 0) do
+    list_invoices_query(limit, offset)
     |> Repo.all()
   end
 
-  defp list_invoices_query(:infinity) do
+  defp list_invoices_query(:infinity, _offset) do
     from(i in Invoice, order_by: [desc: i.invoice_number])
   end
 
-  defp list_invoices_query(limit) when is_integer(limit) do
-    query = list_invoices_query(:infinity)
-    from(i in query, limit: ^limit)
+  defp list_invoices_query(limit, offset) when is_integer(limit) and is_integer(offset) do
+    query = list_invoices_query(:infinity, 0)
+    from(i in query, limit: ^limit, offset: ^offset)
   end
 
   def get_expense!(id), do: Repo.get!(Expense, id)

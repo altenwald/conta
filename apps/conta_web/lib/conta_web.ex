@@ -49,6 +49,16 @@ defmodule ContaWeb do
     end
   end
 
+  def api do
+    quote do
+      use Phoenix.Controller,
+        formats: [:json]
+
+      import Plug.Conn
+      import ContaWeb.Gettext
+    end
+  end
+
   def live_view do
     quote do
       use Phoenix.LiveView,

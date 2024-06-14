@@ -33,6 +33,7 @@ defmodule Conta.Aggregate.Company do
     country: nil | String.t(),
     details: nil | String.t(),
     invoice_numbers: %{pos_integer() => MapSet.t(pos_integer())},
+    expense_numbers: %{pos_integer() => MapSet.t({String.t(), String.t()})},
     contacts: %{String.t() => Contact.t()},
     payment_methods: %{String.t() => PaymentMethod.t()},
     template_names: MapSet.t(String.t())
@@ -47,6 +48,7 @@ defmodule Conta.Aggregate.Company do
             country: nil,
             details: nil,
             invoice_numbers: %{},
+            expense_numbers: %{},
             contacts: %{},
             payment_methods: %{},
             template_names: MapSet.new(["default"])
@@ -166,6 +168,12 @@ defmodule Conta.Aggregate.Company do
       is_nil(company.payment_methods[payment_method]) ->
         {:error, %{payment_method: ["is invalid"]}}
 
+      not valid_expense_number_update(company, command) ->
+        {:error, %{invoice_number: ["does not exist"]}}
+
+      not valid_expense_number_insert(company, command) ->
+        {:error, %{invoice_number: ["is duplicate"]}}
+
       :else ->
         provider = Map.from_struct(company.contacts[provider_nif])
 
@@ -209,6 +217,24 @@ defmodule Conta.Aggregate.Company do
     |> Map.from_struct()
     |> ExpenseRemoved.changeset()
   end
+
+  defp valid_expense_number_update(%__MODULE__{} = company, %SetExpense{action: :update} = command) do
+    member = {command.provider_nif, command.invoice_number}
+    expense_year = command.invoice_date.year
+    expense_numbers = company.expense_numbers[expense_year] || MapSet.new()
+    MapSet.member?(expense_numbers, member)
+  end
+
+  defp valid_expense_number_update(_company, _command), do: true
+
+  defp valid_expense_number_insert(%__MODULE__{} = company, %SetExpense{action: :insert} = command) do
+    member = {command.provider_nif, command.invoice_number}
+    expense_year = command.invoice_date.year
+    expense_numbers = company.expense_numbers[expense_year] || MapSet.new()
+    not MapSet.member?(expense_numbers, member)
+  end
+
+  defp valid_expense_number_insert(_company, _command), do: true
 
   defp validate_duplicate_invoice_number(nil, %__MODULE__{} = company, %SetInvoice{} = command) do
     invoice_year = command.invoice_date.year
@@ -299,7 +325,14 @@ defmodule Conta.Aggregate.Company do
     %__MODULE__{company | invoice_numbers: Map.put(invoice_numbers, year, invoices)}
   end
 
-  def apply(%__MODULE__{} = company, %ExpenseSet{}), do: company
+  def apply(%__MODULE__{} = company, %ExpenseSet{action: :insert} = event) do
+    year = to_date(event.invoice_date).year
+    member = {event.provider.nif, event.invoice_number}
+    expense_numbers = Map.update(company.expense_numbers, year, MapSet.new([member]), &MapSet.put(&1, member))
+    %__MODULE__{company | expense_numbers: expense_numbers}
+  end
+
+  def apply(%__MODULE__{} = company, %ExpenseSet{action: :update}), do: company
 
   def apply(%__MODULE__{} = company, %ExpenseRemoved{}), do: company
 
