@@ -70,3 +70,7 @@ config :conta_bot, :granted_users, String.split(System.get_env("GRANTED_USERS"),
 config :conta,
   default_company_nif: System.get_env("DEFAULT_COMPANY_NIF"),
   default_template: System.get_env("DEFAULT_TEMPLATE")
+
+config :conta_web,
+  pdf_pool_size: String.to_integer(System.get_env("PDF_POOL_SIZE", "3")),
+  pdf_checkout_timeout: String.to_integer(System.get_env("PDF_CHECKOUT_TIMEOUT", "5000"))
