@@ -20,7 +20,7 @@ defmodule Conta.Event.Common.Company do
   @optional_fields ~w[address postcode city state details]a
 
   @doc false
-  def changeset(model \\ %__MODULE__{}, params) do
+  def changeset(model, params) do
     model
     |> cast(params, @required_fields ++ @optional_fields)
     |> validate_required(@required_fields)

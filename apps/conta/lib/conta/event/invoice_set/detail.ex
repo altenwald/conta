@@ -19,7 +19,7 @@ defmodule Conta.Event.InvoiceSet.Detail do
   @optional_fields ~w[sku units]a
 
   @doc false
-  def changeset(model \\ %__MODULE__{}, params) do
+  def changeset(model, params) do
     model
     |> cast(params, @required_fields ++ @optional_fields)
     |> validate_required(@required_fields)

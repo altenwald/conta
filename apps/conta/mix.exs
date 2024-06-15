@@ -12,6 +12,7 @@ defmodule Conta.MixProject do
       elixir: "~> 1.15",
       elixirc_paths: elixirc_paths(Mix.env()),
       start_permanent: Mix.env() == :prod,
+      test_coverage: coverage(),
       aliases: aliases(),
       deps: deps()
     ]
@@ -21,6 +22,19 @@ defmodule Conta.MixProject do
     [
       mod: {Conta.Application, []},
       extra_applications: [:logger, :runtime_tools]
+    ]
+  end
+
+  defp coverage do
+    [
+      ignore_modules: [
+        Conta.AccountsFixtures,
+        Conta.AutomatorFixtures,
+        Conta.BookFixtures,
+        Conta.DirectoryFixtures,
+        Conta.LedgerFixtures,
+        Conta.Repo
+      ]
     ]
   end
 

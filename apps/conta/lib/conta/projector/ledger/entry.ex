@@ -1,10 +1,10 @@
 defmodule Conta.Projector.Ledger.Entry do
-  use Ecto.Schema
+  use TypedEctoSchema
 
   @primary_key {:id, :binary_id, autogenerate: true}
   @foreign_key_type :binary_id
 
-  schema "ledger_entries" do
+  typed_schema "ledger_entries" do
     field(:on_date, :date)
     field(:description, :string)
     field(:credit, Money.Ecto.Amount.Type, default: 0)

@@ -102,7 +102,7 @@ defmodule Conta.Projector.Book.Invoice do
   @optional_fields ~w[intracommunity address postcode city state]a
 
   @doc false
-  def changeset_client(model \\ %__MODULE__.Client{}, params) do
+  def changeset_client(model, params) do
     model
     |> cast(params, @required_fields ++ @optional_fields)
     |> validate_required(@required_fields)

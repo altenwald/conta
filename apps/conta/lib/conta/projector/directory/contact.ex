@@ -26,8 +26,4 @@ defmodule Conta.Projector.Directory.Contact do
     |> cast(params, @required_fields ++ @optional_fields)
     |> validate_required(@required_fields)
   end
-
-  def to_command(changeset) do
-    apply_changes(changeset)
-  end
 end
