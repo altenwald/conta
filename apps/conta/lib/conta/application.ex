@@ -13,10 +13,11 @@ defmodule Conta.Application do
       {Finch, name: Swoosh.Finch},
 
       # Start the projectors
-      Conta.Projector.Ledger,
-      Conta.Projector.Stats,
+      Conta.Projector.Automator,
       Conta.Projector.Book,
-      Conta.Projector.Directory
+      Conta.Projector.Directory,
+      Conta.Projector.Ledger,
+      Conta.Projector.Stats
     ]
 
     options = [strategy: :one_for_one, name: Conta.Supervisor]

@@ -1,4 +1,4 @@
-defmodule Conta.Projector.Ledger.ShortcutParam do
+defmodule Conta.Projector.Automator.ShortcutParam do
   use TypedEctoSchema
   import Ecto.Changeset
 

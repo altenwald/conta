@@ -7,12 +7,10 @@ defmodule Conta.Aggregate.Ledger do
   alias Conta.Command.RemoveAccountTransaction
   alias Conta.Command.SetAccount
   alias Conta.Command.SetAccountTransaction
-  alias Conta.Command.SetShortcut
 
   alias Conta.Event.AccountCreated
   alias Conta.Event.AccountModified
   alias Conta.Event.AccountRenamed
-  alias Conta.Event.ShortcutSet
   alias Conta.Event.TransactionCreated
   alias Conta.Event.TransactionRemoved
 
@@ -22,13 +20,11 @@ defmodule Conta.Aggregate.Ledger do
   @type t() :: %__MODULE__{
     name: String.t(),
     accounts: %{account_id() => Account.t()},
-    account_names: %{required(account_name()) => account_id()},
-    shortcuts: MapSet.t(String.t())
+    account_names: %{required(account_name()) => account_id()}
   }
   defstruct name: nil,
             accounts: %{},
-            account_names: %{},
-            shortcuts: MapSet.new()
+            account_names: %{}
 
   @valid_currencies Map.keys(Money.Currency.all())
 
@@ -191,15 +187,6 @@ defmodule Conta.Aggregate.Ledger do
     end
   end
 
-  def execute(_ledger, %SetShortcut{} = command) do
-    command
-    |> Map.from_struct()
-    |> Map.update!(:params, fn params ->
-      Enum.map(params, &Map.from_struct/1)
-    end)
-    |> ShortcutSet.changeset()
-  end
-
   defp update_ledger(ledger, entry, update_f) do
     account_id = ledger.account_names[entry.account_name]
 
@@ -310,8 +297,9 @@ defmodule Conta.Aggregate.Ledger do
     Enum.reduce(entries, ledger, &update_account_balance(&1, &2, update))
   end
 
-  def apply(%__MODULE__{shortcuts: shortcuts} = ledger, %ShortcutSet{name: name}) do
-    %__MODULE__{ledger | shortcuts: MapSet.put(shortcuts, name)}
+  def apply(%__MODULE__{} = ledger, unknown_event) do
+    Logger.warning("unknown event: #{inspect(unknown_event)}")
+    ledger
   end
 
   defp update_account_hierarchy(ledger, [], _enum_data, _f), do: ledger

@@ -22,7 +22,7 @@ defmodule Conta.Command.SetAccountTransaction do
   end
 
   @required_fields ~w[on_date]a
-  @optional_fields ~w[ledger id on_date_previous]a
+  @optional_fields ~w[ledger]a
 
   @doc false
   def changeset(model \\ %__MODULE__{}, params) do

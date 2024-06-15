@@ -8,7 +8,7 @@ defmodule Conta.Event.ShortcutSet do
   @derive Jason.Encoder
   typed_embedded_schema do
     field :name, :string
-    field :ledger, :string
+    field :automator, :string
     field :description, :string
     embeds_many :params, Param, [primary_key: false, on_replace: :delete] do
       field :name, :string
@@ -19,7 +19,7 @@ defmodule Conta.Event.ShortcutSet do
     field :language, Ecto.Enum, values: ~w[lua php]a, default: :lua
   end
 
-  @required_fields ~w[name code ledger]a
+  @required_fields ~w[name code automator]a
   @optional_fields ~w[language description]a
 
   @doc false

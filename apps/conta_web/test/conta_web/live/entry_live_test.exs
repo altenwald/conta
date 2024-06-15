@@ -40,7 +40,8 @@ defmodule ContaWeb.EntryLiveTest do
 
       assert html =~ "Listing Ledger entries"
       assert html =~ "Buy something"
-      assert html =~ "Assets.Bank"
+      assert html =~ ">Assets<"
+      assert html =~ ">Bank<"
       assert html =~ "Expenses.Supermarket"
       assert html =~ "10,00 €"
     end

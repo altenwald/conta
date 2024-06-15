@@ -5,7 +5,7 @@ defmodule ContaBot.Action.Shortcut do
   @impl ContaBot.Action
   def handle({:init, _command}, context) do
     options =
-      for shortcut <- Conta.Ledger.list_shortcuts() do
+      for shortcut <- Conta.Automator.list_shortcuts() do
         [
           {"run #{shortcut.name}", "shortcut init #{shortcut.name}"},
           {"view #{shortcut.name}", "shortcut view #{shortcut.name}"}
@@ -21,7 +21,7 @@ defmodule ContaBot.Action.Shortcut do
   end
 
   def handle({:callback, "view " <> shortcut}, context) do
-    if shortcut = Conta.Ledger.get_shortcut(shortcut) do
+    if shortcut = Conta.Automator.get_shortcut_by_name(shortcut) do
       output = """
       ```#{shortcut.language}
       #{escape_markdown(shortcut.code)}
@@ -37,7 +37,7 @@ defmodule ContaBot.Action.Shortcut do
   end
 
   def handle({:callback, "init " <> shortcut}, context) do
-    if shortcut = Conta.Ledger.get_shortcut(shortcut) do
+    if shortcut = Conta.Automator.get_shortcut_by_name(shortcut) do
       context
       |> store_init(shortcut.name, shortcut.params)
       |> delete_callback()
@@ -177,7 +177,7 @@ defmodule ContaBot.Action.Shortcut do
     name = get_shortcut_name(context)
     params = store_get_params(context)
 
-    case Conta.Ledger.run_shortcut(name, params) do
+    case Conta.Automator.run_shortcut(name, params) do
       :ok ->
         answer(context, "Shortcut executed successfully")
 

@@ -1,12 +1,14 @@
 defmodule Conta.Commanded.Router do
   use Commanded.Commands.Router
 
+  alias Conta.Aggregate.Automator
   alias Conta.Aggregate.Company
   alias Conta.Aggregate.Ledger
 
   alias Conta.Command.RemoveAccountTransaction
   alias Conta.Command.RemoveExpense
   alias Conta.Command.RemoveInvoice
+  alias Conta.Command.RemoveShortcut
   alias Conta.Command.SetAccount
   alias Conta.Command.SetAccountTransaction
   alias Conta.Command.SetCompany
@@ -17,12 +19,16 @@ defmodule Conta.Commanded.Router do
   alias Conta.Command.SetShortcut
   alias Conta.Command.SetTemplate
 
+  identify(Automator, by: :automator)
+
+  dispatch(RemoveShortcut, to: Automator)
+  dispatch(SetShortcut, to: Automator)
+
   identify(Ledger, by: :ledger)
 
   dispatch(RemoveAccountTransaction, to: Ledger)
   dispatch(SetAccountTransaction, to: Ledger)
   dispatch(SetAccount, to: Ledger)
-  dispatch(SetShortcut, to: Ledger)
 
   dispatch(RemoveExpense, to: Company, identity: :nif)
   dispatch(RemoveInvoice, to: Company, identity: :nif)

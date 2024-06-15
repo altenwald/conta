@@ -90,7 +90,7 @@ defmodule ContaWeb.Router do
       resources "/accounts", Account, only: [:index, :show, :create, :update, :delete]
     end
 
-    scope "/automation/", Automation do
+    scope "/automator/", Automator do
       resources "/shortcuts", Shortcut, only: [:index, :show, :create, :update, :delete]
       get "/shortcuts/:id/run", Shortcut, :run
     end
