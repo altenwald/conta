@@ -202,6 +202,24 @@ defmodule ContaWeb.EntryLive.FormComponent do
     save_account_transaction(socket, :new, params)
   end
 
+  defp save_account_transaction(socket, :edit, params) do
+    account_transaction = socket.assigns.account_transaction
+    changeset = FormAccountTransaction.changeset(account_transaction, params)
+
+    if changeset.valid? and dispatch(FormAccountTransaction.to_command(changeset)) == :ok do
+      delete_transaction(account_transaction.transaction_id)
+
+      {:noreply,
+       socket
+       |> put_flash(:info, gettext("Account transaction updated successfully"))
+       |> push_patch(to: socket.assigns.patch)}
+    else
+      Logger.debug("changeset errors: #{inspect(changeset.errors)}")
+      changeset = Map.put(changeset, :action, :validate)
+      {:noreply, assign_form(socket, changeset)}
+    end
+  end
+
   defp save_account_transaction(socket, :new, params) do
     changeset = FormAccountTransaction.changeset(socket.assigns.account_transaction, params)
 
@@ -219,5 +237,24 @@ defmodule ContaWeb.EntryLive.FormComponent do
 
   defp assign_form(socket, %Ecto.Changeset{} = changeset) do
     assign(socket, :form, to_form(changeset))
+  end
+
+  def delete_transaction(transaction_id) do
+    entries = Ledger.get_entries_by_transaction_id(transaction_id)
+
+    command = %Conta.Command.RemoveAccountTransaction{
+      ledger: "default",
+      transaction_id: transaction_id,
+      entries:
+        for entry <- entries do
+          %Conta.Command.RemoveAccountTransaction.Entry{
+            account_name: entry.account_name,
+            credit: entry.credit,
+            debit: entry.debit
+          }
+        end
+    }
+
+    :ok = dispatch(command)
   end
 end

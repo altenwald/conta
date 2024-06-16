@@ -4,6 +4,7 @@ defmodule ContaWeb.EntryLive.Index do
   require Logger
 
   alias Conta.Ledger
+  alias ContaWeb.EntryLive.FormComponent
   alias ContaWeb.EntryLive.FormComponent.AccountTransaction
 
   @dates_per_page 5
@@ -69,22 +70,7 @@ defmodule ContaWeb.EntryLive.Index do
   end
 
   def handle_event("delete", %{"id" => transaction_id}, socket) do
-    entries = Ledger.get_entries_by_transaction_id(transaction_id)
-
-    command = %Conta.Command.RemoveAccountTransaction{
-      ledger: "default",
-      transaction_id: transaction_id,
-      entries:
-        for entry <- entries do
-          %Conta.Command.RemoveAccountTransaction.Entry{
-            account_name: entry.account_name,
-            credit: entry.credit,
-            debit: entry.debit
-          }
-        end
-    }
-
-    :ok = Conta.Commanded.Application.dispatch(command)
+    FormComponent.delete_transaction(transaction_id)
     {:noreply, reset_view(socket)}
   end
 
@@ -108,15 +94,29 @@ defmodule ContaWeb.EntryLive.Index do
     {:noreply, apply_action(socket, socket.assigns.live_action, params)}
   end
 
+  defp apply_action(socket, :edit, %{"id" => transaction_id}) do
+    account = socket.assigns.account
+
+    account_transaction =
+      transaction_id
+      |> Ledger.get_entries_by_transaction_id()
+      |> first_entry_with_account_name(account.name)
+      |> AccountTransaction.edit()
+
+    socket
+    |> assign(:page_title, gettext("Edit Entry"))
+    |> assign(:transaction_id, account_transaction.transaction_id)
+    |> assign(:account_transaction, account_transaction)
+    |> assign(:breakdown, account_transaction.breakdown)
+  end
+
   defp apply_action(socket, :duplicate, %{"id" => transaction_id}) do
     account = socket.assigns.account
 
     account_transaction =
       transaction_id
       |> Ledger.get_entries_by_transaction_id()
-      |> Enum.split_with(&(&1.account_name == account.name))
-      |> Tuple.to_list()
-      |> List.flatten()
+      |> first_entry_with_account_name(account.name)
       |> AccountTransaction.edit()
 
     account_transaction =
@@ -148,6 +148,13 @@ defmodule ContaWeb.EntryLive.Index do
     |> assign(:page_title, gettext("Listing Ledger entries"))
     |> assign(:transaction_id, nil)
     |> assign(:account_transaction, nil)
+  end
+
+  def first_entry_with_account_name(entries, account_name) do
+    entries
+    |> Enum.split_with(&(&1.account_name == account_name))
+    |> Tuple.to_list()
+    |> List.flatten()
   end
 
   @impl true

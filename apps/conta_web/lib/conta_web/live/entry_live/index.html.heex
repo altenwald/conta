@@ -62,7 +62,7 @@
             <:action :let={{_id, entry}}>
               <.link
                 class="button is-light"
-                patch={~p"/ledger/accounts/#{@account}/entries/#{entry}/edit"}
+                patch={~p"/ledger/accounts/#{@account}/entries/#{entry.transaction_id}/edit"}
                 title={gettext("Edit")}
               >
                 <span class="icon">
