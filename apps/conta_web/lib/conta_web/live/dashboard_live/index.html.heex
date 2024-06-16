@@ -1,0 +1,56 @@
+<section class="section is-main-section">
+  <.breadcrumbs>
+    <:breadcrumb label={gettext("Dashboard")} href={~p"/"} />
+  </.breadcrumbs>
+
+  <div class="columns is-multiline">
+    <div class="column is-half-desktop is-full-touch">
+      <div class="card">
+        <header class="card-header">
+          <p class="card-header-title">
+            <%= gettext("Outcome") %>
+          </p>
+        </header>
+        <div class="card-content">
+          <img src={~p"/dashboard/outcome/#{@currency}"} />
+        </div>
+      </div>
+    </div>
+    <div class="column is-half-desktop is-full-touch">
+      <div class="card">
+        <header class="card-header">
+          <p class="card-header-title">
+            <%= gettext("Income") %>
+          </p>
+        </header>
+        <div class="card-content">
+          <img src={~p"/dashboard/income/#{@currency}"} />
+        </div>
+      </div>
+    </div>
+    <div class="column is-half-desktop is-full-touch">
+      <div class="card">
+        <header class="card-header">
+          <p class="card-header-title">
+            <%= gettext("Profits and Loses") %>
+          </p>
+        </header>
+        <div class="card-content">
+          <img src={~p"/dashboard/pnl/#{@currency}"} />
+        </div>
+      </div>
+    </div>
+    <div class="column is-half-desktop is-full-touch">
+      <div class="card">
+        <header class="card-header">
+          <p class="card-header-title">
+            <%= raw(gettext("Patrimony")) %>
+          </p>
+        </header>
+        <div class="card-content">
+          <img src={~p"/dashboard/patrimony/#{@currency}"} />
+        </div>
+      </div>
+    </div>
+  </div>
+</section>

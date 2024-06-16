@@ -1,20 +1,20 @@
 <.flash_group flash={@flash} />
 <.nav logo_url={~p{/images/conta_header.png}}>
   <.navbar_start :if={@current_user}>
-    <.navbar_item href="/"><%= gettext("Dashboard") %></.navbar_item>
+    <.navbar_item href={~p"/dashboard"}><%= gettext("Dashboard") %></.navbar_item>
     <.navbar_dropdown name={gettext("Ledger")}>
-      <.navbar_item href="/ledger/accounts"><%= gettext("Accounts") %></.navbar_item>
+      <.navbar_item href={~p"/ledger/accounts"}><%= gettext("Accounts") %></.navbar_item>
     </.navbar_dropdown>
     <.navbar_dropdown name={gettext("Books")}>
-      <.navbar_item href="/books/invoices"><%= gettext("Invoices") %></.navbar_item>
+      <.navbar_item href={~p"/books/invoices"}><%= gettext("Invoices") %></.navbar_item>
       <.navbar_divider />
-      <.navbar_item href="/books/expenses"><%= gettext("Expenses") %></.navbar_item>
+      <.navbar_item href={~p"/books/expenses"}><%= gettext("Expenses") %></.navbar_item>
     </.navbar_dropdown>
     <.navbar_dropdown name={gettext("Directories")}>
-      <.navbar_item href="/directories/contacts">
+      <.navbar_item href={~p"/directories/contacts"}>
         <%= gettext("Clients & Providers") %>
       </.navbar_item>
-      <.navbar_item href="/directories/payment-methods">
+      <.navbar_item href={~p"/directories/payment-methods"}>
         <%= gettext("Payment Methods") %>
       </.navbar_item>
     </.navbar_dropdown>

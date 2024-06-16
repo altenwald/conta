@@ -106,6 +106,9 @@ defmodule ContaWeb.Router do
         live "/settings/confirm-email/:token", Settings, :confirm_email
       end
 
+      live "/dashboard", DashboardLive.Index, :index
+      get "/dashboard/:type/:currency", DashboardController, :image
+
       scope "/books/invoices/" do
         live "/", InvoiceLive.Index, :index
         live "/new", InvoiceLive.Index, :new

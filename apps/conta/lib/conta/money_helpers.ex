@@ -6,6 +6,22 @@ defmodule Conta.MoneyHelpers do
   @type currency() :: atom()
 
   @doc """
+  Check if the currency is valid.
+  """
+  def is_currency(currency) when is_atom(currency) do
+    currency in Map.keys(Money.Currency.all())
+  end
+
+  def is_currency(currency) when is_binary(currency) do
+    currencies =
+      Money.Currency.all()
+      |> Map.keys()
+      |> Enum.map(&to_string/1)
+
+    currency in currencies
+  end
+
+  @doc """
   Converts to `%Money{}` given a decimal, integer, or float.
   """
   def to_money(%Money{} = money), do: money
