@@ -112,13 +112,16 @@ defmodule ContaBot.Action do
   def match_me(module, regex) do
     key = {__MODULE__, :match_me}
     matches = :persistent_term.get(key, nil) || %{}
-    :persistent_term.put(key, Map.put(matches, module, regex))
+    :persistent_term.put(key, Map.update(matches, module, [regex], &[regex | &1]))
   end
 
   def get_match_module(command) do
     key = {__MODULE__, :match_me}
     matches = :persistent_term.get(key, nil) || %{}
-    f = fn {_module, regex} -> Regex.match?(regex, command) end
+
+    f = fn {_module, regex_expressions} ->
+      Enum.any?(regex_expressions, &Regex.match?(&1, command))
+    end
 
     if match = Enum.find(matches, f) do
       {module, _regex} = match

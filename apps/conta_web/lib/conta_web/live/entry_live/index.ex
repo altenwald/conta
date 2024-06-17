@@ -4,7 +4,6 @@ defmodule ContaWeb.EntryLive.Index do
   require Logger
 
   alias Conta.Ledger
-  alias ContaWeb.EntryLive.FormComponent
   alias ContaWeb.EntryLive.FormComponent.AccountTransaction
 
   @dates_per_page 5
@@ -70,7 +69,7 @@ defmodule ContaWeb.EntryLive.Index do
   end
 
   def handle_event("delete", %{"id" => transaction_id}, socket) do
-    FormComponent.delete_transaction(transaction_id)
+    :ok = Ledger.delete_account_transaction(transaction_id)
     {:noreply, reset_view(socket)}
   end
 

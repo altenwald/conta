@@ -207,7 +207,7 @@ defmodule ContaWeb.EntryLive.FormComponent do
     changeset = FormAccountTransaction.changeset(account_transaction, params)
 
     if changeset.valid? and dispatch(FormAccountTransaction.to_command(changeset)) == :ok do
-      delete_transaction(account_transaction.transaction_id)
+      :ok = Ledger.delete_account_transaction(account_transaction.transaction_id)
 
       {:noreply,
        socket
@@ -237,24 +237,5 @@ defmodule ContaWeb.EntryLive.FormComponent do
 
   defp assign_form(socket, %Ecto.Changeset{} = changeset) do
     assign(socket, :form, to_form(changeset))
-  end
-
-  def delete_transaction(transaction_id) do
-    entries = Ledger.get_entries_by_transaction_id(transaction_id)
-
-    command = %Conta.Command.RemoveAccountTransaction{
-      ledger: "default",
-      transaction_id: transaction_id,
-      entries:
-        for entry <- entries do
-          %Conta.Command.RemoveAccountTransaction.Entry{
-            account_name: entry.account_name,
-            credit: entry.credit,
-            debit: entry.debit
-          }
-        end
-    }
-
-    :ok = dispatch(command)
   end
 end

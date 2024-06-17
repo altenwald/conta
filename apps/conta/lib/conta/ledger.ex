@@ -4,6 +4,7 @@ defmodule Conta.Ledger do
 
   alias Conta.Command.SetAccount
   alias Conta.Command.SetAccountTransaction
+  alias Conta.Command.RemoveAccountTransaction
 
   alias Conta.Projector.Ledger.Account
   alias Conta.Projector.Ledger.Entry
@@ -19,6 +20,29 @@ defmodule Conta.Ledger do
   def create_account_transaction(on_date, entries, ledger \\ "default") do
     %SetAccountTransaction{ledger: ledger, on_date: on_date, entries: entries}
     |> dispatch()
+  end
+
+
+  def delete_account_transaction(transaction_id) do
+    case get_entries_by_transaction_id(transaction_id) do
+      [] ->
+        {:error, :transaction_not_found}
+
+      entries ->
+        %RemoveAccountTransaction{
+          ledger: "default",
+          transaction_id: transaction_id,
+          entries:
+            for entry <- entries do
+              %RemoveAccountTransaction.Entry{
+                account_name: entry.account_name,
+                credit: entry.credit,
+                debit: entry.debit
+              }
+            end
+        }
+        |> dispatch()
+    end
   end
 
   def new_account_transaction(account_name, ledger \\ "default") do

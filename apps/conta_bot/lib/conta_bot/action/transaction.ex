@@ -177,7 +177,7 @@ defmodule ContaBot.Action.Transaction do
          {:ok, relative_account} <- Conta.Ledger.get_account_by_name(relative_account_name),
          {:currency, true} <- {:currency, account.currency == relative_account.currency} do
       {add_account, add_relative_account} =
-        if data.amount > 0 do
+        if account.type in [:expenses, :assets] and data.amount > 0 do
           {
             &Map.merge(&1, %{debit: abs(data.amount), credit: 0}),
             &Map.merge(&1, %{credit: abs(data.amount), debit: 0})
