@@ -1,6 +1,5 @@
 defmodule Conta.Projector.AutomatorTest do
   use Conta.DataCase
-  import Conta.AutomatorFixtures
   alias Conta.Projector.Automator
 
   setup do

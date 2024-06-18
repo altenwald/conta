@@ -1,16 +1,21 @@
 defmodule Conta.Aggregate.LedgerTest do
   use ExUnit.Case
+
+  alias Conta.Event.AccountRemoved
   alias Conta.Aggregate.Ledger
+
+  alias Conta.Command.RemoveAccount
   alias Conta.Command.RemoveAccountTransaction
   alias Conta.Command.SetAccount
   alias Conta.Command.SetAccountTransaction
+
   alias Conta.Event.AccountCreated
   alias Conta.Event.AccountModified
   alias Conta.Event.AccountRenamed
   alias Conta.Event.TransactionCreated
   alias Conta.Event.TransactionRemoved
 
-  describe "ledger create account execute" do
+  describe "ledger aaccount" do
     test "create account successfully" do
       command =
         %SetAccount{
@@ -312,9 +317,137 @@ defmodule Conta.Aggregate.LedgerTest do
       ledger = %Ledger{name: "default"}
       assert {:error, :invalid_parent_account} = Ledger.execute(ledger, command)
     end
+
+    test "remove account failure" do
+      command = %RemoveAccount{
+        ledger: "default",
+        name: ["NonExist"]
+      }
+
+      ledger = %Ledger{name: "default"}
+
+      assert {:error, %{name: ["is not found"]}} = Ledger.execute(ledger, command)
+    end
+
+    test "remove parent account failure" do
+      command = %RemoveAccount{
+        ledger: "default",
+        name: ["Assets"]
+      }
+
+      ledger = %Ledger{
+        name: "default",
+        account_names: %{
+          ["Assets"] => "83dfbfb4-c7f0-4403-b656-b8ed4228f7bc",
+          ["Assets", "Bank"] => "fbf3d164-01ab-4cae-adfb-20b35f6d2fe3"
+        },
+        accounts: %{
+          "83dfbfb4-c7f0-4403-b656-b8ed4228f7bc" => %Ledger.Account{
+            id: "83dfbfb4-c7f0-4403-b656-b8ed4228f7bc",
+            name: ["Assets"],
+            type: :assets,
+            currency: :EUR,
+            balances: %{}
+          },
+          "fbf3d164-01ab-4cae-adfb-20b35f6d2fe3" => %Ledger.Account{
+            id: "fbf3d164-01ab-4cae-adfb-20b35f6d2fe3",
+            name: ["Assets", "Bank"],
+            type: :assets,
+            currency: :EUR,
+            balances: %{}
+          }
+        }
+      }
+
+      assert {:error, %{name: ["has children accounts"]}} = Ledger.execute(ledger, command)
+    end
+
+    test "remove populated account failure" do
+      command = %RemoveAccount{
+        ledger: "default",
+        name: ["Assets", "Bank"]
+      }
+
+      ledger = %Ledger{
+        name: "default",
+        account_names: %{
+          ["Assets"] => "83dfbfb4-c7f0-4403-b656-b8ed4228f7bc",
+          ["Assets", "Bank"] => "fbf3d164-01ab-4cae-adfb-20b35f6d2fe3"
+        },
+        accounts: %{
+          "83dfbfb4-c7f0-4403-b656-b8ed4228f7bc" => %Ledger.Account{
+            id: "83dfbfb4-c7f0-4403-b656-b8ed4228f7bc",
+            name: ["Assets"],
+            type: :assets,
+            currency: :EUR,
+            balances: %{:EUR => 10_00}
+          },
+          "fbf3d164-01ab-4cae-adfb-20b35f6d2fe3" => %Ledger.Account{
+            id: "fbf3d164-01ab-4cae-adfb-20b35f6d2fe3",
+            name: ["Assets", "Bank"],
+            type: :assets,
+            currency: :EUR,
+            balances: %{:EUR => 10_00}
+          }
+        }
+      }
+
+      assert {:error, %{name: ["has entries"]}} = Ledger.execute(ledger, command)
+    end
+
+    test "simple remove account successfully" do
+      command = %RemoveAccount{
+        ledger: "default",
+        name: ["Assets", "Bank"]
+      }
+
+      ledger = %Ledger{
+        name: "default",
+        account_names: %{
+          ["Assets"] => "83dfbfb4-c7f0-4403-b656-b8ed4228f7bc",
+          ["Assets", "Bank"] => "fbf3d164-01ab-4cae-adfb-20b35f6d2fe3"
+        },
+        accounts: %{
+          "83dfbfb4-c7f0-4403-b656-b8ed4228f7bc" => %Ledger.Account{
+            id: "83dfbfb4-c7f0-4403-b656-b8ed4228f7bc",
+            name: ["Assets"],
+            type: :assets,
+            currency: :EUR,
+            balances: %{}
+          },
+          "fbf3d164-01ab-4cae-adfb-20b35f6d2fe3" => %Ledger.Account{
+            id: "fbf3d164-01ab-4cae-adfb-20b35f6d2fe3",
+            name: ["Assets", "Bank"],
+            type: :assets,
+            currency: :EUR,
+            balances: %{}
+          }
+        }
+      }
+
+      assert %AccountRemoved{
+        ledger: "default",
+        name: ["Assets", "Bank"]
+      } = event = Ledger.execute(ledger, command)
+
+      assert %Ledger{
+        name: "default",
+        account_names: %{["Assets"] => "83dfbfb4-c7f0-4403-b656-b8ed4228f7bc"},
+        accounts: %{
+          "83dfbfb4-c7f0-4403-b656-b8ed4228f7bc" => %Ledger.Account{
+            id: "83dfbfb4-c7f0-4403-b656-b8ed4228f7bc",
+            name: ["Assets"],
+            type: :assets,
+            currency: :EUR,
+            notes: nil,
+            balances: %{}
+          }
+        }
+      } = Ledger.apply(ledger, event)
+    end
   end
 
-  describe "ledger create transaction" do
+  describe "ledger account transaction" do
     test "basic successfully" do
       command =
         %SetAccountTransaction{
@@ -591,10 +724,8 @@ defmodule Conta.Aggregate.LedgerTest do
     test "not enough entries" do
       assert {:error, :not_enough_entries} = Ledger.execute(nil, %SetAccountTransaction{entries: []})
     end
-  end
 
-  describe "ledger remove transaction" do
-    test "basic successfully" do
+    test "basic transaction removed successfully" do
       ledger =
         %Ledger{
           name: "default",
@@ -641,6 +772,7 @@ defmodule Conta.Aggregate.LedgerTest do
 
       command = %RemoveAccountTransaction{
         transaction_id: "f4bd5f91-f62c-4f19-9479-2595b7403262",
+        on_date: ~D[2024-06-01],
         entries: [
           %RemoveAccountTransaction.Entry{
             account_name: ~w[Assets PayPal],
@@ -659,6 +791,7 @@ defmodule Conta.Aggregate.LedgerTest do
 
       assert %TransactionRemoved{
         ledger: "default",
+        on_date: ~D[2024-06-01],
         entries: [
           %TransactionRemoved.Entry{
             account_name: ["Assets", "PayPal"],
@@ -721,7 +854,7 @@ defmodule Conta.Aggregate.LedgerTest do
       } = Ledger.apply(ledger, event)
     end
 
-    test "not enough entries" do
+    test "not enough entries for removing" do
       assert {:error, :not_enough_entries} = Ledger.execute(nil, %RemoveAccountTransaction{entries: []})
     end
   end

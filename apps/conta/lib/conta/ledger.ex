@@ -2,18 +2,24 @@ defmodule Conta.Ledger do
   import Conta.Commanded.Application
   import Ecto.Query, only: [from: 2]
 
+  alias Conta.Command.RemoveAccount
+  alias Conta.Command.RemoveAccountTransaction
   alias Conta.Command.SetAccount
   alias Conta.Command.SetAccountTransaction
-  alias Conta.Command.RemoveAccountTransaction
 
   alias Conta.Projector.Ledger.Account
   alias Conta.Projector.Ledger.Entry
   alias Conta.Repo
 
-  @default_currencies ~w[EUR GBP USD]a
+  @default_frequent_currencies ~w[EUR GBP USD]a
 
   def set_account(name, type, currency \\ :EUR, notes \\ nil, ledger \\ "default") do
     %SetAccount{name: name, type: type, currency: currency, notes: notes, ledger: ledger}
+    |> dispatch()
+  end
+
+  def delete_account(name, ledger \\ "default") do
+    %RemoveAccount{name: name, ledger: ledger}
     |> dispatch()
   end
 
@@ -22,15 +28,15 @@ defmodule Conta.Ledger do
     |> dispatch()
   end
 
-
   def delete_account_transaction(transaction_id) do
     case get_entries_by_transaction_id(transaction_id) do
       [] ->
         {:error, :transaction_not_found}
 
-      entries ->
+      [entry|_] = entries ->
         %RemoveAccountTransaction{
           ledger: "default",
+          on_date: entry.on_date,
           transaction_id: transaction_id,
           entries:
             for entry <- entries do
@@ -161,7 +167,7 @@ defmodule Conta.Ledger do
   end
 
   def list_currencies do
-    Application.get_env(:conta, :currencies, @default_currencies)
+    Application.get_env(:conta, :frequent_currencies, @default_frequent_currencies)
   end
 
   def list_used_currencies do

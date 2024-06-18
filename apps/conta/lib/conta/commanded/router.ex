@@ -5,6 +5,7 @@ defmodule Conta.Commanded.Router do
   alias Conta.Aggregate.Company
   alias Conta.Aggregate.Ledger
 
+  alias Conta.Command.RemoveAccount
   alias Conta.Command.RemoveAccountTransaction
   alias Conta.Command.RemoveExpense
   alias Conta.Command.RemoveInvoice
@@ -26,6 +27,7 @@ defmodule Conta.Commanded.Router do
 
   identify(Ledger, by: :ledger)
 
+  dispatch(RemoveAccount, to: Ledger)
   dispatch(RemoveAccountTransaction, to: Ledger)
   dispatch(SetAccountTransaction, to: Ledger)
   dispatch(SetAccount, to: Ledger)

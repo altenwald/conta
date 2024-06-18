@@ -1032,7 +1032,7 @@ defmodule Conta.Aggregate.CompanyTest do
         payment_method: "paypal"
       }
 
-      assert {:error, %{invoice_number: ["can't be found for update"]}} = Conta.Aggregate.Company.execute(company, command)
+      assert {:error, %{invoice_number: ["does not exist"]}} = Conta.Aggregate.Company.execute(company, command)
     end
 
     test "create failed because missing payment method" do

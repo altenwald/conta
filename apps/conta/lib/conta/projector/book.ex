@@ -1,8 +1,9 @@
 defmodule Conta.Projector.Book do
-  use Commanded.Projections.Ecto,
+  use Conta.Projector,
     application: Conta.Commanded.Application,
     repo: Conta.Repo,
-    name: __MODULE__
+    name: __MODULE__,
+    consistency: Application.compile_env(:conta, :consistency, :eventual)
 
   require Logger
 
@@ -187,7 +188,7 @@ defmodule Conta.Projector.Book do
     Ecto.Multi.insert(multi, :template, changeset, opts)
   end)
 
-  @impl Commanded.Projections.Ecto
+  @impl Conta.Projector
   def after_update(%InvoiceSet{}, _metadata, changes) do
     event_name = "event:invoice_set"
     invoice = changes[:invoice]

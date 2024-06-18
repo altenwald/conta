@@ -1,11 +1,16 @@
 defmodule ContaWeb.AccountLive.Index do
   use ContaWeb, :live_view
+  require Logger
 
   alias Conta.Command.SetAccount
   alias Conta.Ledger
 
   @impl true
   def mount(_params, _session, socket) do
+    ledger = "default"
+    Phoenix.PubSub.subscribe(Conta.PubSub, "event:account_created:#{ledger}")
+    Phoenix.PubSub.subscribe(Conta.PubSub, "event:account_modified:#{ledger}")
+    Phoenix.PubSub.subscribe(Conta.PubSub, "event:account_removed:#{ledger}")
     {:ok, stream(socket, :ledger_accounts, Ledger.list_accounts())}
   end
 
@@ -32,16 +37,27 @@ defmodule ContaWeb.AccountLive.Index do
     |> assign(:account, nil)
   end
 
-  # @impl true
-  # def handle_info({ContaWeb.AccountLive.FormComponent, {:saved, account}}, socket) do
-  #   {:noreply, stream_insert(socket, :ledger_accounts, account)}
-  # end
+  @impl true
+  def handle_info(%{id: _}, socket) do
+    {:noreply, stream(socket, :ledger_accounts, Ledger.list_accounts(), reset: true)}
+  end
 
-  # @impl true
-  # def handle_event("delete", %{"account_name" => account_name}, socket) do
-  #   ## FIXME delete command
-  #   {:noreply, stream_delete(socket, :ledger_accounts, account)}
-  # end
+  @impl true
+  def handle_event("delete", %{"id" => id}, socket) do
+    account = Ledger.get_account!(id)
+
+    case Ledger.delete_account(account.name) do
+      :ok ->
+        {:noreply,
+         socket
+         |> put_flash(:info, gettext("Account deleted successfully"))
+         |> stream(:ledger_accounts, Ledger.list_accounts(), reset: true)}
+
+      {:error, reason} ->
+        Logger.warning("cannot remove account #{inspect(reason)}")
+        {:noreply, put_flash(socket, :error, gettext("Cannot remove account"))}
+    end
+  end
 
   defp get_balance(%_{currency: currency, balances: balances}) do
     balances = Enum.group_by(balances, & &1.currency, & &1.amount.amount)

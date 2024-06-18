@@ -24,6 +24,7 @@ defmodule ContaWeb.ConnCase do
       @endpoint ContaWeb.Endpoint
 
       use ContaWeb, :verified_routes
+      use ExUnit.Case, async: false
 
       # Import conveniences for testing with connections
       import Plug.Conn
@@ -33,6 +34,9 @@ defmodule ContaWeb.ConnCase do
   end
 
   setup tags do
+    {:ok, _} = Application.ensure_all_started(:conta)
+    on_exit(fn -> Application.stop(:conta) end)
+
     Conta.DataCase.setup_sandbox(tags)
     {:ok, conn: Phoenix.ConnTest.build_conn()}
   end

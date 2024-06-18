@@ -8,6 +8,7 @@ defmodule Conta.Command.RemoveAccountTransaction do
 
   typed_embedded_schema do
     field :ledger, :string, default: "default"
+    field :on_date, :date
     field :transaction_id, :binary_id
     embeds_many :entries, Entry, primary_key: false do
       field :account_name, {:array, :string}
@@ -19,7 +20,7 @@ defmodule Conta.Command.RemoveAccountTransaction do
     end
   end
 
-  @required_fields ~w[transaction_id]a
+  @required_fields ~w[transaction_id on_date]a
   @optional_fields ~w[ledger]a
 
   @doc false

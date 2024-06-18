@@ -6,14 +6,15 @@ defmodule Conta.Event.TransactionRemoved do
 
   @primary_key {:id, :binary_id, autogenerate: false}
 
-  @derive Jason.Encoder
+  @derive {Jason.Encoder, only: [:ledger, :on_date, :entries]}
   typed_embedded_schema do
     field :ledger, :string, default: "default"
+    field :on_date, :date
     embeds_many :entries, Entry
   end
 
   @required_fields ~w[id]a
-  @optional_fields ~w[ledger]a
+  @optional_fields ~w[ledger on_date]a
 
   @doc false
   def changeset(model \\ %__MODULE__{}, params) when not is_struct(params) do

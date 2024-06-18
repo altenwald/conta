@@ -1,10 +1,7 @@
 defmodule Conta.Commanded.Application do
   use Commanded.Application,
     otp_app: :conta,
-    event_store: [
-      adapter: Commanded.EventStore.Adapters.EventStore,
-      event_store: Conta.EventStore
-    ]
+    event_store: Application.compile_env!(:conta, :event_store)
 
   router(Conta.Commanded.Router)
 end

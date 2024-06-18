@@ -1,13 +1,15 @@
 defmodule Conta.Projector.Ledger do
-  use Commanded.Projections.Ecto,
+  use Conta.Projector,
     application: Conta.Commanded.Application,
     repo: Conta.Repo,
-    name: __MODULE__
+    name: __MODULE__,
+    consistency: Application.compile_env(:conta, :consistency, :eventual)
 
   import Ecto.Query, only: [from: 2, dynamic: 2]
 
   require Logger
 
+  alias Conta.Event.AccountRemoved
   alias Conta.Event.AccountCreated
   alias Conta.Event.AccountModified
   alias Conta.Event.AccountRenamed
@@ -54,6 +56,11 @@ defmodule Conta.Projector.Ledger do
     ]
 
     Ecto.Multi.insert(multi, :create_account, changeset, opts)
+  end)
+
+  project(%AccountRemoved{} = event, _metadata, fn multi ->
+    account = Repo.get_by!(Account, ledger: event.ledger, name: event.name)
+    Ecto.Multi.delete(multi, :account_removed, account)
   end)
 
   project(%AccountModified{} = event, _metadata, fn multi ->
@@ -200,7 +207,22 @@ defmodule Conta.Projector.Ledger do
     end)
   end)
 
-  @impl Commanded.Projections.Ecto
+  @impl Conta.Projector
+  def after_update(%AccountCreated{ledger: ledger}, _metadata, changes) do
+    event_name = "event:account_created:#{ledger}"
+    Phoenix.PubSub.broadcast(Conta.PubSub, event_name, %{id: changes.create_account.id})
+  end
+
+  def after_update(%AccountModified{}, _metadata, changes) do
+    event_name = "event:account_modified:#{changes.account_modified.ledger}"
+    Phoenix.PubSub.broadcast(Conta.PubSub, event_name, %{id: changes.account_modified.id})
+  end
+
+  def after_update(%AccountRemoved{}, _metadata, changes) do
+    event_name = "event:account_removed:#{changes.account_removed.ledger}"
+    Phoenix.PubSub.broadcast(Conta.PubSub, event_name, %{id: changes.account_removed.id})
+  end
+
   def after_update(%TransactionCreated{}, _metadata, changes) do
     changes
     |> Enum.filter(fn {key, _} -> match?({:entry, _idx}, key) end)

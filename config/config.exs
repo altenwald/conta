@@ -1,5 +1,11 @@
 import Config
 
+config :conta,
+  event_store: [
+    adapter: Commanded.EventStore.Adapters.EventStore,
+    event_store: Conta.EventStore
+  ]
+
 config :conta, event_stores: [Conta.EventStore]
 
 config :conta, Conta.EventStore, serializer: Conta.Commanded.Serializer

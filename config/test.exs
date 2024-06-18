@@ -3,12 +3,12 @@ import Config
 # Only in tests, remove the complexity from the password hashing algorithm
 config :bcrypt_elixir, :log_rounds, 1
 
-config :conta, Conta.EventStore,
-  username: "postgres",
-  password: "postgres",
-  database: "eventstore_test",
-  hostname: "localhost",
-  pool_size: 10
+config :conta,
+  event_store: [
+    adapter: Commanded.EventStore.Adapters.InMemory,
+    serializer: Conta.Commanded.Serializer,
+    concurrency_limit: 10
+  ]
 
 config :conta, Conta.Repo,
   username: "postgres",
@@ -42,3 +42,7 @@ config :phoenix, :filter_parameters, []
 config :ex_gram, test_environment: true
 
 config :ex_gram, token: System.get_env("EXGRAM_TOKEN_TEST")
+
+config :conta, consistency: :strong
+
+config :logger, level: :warning

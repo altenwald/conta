@@ -6,6 +6,8 @@ defmodule Conta.Aggregate.Ledger.Account do
 
   @account_types ~w[assets liabilities equity revenue expenses]a
 
+  @type balances() :: %{required(atom()) => integer()}
+
   @primary_key false
 
   typed_embedded_schema do
@@ -14,7 +16,7 @@ defmodule Conta.Aggregate.Ledger.Account do
     field :type, Ecto.Enum, values: @account_types
     field(:currency, Money.Currency.Ecto.Type) :: MoneyHelpers.currency()
     field :notes, :string
-    field :balances, :map, default: %{}
+    field(:balances, :map, default: %{}) :: balances()
   end
 
   @required_fields ~w[name type currency]a

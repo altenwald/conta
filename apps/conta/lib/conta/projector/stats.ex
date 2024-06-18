@@ -1,13 +1,18 @@
 defmodule Conta.Projector.Stats do
-  use Commanded.Projections.Ecto,
+  use Conta.Projector,
     application: Conta.Commanded.Application,
     repo: Conta.Repo,
-    name: __MODULE__
+    name: __MODULE__,
+    consistency: Application.compile_env(:conta, :consistency, :eventual)
 
   import Ecto.Query, only: [from: 2]
 
   alias Conta.Event.AccountCreated
+  alias Conta.Event.AccountModified
+  alias Conta.Event.AccountRemoved
+  alias Conta.Event.AccountRenamed
   alias Conta.Event.TransactionCreated
+  alias Conta.Event.TransactionRemoved
 
   alias Conta.Projector.Stats.Account
   alias Conta.Projector.Stats.Income
@@ -20,12 +25,31 @@ defmodule Conta.Projector.Stats do
   project(%AccountCreated{} = account, _metadata, fn multi ->
     account =
       Account.changeset(%{
+        id: account.id,
         name: account.name,
         ledger: account.ledger,
         type: account.type
       })
 
     Ecto.Multi.insert(multi, :create_account, account)
+  end)
+
+  project(%AccountModified{} = account_modified, _metadata, fn multi ->
+    account = Repo.get!(Account, account_modified.id)
+    params = Map.from_struct(account_modified)
+    changeset = Account.changeset(account, params)
+    Ecto.Multi.update(multi, :modify_account, changeset)
+  end)
+
+  project(%AccountRenamed{} = account_renamed, _metadata, fn multi ->
+    account = Repo.get!(Account, account_renamed.id)
+    changeset = Account.changeset(account, %{name: account_renamed.new_name})
+    Ecto.Multi.update(multi, :rename_account, changeset)
+  end)
+
+  project(%AccountRemoved{} = account_removed, _metadata, fn multi ->
+    account = Repo.get_by!(Account, ledger: account_removed.ledger, name: account_removed.name)
+    Ecto.Multi.delete(multi, :remove_account, account)
   end)
 
   project(%TransactionCreated{} = transaction, _metadata, fn multi ->
@@ -48,6 +72,30 @@ defmodule Conta.Projector.Stats do
       |> maybe_update_outcome(account.type, on_date, idx, entry)
       |> maybe_update_patrimony(account.type, on_date, idx, entry)
       |> maybe_update_pnl(account.type, on_date, idx, entry)
+    end)
+  end)
+
+  project(%TransactionRemoved{} = transaction, _metadata, fn multi ->
+    accounts =
+      transaction.entries
+      |> Enum.map(& &1.account_name)
+      |> Enum.uniq()
+      |> Enum.map(&Repo.get_by!(Account, name: &1))
+      |> Map.new(&{&1.name, &1})
+
+    on_date = transaction.on_date
+
+    transaction.entries
+    |> Enum.with_index()
+    |> Enum.reduce(multi, fn {entry, idx}, multi ->
+      account = accounts[entry.account_name]
+      inverse_entry = Map.merge(entry, %{credit: entry.debit, debit: entry.credit})
+
+      multi
+      |> maybe_update_income(account.type, on_date, idx, inverse_entry)
+      |> maybe_update_outcome(account.type, on_date, idx, inverse_entry)
+      |> maybe_update_patrimony(account.type, on_date, idx, inverse_entry)
+      |> maybe_update_pnl(account.type, on_date, idx, inverse_entry)
     end)
   end)
 

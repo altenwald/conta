@@ -6,7 +6,7 @@ defmodule Conta.Event.TransactionRemoved.Entry do
 
   @typep currency() :: atom()
 
-  @derive Jason.Encoder
+  @derive {Jason.Encoder, only: ~w[account_name credit debit balance currency]a}
   typed_embedded_schema do
     field :account_name, {:array, :string}
     field(:credit, Money.Ecto.Amount.Type, default: Money.new(0)) :: Money.t()

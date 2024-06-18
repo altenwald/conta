@@ -63,7 +63,7 @@ defmodule Conta.Projector.Stats.Account do
     timestamps(type: :utc_datetime_usec)
   end
 
-  @required_fields ~w[name]a
+  @required_fields ~w[id name]a
   @optional_fields ~w[ledger type]a
 
   @doc false

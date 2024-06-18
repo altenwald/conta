@@ -1,8 +1,8 @@
 defmodule ContaWeb.EntryLiveTest do
   use ContaWeb.ConnCase
 
-  import Phoenix.LiveViewTest
   import Conta.LedgerFixtures
+  import Phoenix.LiveViewTest
 
   alias Conta.AccountsFixtures
 

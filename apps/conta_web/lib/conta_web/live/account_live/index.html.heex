@@ -54,9 +54,9 @@
                 </span>
               </.link>
             </:action>
-            <:action :let={{id, account}}>
+            <:action :let={{_id, account}}>
               <.link
-                phx-click={JS.push("delete", value: %{id: account.id}) |> hide("##{id}")}
+                phx-click={JS.push("delete", value: %{id: account.id})}
                 class="button is-danger is-light"
                 data-confirm={gettext("Are you sure?")}
                 title={gettext("Delete")}

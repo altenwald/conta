@@ -34,9 +34,26 @@ defmodule Conta.Command.SetAccount do
   end
 
   defp populate_name(changeset) do
-    simple_name = List.wrap(get_field(changeset, :simple_name))
-    parent_name = String.split(get_field(changeset, :parent_name) || "", ".")
-    put_change(changeset, :name, parent_name ++ simple_name)
+    simple_name =
+      changeset
+      |> get_field(:simple_name, "")
+      |> then(& &1 || "")
+      |> String.trim()
+      |> List.wrap()
+
+    parent_name =
+      changeset
+      |> get_field(:parent_name, "")
+      |> then(& &1 || "")
+      |> String.trim()
+      |> String.split(".")
+
+    (simple_name ++ parent_name)
+    |> Enum.reject(& &1 == "")
+    |> case do
+      [] -> changeset
+      name -> put_change(changeset, :name, name)
+    end
   end
 
   def populate_account_virtual(%{"name" => name} = params) when is_list(name) do

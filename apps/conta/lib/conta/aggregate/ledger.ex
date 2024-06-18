@@ -4,12 +4,14 @@ defmodule Conta.Aggregate.Ledger do
 
   alias Conta.Aggregate.Ledger.Account
 
+  alias Conta.Command.RemoveAccount
   alias Conta.Command.RemoveAccountTransaction
   alias Conta.Command.SetAccount
   alias Conta.Command.SetAccountTransaction
 
   alias Conta.Event.AccountCreated
   alias Conta.Event.AccountModified
+  alias Conta.Event.AccountRemoved
   alias Conta.Event.AccountRenamed
   alias Conta.Event.TransactionCreated
   alias Conta.Event.TransactionRemoved
@@ -93,6 +95,24 @@ defmodule Conta.Aggregate.Ledger do
       :else ->
         # convert to create
         execute(ledger, %SetAccount{command | id: nil})
+    end
+  end
+
+  def execute(%__MODULE__{} = ledger, %RemoveAccount{} = command) do
+    cond do
+      is_nil(ledger.account_names[command.name]) ->
+        {:error, %{name: ["is not found"]}}
+
+      not empty_balances(ledger, command.name) ->
+        {:error, %{name: ["has entries"]}}
+
+      has_children(ledger, command.name) ->
+        {:error, %{name: ["has children accounts"]}}
+
+      :else ->
+        command
+        |> Map.from_struct()
+        |> AccountRemoved.changeset()
     end
   end
 
@@ -181,6 +201,7 @@ defmodule Conta.Aggregate.Ledger do
           %TransactionRemoved{
             id: command.transaction_id,
             ledger: command.ledger,
+            on_date: command.on_date,
             entries: entries
           }
         end
@@ -250,6 +271,21 @@ defmodule Conta.Aggregate.Ledger do
     end
   end
 
+  defp empty_balances(%__MODULE__{} = ledger, name) do
+    id = ledger.account_names[name]
+    account = %Account{} = ledger.accounts[id]
+    account.balances
+    |> Enum.all?(fn {_currency, amount} when is_integer(amount) ->
+      amount == 0
+    end)
+  end
+
+  defp has_children(%__MODULE__{} = ledger, name) do
+    ledger.account_names
+    |> Map.keys()
+    |> Enum.any?(&child?(&1, name))
+  end
+
   def apply(%__MODULE__{} = ledger, %AccountModified{} = event) do
     params = Map.take(event, ~w[id type currency notes]a)
     account = Account.changeset(ledger.accounts[event.id], params)
@@ -276,6 +312,12 @@ defmodule Conta.Aggregate.Ledger do
       end)
 
     Enum.reduce(new_accounts, ledger, &add_account(&2, &1))
+  end
+
+  def apply(%__MODULE__{} = ledger, %AccountRemoved{} = event) do
+    account_id = ledger.account_names[event.name]
+    account = ledger.accounts[account_id]
+    remove_account(ledger, account)
   end
 
   def apply(%__MODULE__{} = ledger, %AccountCreated{} = event) do

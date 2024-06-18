@@ -1,5 +1,8 @@
 defmodule ContaWeb.AccountLive.FormComponent do
   use ContaWeb, :live_component
+
+  require Logger
+
   import Conta.Commanded.Application, only: [dispatch: 1]
 
   alias Conta.Command.SetAccount
@@ -22,6 +25,7 @@ defmodule ContaWeb.AccountLive.FormComponent do
             phx-change="validate"
             phx-submit="save"
           >
+            <.input field={@form[:ledger]} type="hidden" value="default" />
             <.input field={@form[:simple_name]} type="text" label={gettext("Name")} />
             <.input
               field={@form[:parent_name]}
@@ -56,13 +60,14 @@ defmodule ContaWeb.AccountLive.FormComponent do
               }
               prompt={gettext("Choose a currency...")}
             />
+            <.input field={@form[:notes]} type="textarea" label={gettext("Notes")} />
           </.simple_form>
         </section>
         <footer class="modal-card-foot is-at-right">
           <.button form="account-form" class="is-primary" phx-disable-with={gettext("Saving...")}>
             <%= gettext("Save Account") %>
           </.button>
-          <.link class="button" patch={~p"/ledger/accounts"}>
+          <.link class="button" patch={@patch}>
             <%= gettext("Cancel") %>
           </.link>
         </footer>
@@ -95,12 +100,15 @@ defmodule ContaWeb.AccountLive.FormComponent do
     changeset = SetAccount.changeset(socket.assigns.account, account_params)
 
     if changeset.valid? and dispatch(SetAccount.to_command(changeset)) == :ok do
-      notify_parent(:refresh)
-
       message =
         case socket.assigns.action do
-          :edit -> gettext("Account updated successfully")
-          :new -> gettext("Account created successfully")
+          :edit ->
+            Logger.info("updated account #{inspect(account_params)}")
+            gettext("Account updated successfully")
+
+          :new ->
+            Logger.info("created account #{inspect(account_params)}")
+            gettext("Account created successfully")
         end
 
       {:noreply,
@@ -108,6 +116,10 @@ defmodule ContaWeb.AccountLive.FormComponent do
        |> put_flash(:info, message)
        |> push_patch(to: socket.assigns.patch)}
     else
+      Logger.warning(
+        "cannot #{socket.assigns.action} account #{inspect(Conta.EctoHelpers.get_result(changeset))}"
+      )
+
       {:noreply, assign_form(socket, changeset)}
     end
   end
@@ -115,6 +127,4 @@ defmodule ContaWeb.AccountLive.FormComponent do
   defp assign_form(socket, %Ecto.Changeset{} = changeset) do
     assign(socket, :form, to_form(changeset))
   end
-
-  defp notify_parent(msg), do: send(self(), {__MODULE__, msg})
 end
