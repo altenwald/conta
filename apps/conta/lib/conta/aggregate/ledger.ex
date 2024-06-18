@@ -167,6 +167,9 @@ defmodule Conta.Aggregate.Ledger do
 
   def execute(%__MODULE__{} = ledger, %RemoveAccountTransaction{entries: entries} = command) do
     cond do
+      is_nil(command.transaction_id) ->
+        {:error, :invalid_transaction_id}
+
       not valid_accounts?(entries, ledger) ->
         {:error, :invalid_account}
 

@@ -6,7 +6,7 @@ defmodule Conta.Event.TransactionRemoved do
 
   @primary_key {:id, :binary_id, autogenerate: false}
 
-  @derive {Jason.Encoder, only: [:ledger, :on_date, :entries]}
+  @derive {Jason.Encoder, only: [:id, :ledger, :on_date, :entries]}
   typed_embedded_schema do
     field :ledger, :string, default: "default"
     field :on_date, :date
