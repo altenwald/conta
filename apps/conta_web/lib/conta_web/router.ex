@@ -88,11 +88,16 @@ defmodule ContaWeb.Router do
 
     scope "/ledger/", Ledger do
       resources "/accounts", Account, only: [:index, :show, :create, :update, :delete]
+
+      scope "/accounts/:account_name/" do
+        resources "/entries", Entry, only: [:index, :show, :create, :update, :delete]
+      end
     end
 
     scope "/automator/", Automator do
       resources "/shortcuts", Shortcut, only: [:index, :show, :create, :update, :delete]
       get "/shortcuts/:id/run", Shortcut, :run
+      post "/shortcuts/:id/run", Shortcut, :run
     end
   end
 

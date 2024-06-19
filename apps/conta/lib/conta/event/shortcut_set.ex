@@ -12,7 +12,7 @@ defmodule Conta.Event.ShortcutSet do
     field :description, :string
     embeds_many :params, Param, [primary_key: false, on_replace: :delete] do
       field :name, :string
-      field :type, Ecto.Enum, values: ~w[string date integer money currency options account_name]a
+      field :type, Ecto.Enum, values: ~w[string date integer money currency options account_name table]a
       field :options, {:array, :string}
     end
     field :code, :string

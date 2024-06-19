@@ -74,13 +74,11 @@ defmodule Conta.Automator do
 
   def run_shortcut(_automator, %Shortcut{} = shortcut, params) do
     with :ok <- validate_params(shortcut.params, params),
-         {:ok, [result]} when is_list(result) <- run(shortcut.code, params),
-         %{"status" => "ok", "data" => data} = return <- Map.new(result) do
-      Logger.debug("received data from Lua script: #{inspect(data)}")
-      data = process_data(data)
+         {:ok, %{} = return} <- run(shortcut, params) do
+      Logger.debug("received data from #{shortcut.language} script: #{inspect(return)}")
       case return["type"] || "transaction" do
         "transaction" ->
-          data
+          return["data"]
           |> SetAccountTransaction.changeset()
           |> Conta.EctoHelpers.get_result()
           |> case do
@@ -93,7 +91,7 @@ defmodule Conta.Automator do
           end
 
         "invoice" ->
-          data
+          return["data"]
           |> SetInvoice.changeset()
           |> Conta.EctoHelpers.get_result()
           |> case do
@@ -109,36 +107,26 @@ defmodule Conta.Automator do
       {:error, _} = error -> error
       {:ok, return} -> {:error, {:invalid_code_return, return}}
       {:error, compile, _stacktrace} -> {:error, compile}
-      %{} = return -> {:error, {:invalid_code_return, return}}
     end
   end
 
-  defp process_data(data) do
-    cond do
-      not is_list(data) ->
-        data
-
-      Enum.all?(data, fn {k, _} -> is_integer(k) end) ->
-        Enum.map(data, fn {_, value} -> process_data(value) end)
-
-      :else ->
-        Map.new(data, fn {k, v} -> {k, process_data(v)} end)
-    end
-  end
-
-  defp run(code, params) do
-    params
-    |> Enum.reduce(:luerl.init(), fn {name, value}, state ->
-      :luerl.set_table([name], value, state)
-    end)
-    ### XXX: we have to use here charlist because binary breaks the collation.
-    |> then(&:luerl.eval(to_charlist(code), &1))
+  defp run(%Shortcut{code: code, language: :lua}, params) do
+    __MODULE__.Lua.run(code, params)
   end
 
   defp validate_params([], _params), do: :ok
 
   defp validate_params([%ShortcutParam{name: name}|_], params) when not is_map_key(params, name) do
     {:error, %{name => ["can't be blank"]}}
+  end
+
+  defp validate_params([%ShortcutParam{type: :table} = param|short_params], params) do
+    param_value = params[param.name]
+    if is_list(param_value) or is_map(param_value) do
+      validate_params(short_params, params)
+    else
+      {:error, %{param.name => ["is invalid"]}}
+    end
   end
 
   defp validate_params([%ShortcutParam{type: :account_name} = param|short_params], params) do
@@ -159,7 +147,7 @@ defmodule Conta.Automator do
   end
 
   defp validate_params([%ShortcutParam{type: type} = param|short_params], params) when type in [:money, :integer] do
-    if is_integer(params[param.name]) or match?({_, ""}, Integer.parse(params[param.name])) do
+    if is_integer(params[param.name]) or match?({_, ""}, Integer.parse(params[param.name] || "")) do
       validate_params(short_params, params)
     else
       {:error, %{param.name => ["is invalid"]}}
@@ -201,11 +189,20 @@ defmodule Conta.Automator do
     end
   end
 
+  defp to_list(enum) when is_list(enum) or is_map(enum), do: Enum.map(enum, &to_list/1)
+  defp to_list({key, value}), do: {to_list(key), to_list(value)}
+  defp to_list(atom) when is_atom(atom), do: to_string(atom)
+  defp to_list(otherwise), do: otherwise
+
   def cast(%Shortcut{params: shortcut_params}, params) do
     cast(shortcut_params, params, [])
   end
 
   defp cast([], _params, acc), do: Enum.reverse(acc)
+
+  defp cast([%ShortcutParam{type: :table, name: name}|shortcut_params], params, acc) do
+    cast(shortcut_params, params, [{name, to_list(params[name])}|acc])
+  end
 
   defp cast([%ShortcutParam{type: :account_name, name: name}|shortcut_params], params, acc) when not is_map_key(params, name) do
     cast(shortcut_params, params, [{name, nil}|acc])
@@ -220,9 +217,19 @@ defmodule Conta.Automator do
   end
 
   defp cast([%ShortcutParam{type: type, name: name}|shortcut_params], params, acc) when type in [:money, :integer] do
-    case Integer.parse(params[name]) do
-      {number, _} -> cast(shortcut_params, params, [{name, number}|acc])
-      _ -> cast(shortcut_params, params, [{name, nil}|acc])
+    value = params[name]
+    cond do
+      is_integer(value) ->
+        cast(shortcut_params, params, [{name, value}|acc])
+
+      is_float(value) ->
+        cast(shortcut_params, params, [{name, ceil(value * 100)}|acc])
+
+      is_binary(value) and match?({_, ""}, Integer.parse(value)) ->
+        cast(shortcut_params, params, [{name, String.to_integer(value)}|acc])
+
+      :else ->
+        cast(shortcut_params, params, [{name, nil}|acc])
     end
   end
 
@@ -248,8 +255,9 @@ defmodule Conta.Automator do
   end
 
   defp cast([%ShortcutParam{type: :date, name: name}|shortcut_params], params, acc) do
-    case Date.from_iso8601(params[name]) do
-      {:ok, date} -> cast(shortcut_params, params, [{name, date}|acc])
+    value = params[name] || ""
+    case Date.from_iso8601(value) do
+      {:ok, _date} -> cast(shortcut_params, params, [{name, value}|acc])
       {:error, _} -> cast(shortcut_params, params, [{name, nil}|acc])
     end
   end

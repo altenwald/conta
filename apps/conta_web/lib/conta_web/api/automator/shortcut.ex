@@ -14,7 +14,16 @@ defmodule ContaWeb.Api.Automator.Shortcut do
       json(conn, %{
         "page" => 1,
         "entities_per_page" => length(shortcuts),
-        "entities" => shortcuts
+        "entities" =>
+          for shortcut <- shortcuts do
+            %{
+              "id" => shortcut.id,
+              "name" => shortcut.name,
+              "langauge" => shortcut.language,
+              "description" => shortcut.description,
+              "code" => shortcut.code
+            }
+          end
       })
     else
       conn

@@ -10,7 +10,7 @@ defmodule Conta.Command.SetShortcut do
     field :automator, :string
     embeds_many :params, Param do
       field :name, :string
-      field :type, Ecto.Enum, values: ~w[string date integer money currency options account_name]a
+      field :type, Ecto.Enum, values: ~w[string date integer money currency options account_name table]a
       field :options, {:array, :string}
     end
     field :code, :string

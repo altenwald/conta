@@ -126,13 +126,13 @@ defmodule Conta.Aggregate.Ledger do
       ) do
     cond do
       not valid_date?(transaction.on_date) ->
-        {:error, :invalid_date}
+        {:error, %{on_date: ["is invalid"]}}
 
       not valid_accounts?(entries, ledger) ->
-        {:error, :invalid_account}
+        {:error, %{account_name: ["is invalid"]}}
 
       not valid_entries?(entries, ledger) ->
-        {:error, :invalid_entries}
+        {:error, %{entries: ["are invalid"]}}
 
       :else ->
         {entries, _accounts} =
@@ -168,13 +168,13 @@ defmodule Conta.Aggregate.Ledger do
   def execute(%__MODULE__{} = ledger, %RemoveAccountTransaction{entries: entries} = command) do
     cond do
       is_nil(command.transaction_id) ->
-        {:error, :invalid_transaction_id}
+        {:error, %{transaction_id: ["can't be blank"]}}
 
       not valid_accounts?(entries, ledger) ->
-        {:error, :invalid_account}
+        {:error, %{account_name: ["is invalid"]}}
 
       not valid_entries?(entries, ledger) ->
-        {:error, :invalid_entries}
+        {:error, %{entries: ["are invalid"]}}
 
       :else ->
         {entries, _accounts} =
@@ -231,6 +231,8 @@ defmodule Conta.Aggregate.Ledger do
     Date.from_iso8601!(date)
   end
 
+  defp valid_date?(nil), do: false
+
   defp valid_date?(date) when is_struct(date, Date), do: true
 
   defp valid_date?(date) when is_binary(date) do
@@ -239,6 +241,8 @@ defmodule Conta.Aggregate.Ledger do
       {:error, _} -> false
     end
   end
+
+  defp valid_entries?(nil, _ledger), do: false
 
   defp valid_entries?(entries, ledger) when is_list(entries) do
     Enum.reduce(entries, %{}, fn entry, acc ->
@@ -262,6 +266,8 @@ defmodule Conta.Aggregate.Ledger do
     balance = Money.subtract(debit, credit)
     Map.update(account, to_string(entry.change_currency), balance, &Money.add(&1, balance))
   end
+
+  defp valid_accounts?(nil, _ledger), do: false
 
   defp valid_accounts?(entries, ledger) when is_list(entries) do
     Enum.all?(entries, &is_map_key(ledger.account_names, &1.account_name))

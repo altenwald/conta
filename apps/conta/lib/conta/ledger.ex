@@ -77,7 +77,7 @@ defmodule Conta.Ledger do
 
   def get_account_by_name(name) when is_list(name) do
     if account = Repo.get_by(Account, name: name) do
-      {:ok, account}
+      {:ok, Repo.preload(account, :balances)}
     else
       {:error, :invalid_account_name}
     end
@@ -107,6 +107,11 @@ defmodule Conta.Ledger do
     |> populate_account_virtual()
   end
 
+  def get_account(id) do
+    Repo.get(Account, id)
+    |> Repo.preload(:balances)
+  end
+
   def get_account!(id) do
     Repo.get!(Account, id)
     |> Repo.preload(:balances)
@@ -114,6 +119,10 @@ defmodule Conta.Ledger do
 
   def get_entry!(id) do
     Repo.get!(Entry, id)
+  end
+
+  def get_entry(id) do
+    Repo.get(Entry, id)
   end
 
   def get_entries_by_transaction_id(transaction_id) do
