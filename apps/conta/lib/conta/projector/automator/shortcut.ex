@@ -6,6 +6,7 @@ defmodule Conta.Projector.Automator.Shortcut do
   @primary_key {:id, :binary_id, autogenerate: true}
   @foreign_key_type :binary_id
 
+  @derive {Jason.Encoder, only: ~w[name automator description params code language]a}
   typed_schema "automator_shortcuts" do
     field :name, :string
     field :automator, :string

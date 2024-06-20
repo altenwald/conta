@@ -4,6 +4,7 @@ defmodule Conta.Projector.Automator.ShortcutParam do
 
   @primary_key false
 
+  @derive {Jason.Encoder, only: ~w[name type options]a}
   typed_embedded_schema do
     field :name, :string, primary_key: true
     field :type, Ecto.Enum, values: ~w[string date integer money currency options account_name table]a
