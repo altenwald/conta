@@ -348,8 +348,7 @@ defmodule Conta.Aggregate.Ledger do
     Enum.reduce(entries, ledger, &update_account_balance(&1, &2, update))
   end
 
-  def apply(%__MODULE__{} = ledger, unknown_event) do
-    Logger.warning("unknown event: #{inspect(unknown_event)}")
+  def apply(%__MODULE__{} = ledger, _unknown_event) do
     ledger
   end
 

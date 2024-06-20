@@ -74,35 +74,45 @@ defmodule Conta.Automator do
 
   def run_shortcut(_automator, %Shortcut{} = shortcut, params) do
     with :ok <- validate_params(shortcut.params, params),
-         {:ok, %{} = return} <- run(shortcut, params) do
-      Logger.debug("received data from #{shortcut.language} script: #{inspect(return)}")
-      case return["type"] || "transaction" do
-        "transaction" ->
-          return["data"]
+         {:ok, %{"status" => "ok", "commands" => commands}} when is_list(commands) <- run(shortcut, params) do
+      Logger.debug("received data from #{shortcut.language} script: #{inspect(commands)}")
+      Enum.reduce_while(commands, :ok, fn
+        %{"type" => "transaction", "data" => data}, :ok ->
+          data
           |> SetAccountTransaction.changeset()
           |> Conta.EctoHelpers.get_result()
           |> case do
             %SetAccountTransaction{} = command ->
               Logger.debug("processing command: #{inspect(command)}")
-              dispatch(command)
+              result = dispatch(command)
+              if result == :ok do
+                {:cont, :ok}
+              else
+                {:halt, result}
+              end
 
             {:error, _} = error ->
-              error
+              {:halt, error}
           end
 
-        "invoice" ->
-          return["data"]
+        %{"type" => "invoice", "data" => data}, :ok ->
+          data
           |> SetInvoice.changeset()
           |> Conta.EctoHelpers.get_result()
           |> case do
             %SetInvoice{} = command ->
               Logger.debug("processing command: #{inspect(command)}")
-              dispatch(command)
+              result = dispatch(command)
+              if result == :ok do
+                {:cont, :ok}
+              else
+                {:halt, result}
+              end
 
             {:error, _} = error ->
-              error
+              {:halt, error}
           end
-      end
+      end)
     else
       {:error, _} = error -> error
       {:ok, return} -> {:error, {:invalid_code_return, return}}
