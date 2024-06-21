@@ -9,7 +9,7 @@ defmodule ContaWeb.EntryLive.Index do
   @dates_per_page 5
 
   @impl true
-  def mount(%{"account_id" => account_id}, _session, socket) do
+  def mount(%{"account_id" => account_id} = params, _session, socket) do
     account = Ledger.get_account!(account_id)
     account_name = Enum.join(account.name, ".")
     Phoenix.PubSub.subscribe(Conta.PubSub, "event:transaction_created:#{account_name}")
@@ -17,7 +17,7 @@ defmodule ContaWeb.EntryLive.Index do
 
     {:ok,
      socket
-     |> assign(account: account, page: 1)
+     |> assign(account: account, page: 1, search: params["search"] || "")
      |> paginate_entries(1, @dates_per_page)}
   end
 
@@ -40,12 +40,18 @@ defmodule ContaWeb.EntryLive.Index do
        do: socket
 
   defp paginate_entries(socket, new_page, dates_per_page) do
-    %{page: cur_page, account: account} = socket.assigns
+    %{page: cur_page, account: account, search: search} = socket.assigns
 
     entries =
-      account
-      |> Ledger.list_entries_by_account(new_page, dates_per_page)
-      |> flat_title_and_entries()
+      if search == "" do
+        account
+        |> Ledger.list_entries_by_account(new_page, dates_per_page)
+        |> flat_title_and_entries()
+      else
+        account
+        |> Ledger.search_entries_by_account(search, new_page, dates_per_page)
+        |> flat_title_and_entries()
+      end
 
     {entries, at} =
       if new_page >= cur_page do
@@ -75,6 +81,26 @@ defmodule ContaWeb.EntryLive.Index do
 
   def handle_event("reload", _params, socket) do
     {:noreply, reset_view(socket)}
+  end
+
+  def handle_event("search", %{"search" => ""}, socket) do
+    {:noreply, reset_view(socket)}
+  end
+
+  def handle_event("search", %{"search" => text}, socket) do
+    dates_per_page = socket.assigns.page * @dates_per_page
+
+    entries =
+      socket.assigns.account
+      |> Ledger.search_entries_by_account(text, 1, dates_per_page)
+      |> flat_title_and_entries()
+
+    socket =
+      socket
+      |> stream(:ledger_entries, entries, reset: true)
+      |> assign(:search, text)
+
+    {:noreply, socket}
   end
 
   defp reset_view(socket) do

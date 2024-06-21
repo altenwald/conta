@@ -250,6 +250,32 @@ defmodule Conta.Ledger do
     |> Enum.map(&adjust_currency(&1, account.currency))
   end
 
+  def search_entries_by_account(%Account{} = account, search, page, dates_per_page) do
+    search = "%" <> Regex.replace(~r/^$|([\%_])/, search, "[\\1]") <> "%"
+
+    dates =
+      from(
+        e in Entry,
+        where: e.account_name == ^account.name,
+        where: ilike(e.description, ^search),
+        order_by: [desc: e.on_date],
+        group_by: e.on_date,
+        select: e.on_date
+      )
+      |> Repo.all()
+      |> Enum.chunk_every(dates_per_page)
+      |> Enum.at(page - 1, [])
+
+    from(
+      e in Entry,
+      where: e.account_name == ^account.name and e.on_date in ^dates,
+      where: ilike(e.description, ^search),
+      order_by: [desc: e.on_date, desc: e.updated_at]
+    )
+    |> Repo.all()
+    |> Enum.map(&adjust_currency(&1, account.currency))
+  end
+
   def list_entries_by(text, limit) when is_integer(limit) do
     from(
       e in Entry,

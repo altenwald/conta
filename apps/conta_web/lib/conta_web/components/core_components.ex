@@ -608,6 +608,38 @@ defmodule ContaWeb.CoreComponents do
     """
   end
 
+  attr :input_class, :string, default: ""
+  attr :button_class, :string, default: "is-info"
+  attr :label, :string
+  attr :name, :string, default: "search"
+  attr :value, :string
+  attr :debounce, :integer, default: 1_000
+
+  def search(assigns) do
+    ~H"""
+    <form role="search" phx-change="search">
+      <div class="field has-addons">
+        <div class="control">
+          <input
+            class={["input", @input_class]}
+            type="search"
+            placeholder={@label}
+            name={@name}
+            value={@value}
+            phx-debounce={@debounce}
+            autocomplete="off"
+            autocorrect="off"
+            autocapitalize="off"
+            enterkeyhint="search"
+            spellcheck="false"
+            phx-key="Enter"
+          />
+        </div>
+      </div>
+    </form>
+    """
+  end
+
   @doc """
   Renders a label.
   """
