@@ -1,6 +1,9 @@
 defmodule ContaWeb.EntryLive.FormComponent do
   use ContaWeb, :live_component
+
   import Conta.Commanded.Application, only: [dispatch: 1]
+  import Ecto.Changeset, only: [get_field: 2]
+
   require Logger
 
   alias Conta.Ledger
@@ -14,6 +17,9 @@ defmodule ContaWeb.EntryLive.FormComponent do
       <div class="modal-card">
         <header class="modal-card-head">
           <h2><%= @title %></h2>
+          <div :if={@breakdown} class="is-right">
+            <%= gettext("imbalance: %{currency_data}", currency_data: @currency_data) %>
+          </div>
         </header>
         <section class="modal-card-body">
           <.simple_form
@@ -59,10 +65,28 @@ defmodule ContaWeb.EntryLive.FormComponent do
                       field={d[:account_name]}
                       label={gettext("Account")}
                       type="select"
-                      options={list_accounts()}
+                      options={list_accounts(@accounts)}
                       prompt={gettext("Choose an account...")}
                     />
-                    <.input field={d[:amount]} label={gettext("Amount")} type="number" step=".01" />
+                    <%= if @different_currency? do %>
+                      <.input field={d[:currency]} type="hidden" />
+                      <.input
+                        field={d[:amount]}
+                        label={gettext("Amount (%{currency})", currency: d[:currency].value)}
+                        type="number"
+                        step=".01"
+                      />
+                      <.input field={d[:change_currency]} type="hidden" />
+                      <.input
+                        field={d[:change_amount]}
+                        label={gettext("Amount (%{currency})", currency: d[:change_currency].value)}
+                        type="number"
+                        step=".01"
+                      />
+                    <% else %>
+                      <.input field={d[:currency]} type="hidden" />
+                      <.input field={d[:amount]} label={gettext("Amount")} type="number" step=".01" />
+                    <% end %>
                   </div>
                 </div>
               </.inputs_for>
@@ -77,17 +101,34 @@ defmodule ContaWeb.EntryLive.FormComponent do
                 field={@form[:account_name]}
                 label={gettext("Account")}
                 type="select"
-                options={list_accounts()}
+                options={list_accounts(@accounts)}
                 prompt={gettext("Choose an account...")}
               />
               <.input
                 field={@form[:related_account_name]}
                 label={gettext("Related Account")}
                 type="select"
-                options={list_accounts()}
+                options={list_accounts(@accounts)}
                 prompt={gettext("Choose an account...")}
               />
-              <.input field={@form[:amount]} label={gettext("Amount")} type="number" step=".01" />
+              <%= if @different_currency? do %>
+                <.input
+                  field={@form[:amount]}
+                  label={gettext("Amount (%{currency})", currency: @form[:currency].value)}
+                  type="number"
+                  step=".01"
+                />
+                <.input field={@form[:currency]} type="hidden" />
+                <.input
+                  field={@form[:change_amount]}
+                  label={gettext("Amount (%{currency})", currency: @form[:change_currency].value)}
+                  type="number"
+                  step=".01"
+                />
+                <.input field={@form[:change_currency]} type="hidden" />
+              <% else %>
+                <.input field={@form[:amount]} label={gettext("Amount")} type="number" step=".01" />
+              <% end %>
             <% end %>
           </.simple_form>
         </section>
@@ -108,15 +149,79 @@ defmodule ContaWeb.EntryLive.FormComponent do
     """
   end
 
+  defp get_currencies(%{"entries" => entries, "breakdown" => "true"}) do
+    Map.values(entries)
+    |> Enum.flat_map(fn entry ->
+      [
+        %{currency: entry["currency"], amount: entry["amount"]},
+        %{currency: entry["change_currency"], amount: entry["change_amount"]}
+      ]
+    end)
+    |> Enum.group_by(&to_string(&1.currency), & &1.amount)
+    |> Enum.map_join("; ", fn {currency, amounts} ->
+      "#{currency} = #{Enum.reduce(amounts, Decimal.new(0), &sum_decimal/2)}"
+    end)
+  end
+
+  defp get_currencies(%{}), do: ""
+
+  defp sum_decimal(number, acc) when is_binary(number) and is_struct(acc, Decimal) do
+    case Decimal.parse(number) do
+      {decimal, ""} -> Decimal.add(acc, decimal)
+      _ -> acc
+    end
+  end
+
+  defp assign_currencies(socket) do
+    assign(socket, :currency_data, get_currencies(socket.assigns.form.params))
+  end
+
+  defp list_accounts(accounts) do
+    Map.keys(accounts) |> Enum.sort()
+  end
+
   defp list_accounts do
-    for account <- Ledger.list_accounts(), do: Enum.join(account.name, ".")
+    Ledger.list_simple_accounts()
+    |> Map.new(
+      &{Enum.join(&1.name, "."),
+       %{
+         id: &1.id,
+         currency: &1.currency,
+         real_name: &1.name
+       }}
+    )
   end
 
   @impl true
-  def update(%{account_transaction: account_transaction} = assigns, socket) do
-    params = %{
-      "account_name" => Enum.join(assigns.account.name, ".")
-    }
+  def update(
+        %{account_transaction: %FormAccountTransaction{} = account_transaction} = assigns,
+        socket
+      ) do
+    accounts = list_accounts()
+
+    params =
+      if account_transaction.breakdown do
+        %{
+          "entries" =>
+            account_transaction.entries
+            |> Enum.with_index()
+            |> Map.new(fn {entry, idx} ->
+              currency = get_currency(accounts, entry["account_name"])
+              {idx, %{"currency" => currency}}
+            end)
+        }
+      else
+        account_name = account_transaction.account_name || Enum.join(assigns.account.name, ".")
+
+        %{
+          "account_name" => account_name,
+          "related_account_name" => account_transaction.related_account_name,
+          "currency" => get_currency(accounts, account_name),
+          "amount" => account_transaction.amount,
+          "change_currency" => get_currency(accounts, account_transaction.related_account_name),
+          "change_amount" => account_transaction.change_amount
+        }
+      end
 
     Logger.debug("account transaction: #{inspect(account_transaction)}")
     changeset = FormAccountTransaction.changeset(account_transaction, params)
@@ -124,7 +229,28 @@ defmodule ContaWeb.EntryLive.FormComponent do
     {:ok,
      socket
      |> assign(assigns)
-     |> assign_form(changeset)}
+     |> assign(
+       accounts: accounts,
+       different_currency?: different_currency?(accounts, changeset)
+     )
+     |> assign_form(changeset)
+     |> assign_currencies()}
+  end
+
+  defp different_currency?(accounts, changeset) do
+    if get_field(changeset, :breakdown) do
+      changeset
+      |> get_field(:entries)
+      |> Enum.map(&accounts[&1])
+      |> Enum.reject(&is_nil/1)
+      |> Enum.map(& &1.currency)
+      |> Enum.uniq()
+      |> length() != 1
+    else
+      account = accounts[get_field(changeset, :account_name)]
+      related_account = accounts[get_field(changeset, :related_account_name)]
+      account != nil and related_account != nil and account.currency != related_account.currency
+    end
   end
 
   @impl true
@@ -136,6 +262,7 @@ defmodule ContaWeb.EntryLive.FormComponent do
     {:noreply,
      socket
      |> assign_form(changeset)
+     |> assign_currencies()
      |> assign(params: params)}
   end
 
@@ -152,6 +279,7 @@ defmodule ContaWeb.EntryLive.FormComponent do
     {:noreply,
      socket
      |> assign_form(changeset)
+     |> assign_currencies()
      |> assign(params: params)}
   end
 
@@ -172,6 +300,7 @@ defmodule ContaWeb.EntryLive.FormComponent do
     {:noreply,
      socket
      |> assign_form(changeset)
+     |> assign_currencies()
      |> assign(
        params: params,
        breakdown: not socket.assigns.breakdown
@@ -179,23 +308,49 @@ defmodule ContaWeb.EntryLive.FormComponent do
   end
 
   def handle_event("validate", %{"account_transaction" => params} = global_params, socket) do
+    accounts = socket.assigns.accounts
+
+    params =
+      if params["breakdown"] == "true" do
+        Map.update!(params, "entries", fn entries ->
+          Map.new(entries, fn {idx, entry} ->
+            currency = get_currency(accounts, entry["account_name"])
+            {idx, Map.put(entry, "currency", currency)}
+          end)
+        end)
+      else
+        params
+        |> Map.put("currency", get_currency(accounts, params["account_name"]))
+        |> Map.put("change_currency", get_currency(accounts, params["related_account_name"]))
+      end
+
     changeset =
       socket.assigns.account_transaction
       |> FormAccountTransaction.changeset(params)
       |> Map.put(:action, :validate)
 
     if global_params["_target"] == ~w[account_transaction on_date] do
-      send(self(), {:on_date, Ecto.Changeset.get_field(changeset, :on_date)})
+      send(self(), {:on_date, get_field(changeset, :on_date)})
     end
+
+    different_currency? = different_currency?(accounts, changeset)
+    Logger.debug("different currency: #{different_currency?}")
 
     {:noreply,
      socket
      |> assign_form(changeset)
-     |> assign(params: params)}
+     |> assign_currencies()
+     |> assign(params: params, different_currency?: different_currency?)}
   end
 
   def handle_event("save", %{"account_transaction" => params}, socket) do
     save_account_transaction(socket, socket.assigns.action, params)
+  end
+
+  defp get_currency(_accounts, nil), do: nil
+
+  defp get_currency(accounts, account_name) do
+    if(account = accounts[account_name], do: account.currency)
   end
 
   defp save_account_transaction(socket, :duplicate, params) do
@@ -216,7 +371,11 @@ defmodule ContaWeb.EntryLive.FormComponent do
     else
       Logger.debug("changeset errors: #{inspect(changeset.errors)}")
       changeset = Map.put(changeset, :action, :validate)
-      {:noreply, assign_form(socket, changeset)}
+
+      {:noreply,
+       socket
+       |> assign_form(changeset)
+       |> assign_currencies()}
     end
   end
 
@@ -231,7 +390,11 @@ defmodule ContaWeb.EntryLive.FormComponent do
     else
       Logger.debug("changeset errors: #{inspect(changeset.errors)}")
       changeset = Map.put(changeset, :action, :validate)
-      {:noreply, assign_form(socket, changeset)}
+
+      {:noreply,
+       socket
+       |> assign_form(changeset)
+       |> assign_currencies()}
     end
   end
 

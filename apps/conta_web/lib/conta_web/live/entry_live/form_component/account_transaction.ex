@@ -6,6 +6,8 @@ defmodule ContaWeb.EntryLive.FormComponent.AccountTransaction do
 
   @primary_key false
 
+  @typep currency() :: atom()
+
   typed_embedded_schema do
     field(:transaction_id, :binary_id)
     field(:ledger, :string, default: "default")
@@ -14,6 +16,9 @@ defmodule ContaWeb.EntryLive.FormComponent.AccountTransaction do
     field(:account_name, :string)
     field(:related_account_name, :string)
     field(:amount, :decimal)
+    field(:currency, Money.Ecto.Currency.Type, default: :EUR) :: currency()
+    field(:change_amount, :decimal)
+    field(:change_currency, Money.Ecto.Currency.Type, default: :EUR) :: currency()
     field(:breakdown, :boolean, default: false)
 
     embeds_many :entries, Entry, primary_key: false, on_replace: :delete do
@@ -22,10 +27,10 @@ defmodule ContaWeb.EntryLive.FormComponent.AccountTransaction do
       field(:id, :binary_id)
       field(:description, :string)
       field(:account_name, :string)
+      field(:currency, Money.Ecto.Currency.Type, default: :EUR) :: currency()
       field(:amount, :decimal, default: 0)
       field(:change_currency, Money.Ecto.Currency.Type, default: :EUR) :: currency()
       field(:change_amount, :decimal, default: Decimal.new(0))
-      field(:change_price, :decimal, default: Decimal.new(1))
     end
   end
 
@@ -33,11 +38,18 @@ defmodule ContaWeb.EntryLive.FormComponent.AccountTransaction do
     %{
       "description" => "",
       "account_name" => "",
-      "amount" => ""
+      "amount" => "",
+      "change_amount" => ""
     }
   end
 
   def edit([%Conta.Projector.Ledger.Entry{} = main_entry | _] = entries) do
+    currencies =
+      case Enum.map(entries, & &1.change_currency) do
+        [one] -> %{one => one}
+        [first, second] -> %{first => second, second => first}
+      end
+
     %__MODULE__{
       transaction_id: main_entry.transaction_id,
       on_date: main_entry.on_date,
@@ -52,12 +64,24 @@ defmodule ContaWeb.EntryLive.FormComponent.AccountTransaction do
             id: entry.id,
             description: entry.description,
             account_name: to_account_name(entry.account_name),
+            currency: currencies[entry.change_currency],
             amount: Money.subtract(entry.debit, entry.credit) |> Money.to_decimal()
-            # TODO missing change information in projection (check Conta.Projector.Ledger.Entry)
           }
+          |> maybe_change_data(entry)
         end
     }
+    |> maybe_change_data(main_entry)
   end
+
+  defp maybe_change_data(struct, entry)
+       when entry.change_debit.amount != 0 or entry.change_credit.amount != 0 do
+    Map.merge(struct, %{
+      change_currency: entry.change_currency,
+      change_amount: Money.subtract(entry.change_debit, entry.change_credit) |> Money.to_decimal()
+    })
+  end
+
+  defp maybe_change_data(struct, _entry), do: struct
 
   defp to_account_name(nil), do: nil
 
@@ -70,12 +94,18 @@ defmodule ContaWeb.EntryLive.FormComponent.AccountTransaction do
       "0" => %{
         "description" => params["description"],
         "account_name" => params["account_name"],
-        "amount" => params["amount"]
+        "amount" => params["amount"],
+        "currency" => params["currency"],
+        "change_amount" => params["change_amount"],
+        "change_currency" => params["change_currency"]
       },
       "1" => %{
         "description" => params["description"],
         "account_name" => params["related_account_name"],
-        "amount" => negate_amount!(params["amount"])
+        "amount" => negate_amount!(params["change_amount"]),
+        "currency" => params["change_currency"],
+        "change_amount" => negate_amount!(params["amount"]),
+        "change_currency" => params["currency"]
       }
     })
   end
@@ -90,7 +120,10 @@ defmodule ContaWeb.EntryLive.FormComponent.AccountTransaction do
       "description" => entry1["description"],
       "account_name" => entry1["account_name"],
       "related_account_name" => entry2["account_name"],
-      "amount" => entry1["amount"]
+      "amount" => entry1["amount"],
+      "currency" => entry1["currency"],
+      "change_amount" => entry1["change_amount"],
+      "change_currency" => entry1["change_currency"]
     }
   end
 
@@ -104,8 +137,20 @@ defmodule ContaWeb.EntryLive.FormComponent.AccountTransaction do
     |> Decimal.to_string()
   end
 
-  @required_fields ~w[on_date description account_name related_account_name amount]a
-  @optional_fields ~w[breakdown ledger]a
+  @required_fields ~w[
+    on_date
+    description
+    account_name
+    related_account_name
+    currency
+    amount
+  ]a
+  @optional_fields ~w[
+    breakdown
+    ledger
+    change_currency
+    change_amount
+  ]a
 
   @doc false
   def changeset(model \\ %__MODULE__{}, params) do
@@ -123,7 +168,7 @@ defmodule ContaWeb.EntryLive.FormComponent.AccountTransaction do
   end
 
   @required_fields ~w[description account_name amount]a
-  @optional_fields ~w[change_currency change_amount change_price]a
+  @optional_fields ~w[change_currency change_amount]a
 
   @doc false
   def changeset_entries(model \\ %__MODULE__.Entry{}, params) do
@@ -166,8 +211,7 @@ defmodule ContaWeb.EntryLive.FormComponent.AccountTransaction do
             debit: from_money(amount, :positive),
             change_currency: entry.change_currency,
             change_credit: from_money(change_amount, :negative),
-            change_debit: from_money(change_amount, :positive),
-            change_price: entry.change_price
+            change_debit: from_money(change_amount, :positive)
           }
         end
     }
@@ -175,6 +219,9 @@ defmodule ContaWeb.EntryLive.FormComponent.AccountTransaction do
 
   defp to_command_simple(acctrans) do
     amount = Money.parse!(acctrans.amount)
+    change_amount = Money.parse!(acctrans.change_amount || acctrans.amount)
+    currency = acctrans.currency
+    change_currency = acctrans.change_currency || currency
 
     %SetAccountTransaction{
       ledger: acctrans.ledger,
@@ -184,13 +231,19 @@ defmodule ContaWeb.EntryLive.FormComponent.AccountTransaction do
           description: acctrans.description,
           account_name: String.split(acctrans.account_name, "."),
           credit: from_money(amount, :negative),
-          debit: from_money(amount, :positive)
+          debit: from_money(amount, :positive),
+          change_currency: change_currency,
+          change_credit: from_money(change_amount, :negative),
+          change_debit: from_money(change_amount, :positive)
         },
         %SetAccountTransaction.Entry{
           description: acctrans.description,
           account_name: String.split(acctrans.related_account_name, "."),
-          credit: from_money(amount, :positive),
-          debit: from_money(amount, :negative)
+          credit: from_money(change_amount, :positive),
+          debit: from_money(change_amount, :negative),
+          change_currency: currency,
+          change_credit: from_money(amount, :positive),
+          change_debit: from_money(amount, :negative)
         }
       ]
     }

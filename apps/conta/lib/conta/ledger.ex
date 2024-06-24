@@ -43,7 +43,10 @@ defmodule Conta.Ledger do
               %RemoveAccountTransaction.Entry{
                 account_name: entry.account_name,
                 credit: entry.credit,
-                debit: entry.debit
+                debit: entry.debit,
+                change_currency: entry.change_currency,
+                change_credit: entry.change_credit,
+                change_debit: entry.change_debit
               }
             end
         }
