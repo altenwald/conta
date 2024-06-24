@@ -43,6 +43,11 @@ defmodule ContaWeb.EntryLive.FormComponent do
                   </.link>
                 </div>
               </div>
+              <div class="notification">
+                <.error :for={{error, _} <- @form[:entries].errors}>
+                  <strong><%= gettext("Entries") %></strong>&nbsp;<%= error %>
+                </.error>
+              </div>
               <.inputs_for :let={d} field={@form[:entries]}>
                 <div class="columns">
                   <div class="column is-one-fifth">
@@ -157,13 +162,14 @@ defmodule ContaWeb.EntryLive.FormComponent do
         %{currency: entry["change_currency"], amount: entry["change_amount"]}
       ]
     end)
+    |> Enum.reject(&is_nil(&1.currency))
     |> Enum.group_by(&to_string(&1.currency), & &1.amount)
     |> Enum.map_join("; ", fn {currency, amounts} ->
       "#{currency} = #{Enum.reduce(amounts, Decimal.new(0), &sum_decimal/2)}"
     end)
   end
 
-  defp get_currencies(%{}), do: ""
+  defp get_currencies(%{}), do: gettext("none")
 
   defp sum_decimal(number, acc) when is_binary(number) and is_struct(acc, Decimal) do
     case Decimal.parse(number) do
@@ -171,6 +177,12 @@ defmodule ContaWeb.EntryLive.FormComponent do
       _ -> acc
     end
   end
+
+  defp sum_decimal(decimal, acc) when is_struct(decimal, Decimal) and is_struct(acc, Decimal) do
+    Decimal.add(decimal, acc)
+  end
+
+  defp sum_decimal(nil, acc), do: acc
 
   defp assign_currencies(socket) do
     assign(socket, :currency_data, get_currencies(socket.assigns.form.params))
@@ -193,21 +205,29 @@ defmodule ContaWeb.EntryLive.FormComponent do
   end
 
   @impl true
-  def update(
-        %{account_transaction: %FormAccountTransaction{} = account_transaction} = assigns,
-        socket
-      ) do
+  def update(assigns, socket) do
+    %{account_transaction: %FormAccountTransaction{} = account_transaction} = assigns
     accounts = list_accounts()
 
     params =
       if account_transaction.breakdown do
         %{
+          "breakdown" => "true",
           "entries" =>
             account_transaction.entries
             |> Enum.with_index()
             |> Map.new(fn {entry, idx} ->
-              currency = get_currency(accounts, entry["account_name"])
-              {idx, %{"currency" => currency}}
+              currency = get_currency(accounts, entry.account_name)
+
+              {idx,
+               %{
+                 "description" => entry.description,
+                 "account_name" => entry.account_name,
+                 "currency" => currency,
+                 "amount" => entry.amount,
+                 "change_currency" => entry.change_currency,
+                 "change_amount" => entry.change_amount
+               }}
             end)
         }
       else
@@ -241,7 +261,7 @@ defmodule ContaWeb.EntryLive.FormComponent do
     if get_field(changeset, :breakdown) do
       changeset
       |> get_field(:entries)
-      |> Enum.map(&accounts[&1])
+      |> Enum.map(&accounts[&1.account_name])
       |> Enum.reject(&is_nil/1)
       |> Enum.map(& &1.currency)
       |> Enum.uniq()
@@ -382,19 +402,36 @@ defmodule ContaWeb.EntryLive.FormComponent do
   defp save_account_transaction(socket, :new, params) do
     changeset = FormAccountTransaction.changeset(socket.assigns.account_transaction, params)
 
-    if changeset.valid? and dispatch(FormAccountTransaction.to_command(changeset)) == :ok do
+    with %Ecto.Changeset{valid?: true} <- changeset,
+         :ok <- dispatch(FormAccountTransaction.to_command(changeset)) do
       {:noreply,
        socket
        |> put_flash(:info, gettext("Account transaction created successfully"))
        |> push_patch(to: socket.assigns.patch)}
     else
-      Logger.debug("changeset errors: #{inspect(changeset.errors)}")
-      changeset = Map.put(changeset, :action, :validate)
+      {:error, errors} ->
+        changeset =
+          Enum.reduce(errors, changeset, fn {key, messages}, changeset ->
+            Enum.reduce(messages, changeset, &Ecto.Changeset.add_error(&2, key, &1))
+          end)
+          |> Map.put(:action, :validate)
 
-      {:noreply,
-       socket
-       |> assign_form(changeset)
-       |> assign_currencies()}
+        Logger.warning("changeset errors: #{inspect(changeset.errors)}")
+
+        {:noreply,
+         socket
+         |> assign_form(changeset)
+         |> assign_currencies()}
+
+      %Ecto.Changeset{} ->
+        {:error, changeset} = Conta.EctoHelpers.get_result(changeset)
+        Logger.debug("changeset errors: #{inspect(changeset.errors)}")
+        changeset = Map.put(changeset, :action, :validate)
+
+        {:noreply,
+         socket
+         |> assign_form(changeset)
+         |> assign_currencies()}
     end
   end
 

@@ -92,7 +92,11 @@
             </:col>
             <:col :let={{_id, entry}} label={gettext("account name")}>
               <% name = account_name(entry.related_account_name) %>
-              <.link href={~p"/ledger/accounts/#{name}"}><%= name %></.link>
+              <%= if name == "-- Breakdown" do %>
+                <strong><%= name %></strong>
+              <% else %>
+                <.link href={~p"/ledger/accounts/#{name}"}><%= name %></.link>
+              <% end %>
             </:col>
             <:col :let={{_id, entry}} class="has-text-right money" label={gettext("debit")}>
               <%= entry.debit %>

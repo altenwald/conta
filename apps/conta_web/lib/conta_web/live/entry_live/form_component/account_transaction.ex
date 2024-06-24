@@ -45,7 +45,10 @@ defmodule ContaWeb.EntryLive.FormComponent.AccountTransaction do
 
   def edit([%Conta.Projector.Ledger.Entry{} = main_entry | _] = entries) do
     currencies =
-      case Enum.map(entries, & &1.change_currency) do
+      entries
+      |> Enum.map(& &1.change_currency)
+      |> Enum.uniq()
+      |> case do
         [one] -> %{one => one}
         [first, second] -> %{first => second, second => first}
       end
