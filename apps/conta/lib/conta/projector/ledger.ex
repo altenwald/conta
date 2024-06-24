@@ -137,7 +137,7 @@ defmodule Conta.Projector.Ledger do
 
     transaction.entries
     |> Enum.with_index(1)
-    |> Enum.reduce(multi, fn {trans_entry, idx}, multi ->
+    |> Enum.reduce(multi, fn {%TransactionCreated.Entry{} = trans_entry, idx}, multi ->
       {breakdown, related_account_id} =
         if entries_len > 2 do
           {true, nil}
@@ -176,7 +176,10 @@ defmodule Conta.Projector.Ledger do
           balance: Money.add(balance, amount),
           account_name: trans_entry.account_name,
           breakdown: breakdown,
-          related_account_name: related_account_id
+          related_account_name: related_account_id,
+          change_currency: trans_entry.change_currency,
+          change_credit: trans_entry.change_credit,
+          change_debit: trans_entry.change_debit
         }
 
       updated_at = NaiveDateTime.utc_now()

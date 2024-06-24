@@ -159,6 +159,11 @@ defmodule Conta.Ledger do
     |> Repo.all()
   end
 
+  def list_simple_accounts do
+    from(a in Account, order_by: a.name)
+    |> Repo.all()
+  end
+
   def list_accounts(type, depth \\ nil)
 
   def list_accounts(type, nil) do

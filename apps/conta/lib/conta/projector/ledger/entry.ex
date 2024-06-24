@@ -14,7 +14,9 @@ defmodule Conta.Projector.Ledger.Entry do
     field(:account_name, {:array, :string})
     field(:breakdown, :boolean, default: false)
     field(:related_account_name, {:array, :string})
-
+    field(:change_currency, Money.Ecto.Currency.Type)
+    field(:change_credit, Money.Ecto.Amount.Type)
+    field(:change_debit, Money.Ecto.Amount.Type)
     timestamps(type: :utc_datetime_usec)
   end
 end
