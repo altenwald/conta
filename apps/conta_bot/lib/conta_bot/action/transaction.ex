@@ -3,12 +3,102 @@ defmodule ContaBot.Action.Transaction do
   require Logger
   alias ContaBot.Action.Transaction.Worker
 
+  def match_dup_and_rem do
+    match_me(~r/^dup_[0-9A-Z]+$/)
+    match_me(~r/^rem_[0-9A-Z]+$/)
+  end
+
+  def uuid_to_int36(uuid) when is_binary(uuid) do
+    <<uuid_int::integer-size(128)>> = Ecto.UUID.dump!(uuid)
+    Integer.to_string(uuid_int, 36)
+  end
+
+  def int36_to_uuid(uuid_int) when is_binary(uuid_int) do
+    uuid_int = String.to_integer(uuid_int, 36)
+    Ecto.UUID.load!(<<uuid_int::integer-size(128)>>)
+  end
+
+  def dup_cmd(transaction_id) do
+    transaction_id = uuid_to_int36(transaction_id)
+    "/dup\\_#{transaction_id}"
+  end
+
+  def rem_cmd(transaction_id) do
+    transaction_id = uuid_to_int36(transaction_id)
+    "/rem\\_#{transaction_id}"
+  end
+
   @impl ContaBot.Action
+  def handle({:init, <<"dup_", uuid_int_str::binary>>}, context) do
+    transaction_id = int36_to_uuid(uuid_int_str)
+
+    case Conta.Ledger.get_entries_by_transaction_id(transaction_id) do
+      [entry1, entry2] ->
+        chat_id = get_chat_id(context)
+        if Worker.exists?(chat_id), do: Worker.stop(chat_id)
+        # TODO based on the account type it could be credit for positive or
+        # negative values of amount.
+        amount = Money.subtract(entry1.debit, entry1.credit) |> Money.to_decimal()
+        {:ok, _pid} = Worker.start(chat_id)
+        {:ok, _} = Worker.call(chat_id, {:callback, Enum.join(entry1.account_name, ".")})
+        {:ok, _} = Worker.call(chat_id, {:event, "description"})
+        {:ok, _} = Worker.call(chat_id, {:text, entry1.description})
+        {:ok, _} = Worker.call(chat_id, {:callback, Enum.join(entry2.account_name, ".")})
+        {:ok, _} = Worker.call(chat_id, {:event, "amount"})
+        {:ok, _} = Worker.call(chat_id, {:text, to_string(amount)})
+        handle({:text, to_string(entry1.on_date)}, context)
+
+      [] ->
+        answer(context, "not found transaction #{transaction_id}")
+
+      _ ->
+        # TODO support for complex transactions
+        answer(context, "we've still not support for complex transactions")
+    end
+  end
+
+  def handle({:init, <<"rem_", uuid_int_str::binary>>}, context) do
+    transaction_id = int36_to_uuid(uuid_int_str)
+
+    case Conta.Ledger.get_entries_by_transaction_id(transaction_id) do
+      [] ->
+        answer(context, "not found transaction #{transaction_id}")
+
+      [entry | _] = entries ->
+        answer_select(
+          context,
+          """
+          Are you sure you want to remove it?
+
+          *#{escape_markdown(to_string(entry.on_date))}*
+          """ <> entries_to_string(entries),
+          [
+            {"Confirm", "transaction remove confirm #{transaction_id}"},
+            {"Cancel", "transaction cancel"}
+          ],
+          [],
+          parse_mode: "MarkdownV2"
+        )
+    end
+  end
+
   def handle({:init, _command}, context) do
     chat_id = get_chat_id(context)
     :ok = Worker.stop(chat_id)
     {:ok, _pid} = Worker.start(chat_id)
     response({:ok, :account_name}, context)
+  end
+
+  def handle({:callback, "cancel"}, context) do
+    delete_callback(context)
+  end
+
+  def handle({:callback, "remove confirm " <> transaction_id}, context) do
+    :ok = Conta.Ledger.delete_account_transaction(transaction_id)
+
+    context
+    |> delete_callback()
+    |> answer("Transaction removed")
   end
 
   def handle(event, context) do
@@ -110,7 +200,8 @@ defmodule ContaBot.Action.Transaction do
             {"Change description", "transaction description"},
             {"Change relative account name", "transaction relative_account_name"},
             {"Change amount", "transaction amount"},
-            {"Change date", "transaction on_date"}
+            {"Change date", "transaction on_date"},
+            {"Cancel", "transaction cancel"}
           ],
           [],
           parse_mode: "MarkdownV2"
@@ -154,13 +245,18 @@ defmodule ContaBot.Action.Transaction do
     answer(context, "Invalid event")
   end
 
+  defp to_str(%Money{} = money), do: Money.to_decimal(money) |> to_string()
+  defp to_str(%Decimal{} = decimal), do: to_string(decimal)
+  defp to_str(int) when is_integer(int), do: to_string(int / 100.0)
+  defp to_str(float) when is_float(float), do: to_string(float)
+  defp to_str(string) when is_binary(string), do: string
+
   defp entries_to_string(entries) do
-    Enum.reduce(entries, "", fn entry, acc ->
+    Enum.map_join(entries, fn entry ->
       """
-      #{acc}
       ```
-      credit : #{escape_markdown(String.pad_leading(to_string(entry.credit / 100.0), 15))}
-      debit  : #{escape_markdown(String.pad_leading(to_string(entry.debit / 100.0), 15))}
+      credit : #{escape_markdown(String.pad_leading(to_str(entry.credit), 15))}
+      debit  : #{escape_markdown(String.pad_leading(to_str(entry.debit), 15))}
       ```
       *Account* #{escape_markdown(Enum.join(entry.account_name, "."))}
       *Description* #{escape_markdown(entry.description)}

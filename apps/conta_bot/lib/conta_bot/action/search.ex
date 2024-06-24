@@ -1,19 +1,23 @@
 defmodule ContaBot.Action.Search do
   use ContaBot.Action
+  alias ContaBot.Action.Transaction
 
   @num_entries 20
 
   def statement_output(search) do
+    Transaction.match_dup_and_rem()
+
     Conta.Ledger.list_entries_by(search, @num_entries)
     |> Enum.group_by(& &1.transaction_id)
     |> Enum.sort_by(fn {_transaction_id, [entry | _]} -> entry.on_date end, {:asc, Date})
-    |> Enum.map(fn {_transaction_id, [entry | _] = entries} ->
+    |> Enum.map(fn {transaction_id, [entry | _] = entries} ->
       header =
         """
         \\-\\-\\-\\-\\-
         *#{escape_markdown(to_string(entry.on_date))}*
         _#{escape_markdown(entry.description)}_
-
+        #{Transaction.dup_cmd(transaction_id)}
+        #{Transaction.rem_cmd(transaction_id)}
         ```
         """
 
