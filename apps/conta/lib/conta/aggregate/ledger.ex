@@ -257,7 +257,9 @@ defmodule Conta.Aggregate.Ledger do
       |> add_change_data(entry)
     end)
     |> Map.values()
-    |> Enum.all?(&Money.zero?/1)
+    |> then(fn imbalances ->
+      Enum.all?(imbalances, &Money.zero?/1) and length(imbalances) <= 2
+    end)
   end
 
   defp add_change_data(account, entry) do

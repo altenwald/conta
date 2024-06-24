@@ -15,7 +15,7 @@ defmodule Conta.Aggregate.LedgerTest do
   alias Conta.Event.TransactionCreated
   alias Conta.Event.TransactionRemoved
 
-  describe "ledger aaccount" do
+  describe "ledger account" do
     test "create account successfully" do
       command =
         %SetAccount{
@@ -719,6 +719,105 @@ defmodule Conta.Aggregate.LedgerTest do
           }
         }
       } == ledger
+    end
+
+    test "fail because too many currencies" do
+      command =
+        %SetAccountTransaction{
+          ledger: "default",
+          on_date: ~D[2024-01-04],
+          entries: [
+            %SetAccountTransaction.Entry{
+              description: "Walmart",
+              account_name: ["Expenses", "Supermarket"],
+              credit: 0,
+              debit: 475,
+              change_currency: :USD,
+              change_credit: 0,
+              change_debit: 500
+            },
+            %SetAccountTransaction.Entry{
+              description: "Coop",
+              account_name: ["Expenses", "Supermarket", "Sweden"],
+              credit: 0,
+              debit: 4750,
+              change_currency: :USD,
+              change_credit: 0,
+              change_debit: 500
+            },
+            %SetAccountTransaction.Entry{
+              description: "Walmart",
+              account_name: ["Assets", "PayPal"],
+              credit: 500,
+              debit: 0,
+              change_currency: :EUR,
+              change_credit: 475,
+              change_debit: 0
+            },
+            %SetAccountTransaction.Entry{
+              description: "Walmart",
+              account_name: ["Assets", "PayPal"],
+              credit: 500,
+              debit: 0,
+              change_currency: :SEK,
+              change_credit: 4750,
+              change_debit: 0
+            }
+          ]
+        }
+
+      ledger =
+        %Ledger{
+          name: "default",
+          account_names: %{
+            ~w[Assets] => "bd625868-3bd3-4f2c-9cab-8d8b73018ed1",
+            ~w[Assets Cash] => "ab0c9ece-4aa5-48d5-ae08-7e89bd104fde",
+            ~w[Assets PayPal] => "569eb02b-da2c-42c8-ad89-c7ba1618c451",
+            ~w[Expenses] => "7c708316-43ed-4130-9c66-a1e063d10374",
+            ~w[Expenses Supermarket] => "4151bcd1-de24-48fc-a8de-e18d2aae0eb7",
+            ~w[Expenses Supermarket Sweden] => "f52fb177-08df-4882-8cd3-bc2d834f2d05"
+          },
+          accounts: %{
+            "bd625868-3bd3-4f2c-9cab-8d8b73018ed1" => %Ledger.Account{
+              name: ["Assets"],
+              type: :assets,
+              currency: :EUR,
+              balances: %{EUR: 100_00, USD: 100_00}
+            },
+            "ab0c9ece-4aa5-48d5-ae08-7e89bd104fde" => %Ledger.Account{
+              name: ["Assets", "Cash"],
+              type: :assets,
+              currency: :EUR,
+              balances: %{EUR: 100_00}
+            },
+            "569eb02b-da2c-42c8-ad89-c7ba1618c451" => %Ledger.Account{
+              name: ["Assets", "PayPal"],
+              type: :assets,
+              currency: :USD,
+              balances: %{USD: 100_00}
+            },
+            "7c708316-43ed-4130-9c66-a1e063d10374" => %Ledger.Account{
+              name: ["Expenses"],
+              type: :expenses,
+              currency: :EUR,
+              balances: %{EUR: 50_00}
+            },
+            "4151bcd1-de24-48fc-a8de-e18d2aae0eb7" => %Ledger.Account{
+              name: ["Expenses", "Supermarket"],
+              type: :expenses,
+              currency: :EUR,
+              balances: %{EUR: 50_00}
+            },
+            "f52fb177-08df-4882-8cd3-bc2d834f2d05" => %Ledger.Account{
+              name: ["Expenses", "Supermarket", "Sweden"],
+              type: :expenses,
+              currency: :EUR,
+              balances: %{SEK: 500_00}
+            }
+          }
+        }
+
+      {:error, %{entries: ["are invalid"]}} = Ledger.execute(ledger, command)
     end
 
     test "not enough entries" do
