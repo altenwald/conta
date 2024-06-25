@@ -594,8 +594,7 @@ defmodule Conta.Aggregate.LedgerTest do
               debit: 475,
               change_currency: :USD,
               change_credit: 0,
-              change_debit: 500,
-              change_price: 1
+              change_debit: 500
             },
             %SetAccountTransaction.Entry{
               description: "Walmart",
@@ -604,8 +603,7 @@ defmodule Conta.Aggregate.LedgerTest do
               debit: 0,
               change_currency: :EUR,
               change_credit: 475,
-              change_debit: 0,
-              change_price: 1
+              change_debit: 0
             }
           ]
         }

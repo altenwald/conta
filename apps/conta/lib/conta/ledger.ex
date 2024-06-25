@@ -65,7 +65,7 @@ defmodule Conta.Ledger do
     }
   end
 
-  def entry(description, account_name, credit, debit, change_currency, change_credit, change_debit, change_price) do
+  def entry(description, account_name, credit, debit, change_currency, change_credit, change_debit) do
     %SetAccountTransaction.Entry{
       description: description,
       account_name: account_name,
@@ -73,8 +73,7 @@ defmodule Conta.Ledger do
       debit: debit,
       change_currency: change_currency,
       change_credit: change_credit,
-      change_debit: change_debit,
-      change_price: change_price
+      change_debit: change_debit
     }
   end
 

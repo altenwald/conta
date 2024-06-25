@@ -16,11 +16,10 @@ defmodule Conta.Event.TransactionCreated.Entry do
     field(:change_currency, Money.Ecto.Currency.Type, default: :EUR) :: currency()
     field(:change_credit, Money.Ecto.Amount.Type, default: Money.new(0)) :: Money.t()
     field(:change_debit, Money.Ecto.Amount.Type, default: Money.new(0)) :: Money.t()
-    field :change_price, :decimal, default: 1.0
   end
 
   @required_fields ~w[description account_name balance]a
-  @optional_fields ~w[credit debit change_currency change_credit change_debit change_price]a
+  @optional_fields ~w[credit debit change_currency change_credit change_debit]a
 
   @doc false
   def changeset(model \\ %__MODULE__{}, params) do
