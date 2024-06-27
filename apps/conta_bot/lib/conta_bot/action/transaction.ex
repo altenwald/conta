@@ -46,7 +46,7 @@ defmodule ContaBot.Action.Transaction do
         {:ok, _} = Worker.call(chat_id, {:callback, Enum.join(entry2.account_name, ".")})
         {:ok, _} = Worker.call(chat_id, {:event, "amount"})
         {:ok, _} = Worker.call(chat_id, {:text, to_string(amount)})
-        handle({:text, to_string(entry1.on_date)}, context)
+        handle({:text, to_string(Date.utc_today())}, context)
 
       [] ->
         answer(context, "not found transaction #{transaction_id}")
