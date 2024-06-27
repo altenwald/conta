@@ -1,7 +1,6 @@
 defmodule Conta.Aggregate.LedgerTest do
   use ExUnit.Case
 
-  alias Conta.Event.AccountRemoved
   alias Conta.Aggregate.Ledger
 
   alias Conta.Command.RemoveAccount
@@ -11,6 +10,7 @@ defmodule Conta.Aggregate.LedgerTest do
 
   alias Conta.Event.AccountCreated
   alias Conta.Event.AccountModified
+  alias Conta.Event.AccountRemoved
   alias Conta.Event.AccountRenamed
   alias Conta.Event.TransactionCreated
   alias Conta.Event.TransactionRemoved

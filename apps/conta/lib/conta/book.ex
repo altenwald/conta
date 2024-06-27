@@ -14,6 +14,33 @@ defmodule Conta.Book do
 
   @due_in_days 30
 
+  defp by_term(query, nil), do: query
+  defp by_term(query, "Q1"), do: by_term(query, [1, 2, 3])
+  defp by_term(query, "Q2"), do: by_term(query, [4, 5, 6])
+  defp by_term(query, "Q3"), do: by_term(query, [7, 8, 9])
+  defp by_term(query, "Q4"), do: by_term(query, [10, 11, 12])
+
+  defp by_term(query, list) when is_list(list) do
+    from(i in query, where: fragment("EXTRACT(MONTH FROM ?)", i.invoice_date) in ^list)
+  end
+
+  defp by_year(query, nil), do: query
+
+  defp by_year(query, year) when is_binary(year) do
+    by_year(query, String.to_integer(year))
+  end
+
+  defp by_year(query, year) when is_integer(year) do
+    from(i in query, where: fragment("EXTRACT(YEAR FROM ?)", i.invoice_date) == ^year)
+  end
+
+  def list_invoices_by_term_and_year(term, year) do
+    from(i in Invoice, order_by: [desc: :invoice_number])
+    |> by_term(term)
+    |> by_year(year)
+    |> Repo.all()
+  end
+
   def list_simple_expenses(limit \\ :infinity, offset \\ 0) do
     list_simple_expenses_query(limit, offset)
     |> Repo.all()

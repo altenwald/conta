@@ -13,9 +13,6 @@ defmodule Conta.Projector do
   defmacro __using__(opts) do
     opts = opts || []
 
-    schema_prefix =
-      opts[:schema_prefix] || Application.get_env(:commanded_ecto_projections, :schema_prefix)
-
     quote location: :keep do
       @behaviour Conta.Projector
 
@@ -25,9 +22,8 @@ defmodule Conta.Projector do
       @timeout @opts[:timeout] || :infinity
 
       # Pass through any other configuration to the event handler
-      @handler_opts Keyword.drop(@opts, [:repo, :schema_prefix, :timeout, :consistency])
+      @handler_opts Keyword.drop(@opts, [:repo, :timeout, :consistency])
 
-      unquote(__include_schema_prefix__(schema_prefix))
       unquote(__include_projection_version_schema__())
 
       use Ecto.Schema
@@ -45,8 +41,6 @@ defmodule Conta.Projector do
           last_seen_event_number: event_number
         }
 
-        prefix = schema_prefix(event, metadata)
-
         # Query to update an existing projection version with the last seen event number with
         # a check to ensure that the event has not already been projected.
         update_projection_version =
@@ -61,7 +55,6 @@ defmodule Conta.Projector do
           |> Ecto.Multi.run(:track_projection_version, fn repo, _changes ->
             try do
               repo.insert(projection_version,
-                prefix: prefix,
                 on_conflict: update_projection_version,
                 conflict_target: [:projection_name]
               )
@@ -75,7 +68,7 @@ defmodule Conta.Projector do
             end
           end)
 
-        with %Ecto.Multi{} = multi <- apply(multi_fn, [multi]),
+        with %Ecto.Multi{} = multi <- multi_fn.(multi),
              {:ok, changes} <- transaction(multi) do
           if function_exported?(__MODULE__, :after_update, 3) do
             apply(__MODULE__, :after_update, [event, metadata, changes])
@@ -92,14 +85,12 @@ defmodule Conta.Projector do
       defp transaction(%Ecto.Multi{} = multi) do
         @repo.transaction(multi, timeout: @timeout, pool_timeout: @timeout)
       end
-
-      defoverridable schema_prefix: 1, schema_prefix: 2
     end
   end
 
   ## User callbacks
 
-  @optional_callbacks [after_update: 3, schema_prefix: 1, schema_prefix: 2]
+  @optional_callbacks [after_update: 3]
 
   @doc """
   The optional `after_update/3` callback function defined in a projector is
@@ -133,54 +124,6 @@ defmodule Conta.Projector do
   """
   @callback after_update(event :: struct, metadata :: map, changes :: Ecto.Multi.changes()) ::
               :ok | {:error, any}
-
-  @doc """
-  The optional `schema_prefix/1` callback function defined in a projector is
-  used to set the schema of the `projection_versions` table used by the
-  projector for idempotency checks.
-
-  It is passed the event and its metadata and must return the schema name, as a
-  string, or `nil`.
-  """
-  @callback schema_prefix(event :: struct) :: String.t() | nil
-
-  @doc """
-  The optional `schema_prefix/2` callback function defined in a projector is
-  used to set the schema of the `projection_versions` table used by the
-  projector for idempotency checks.
-
-  It is passed the event and its metadata, and must return the schema name, as a
-  string, or `nil`
-  """
-  @callback schema_prefix(event :: struct(), metadata :: map()) :: String.t() | nil
-
-  defp __include_schema_prefix__(schema_prefix) do
-    quote do
-      cond do
-        is_nil(unquote(schema_prefix)) ->
-          def schema_prefix(_event), do: nil
-          def schema_prefix(event, _metadata), do: schema_prefix(event)
-
-        is_binary(unquote(schema_prefix)) ->
-          def schema_prefix(_event), do: nil
-          def schema_prefix(_event, _metadata), do: unquote(schema_prefix)
-
-        is_function(unquote(schema_prefix), 1) ->
-          def schema_prefix(event), do: nil
-          def schema_prefix(event, _metadata), do: apply(unquote(schema_prefix), [event])
-
-        is_function(unquote(schema_prefix), 2) ->
-          def schema_prefix(event), do: nil
-          def schema_prefix(event, metadata), do: apply(unquote(schema_prefix), [event, metadata])
-
-        true ->
-          raise ArgumentError,
-            message:
-              "expected :schema_prefix option to be a string or a one-arity or two-arity function, but got: " <>
-                inspect(unquote(schema_prefix))
-      end
-    end
-  end
 
   defp __include_projection_version_schema__ do
     quote do

@@ -16,7 +16,7 @@ defmodule Conta.AutomatorFixtures do
   end
 
   def shortcut_param_factory do
-    %Conta.Projector.Automator.ShortcutParam{
+    %Conta.Projector.Automator.Param{
       name: "amount",
       type: :money
     }

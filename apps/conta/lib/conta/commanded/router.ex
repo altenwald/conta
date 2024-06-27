@@ -8,6 +8,7 @@ defmodule Conta.Commanded.Router do
   alias Conta.Command.RemoveAccount
   alias Conta.Command.RemoveAccountTransaction
   alias Conta.Command.RemoveExpense
+  alias Conta.Command.RemoveFilter
   alias Conta.Command.RemoveInvoice
   alias Conta.Command.RemoveShortcut
   alias Conta.Command.SetAccount
@@ -15,6 +16,7 @@ defmodule Conta.Commanded.Router do
   alias Conta.Command.SetCompany
   alias Conta.Command.SetContact
   alias Conta.Command.SetExpense
+  alias Conta.Command.SetFilter
   alias Conta.Command.SetInvoice
   alias Conta.Command.SetPaymentMethod
   alias Conta.Command.SetShortcut
@@ -22,7 +24,9 @@ defmodule Conta.Commanded.Router do
 
   identify(Automator, by: :automator)
 
+  dispatch(RemoveFilter, to: Automator)
   dispatch(RemoveShortcut, to: Automator)
+  dispatch(SetFilter, to: Automator)
   dispatch(SetShortcut, to: Automator)
 
   identify(Ledger, by: :ledger)

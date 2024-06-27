@@ -9,9 +9,9 @@ defmodule Conta.Projector.Ledger do
 
   require Logger
 
-  alias Conta.Event.AccountRemoved
   alias Conta.Event.AccountCreated
   alias Conta.Event.AccountModified
+  alias Conta.Event.AccountRemoved
   alias Conta.Event.AccountRenamed
   alias Conta.Event.TransactionCreated
   alias Conta.Event.TransactionRemoved

@@ -1,6 +1,14 @@
 defmodule Conta.Automator.Lua do
+  require Record
+
+  Record.defrecordp(:luerl, Record.extract(:luerl, from_lib: "luerl/include/luerl.hrl"))
 
   defp process_data({:ok, [data]}), do: process_data(data, "")
+
+  defp process_data({:error, {:lua_error, reason, state}, _stacktrace}) do
+    {:current_line, line, _file} = List.keyfind(luerl(state, :cs), :current_line, 0)
+    {:error, line, reason}
+  end
 
   defp process_data(data, key) do
     cond do
@@ -26,6 +34,9 @@ defmodule Conta.Automator.Lua do
     ### XXX: we have to use here charlist because binary breaks the collation.
     |> then(&:luerl.eval(to_charlist(code), &1))
     |> process_data()
-    |> then(&{:ok, &1})
+    |> case do
+      {:error, line, reason} -> {:error, "line #{line} error #{inspect(reason)}"}
+      result -> {:ok, result}
+    end
   end
 end

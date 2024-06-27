@@ -1,4 +1,4 @@
-defmodule Conta.Projector.Automator.Shortcut do
+defmodule Conta.Projector.Automator.Filter do
   use TypedEctoSchema
   import Ecto.Changeset
   alias Conta.Projector.Automator.Param
@@ -7,16 +7,17 @@ defmodule Conta.Projector.Automator.Shortcut do
   @foreign_key_type :binary_id
 
   @derive {Jason.Encoder, only: ~w[name automator description params code language]a}
-  typed_schema "automator_shortcuts" do
+  typed_schema "automator_filters" do
     field :name, :string
     field :automator, :string
     field :description, :string
+    field :output, Ecto.Enum, values: ~w[json xlsx]a
     embeds_many :params, Param, on_replace: :delete
     field :code, :string
     field :language, Ecto.Enum, values: ~w[lua php]a, default: :lua
   end
 
-  @required_fields ~w[name code automator]a
+  @required_fields ~w[name code automator output]a
   @optional_fields ~w[language description]a
 
   @doc false

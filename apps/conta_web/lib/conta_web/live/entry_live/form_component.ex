@@ -332,12 +332,7 @@ defmodule ContaWeb.EntryLive.FormComponent do
 
     params =
       if params["breakdown"] == "true" do
-        Map.update!(params, "entries", fn entries ->
-          Map.new(entries, fn {idx, entry} ->
-            currency = get_currency(accounts, entry["account_name"])
-            {idx, Map.put(entry, "currency", currency)}
-          end)
-        end)
+        Map.update!(params, "entries", &set_currency_for_entries(&1, accounts))
       else
         params
         |> Map.put("currency", get_currency(accounts, params["account_name"]))
@@ -424,15 +419,22 @@ defmodule ContaWeb.EntryLive.FormComponent do
          |> assign_currencies()}
 
       %Ecto.Changeset{} ->
-        {:error, changeset} = Conta.EctoHelpers.get_result(changeset)
-        Logger.debug("changeset errors: #{inspect(changeset.errors)}")
-        changeset = Map.put(changeset, :action, :validate)
+        {:error, errors} = Conta.EctoHelpers.get_result(changeset)
+        Logger.debug("changeset errors: #{inspect(errors)}")
+        changeset = %Ecto.Changeset{changeset | action: :validate}
 
         {:noreply,
          socket
          |> assign_form(changeset)
          |> assign_currencies()}
     end
+  end
+
+  defp set_currency_for_entries(entries, accounts) do
+    Map.new(entries, fn {idx, entry} ->
+      currency = get_currency(accounts, entry["account_name"])
+      {idx, Map.put(entry, "currency", currency)}
+    end)
   end
 
   defp assign_form(socket, %Ecto.Changeset{} = changeset) do
