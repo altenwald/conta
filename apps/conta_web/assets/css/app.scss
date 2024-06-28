@@ -119,3 +119,30 @@ $modal-content-width: 1024px !default;
     opacity: 0;
   }
 }
+
+.card-filter {
+  flex-direction: column;
+}
+
+.card-filter .field {
+  margin-bottom: 0.5rem;
+  height: 3rem;
+}
+
+.card-filter .field.has-addons .control {
+  flex: 1;
+}
+
+.card-filter {
+  padding: 1.5rem 1.5rem 0;
+  display: flex;
+  flex-direction: row;
+}
+
+.card-filter .field {
+  margin-bottom: 0;
+}
+
+.card-filter .field:not(:last-child) {
+  margin-right: 0.75rem;
+}

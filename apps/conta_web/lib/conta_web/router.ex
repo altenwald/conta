@@ -125,6 +125,8 @@ defmodule ContaWeb.Router do
         live "/:id/edit", InvoiceLive.Index, :edit
         live "/:id/duplicate", InvoiceLive.Index, :duplicate
 
+        get "/run/:automator_id", InvoiceController, :run
+
         scope "/" do
           pipe_through :printer
 

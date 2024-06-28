@@ -429,6 +429,7 @@ defmodule ContaWeb.CoreComponents do
   """
   attr :id, :any, default: nil
   attr :name, :any
+  attr :class, :string, default: "is-horizontal"
   attr :label, :string, default: nil
   attr :control_label, :string, default: nil
   attr :value, :any
@@ -469,7 +470,7 @@ defmodule ContaWeb.CoreComponents do
       end)
 
     ~H"""
-    <.field id={@id} name={@name} label={@label} class="is-horizontal" errors={@errors}>
+    <.field id={@id} name={@name} label={@label} class={@class} errors={@errors}>
       <label class="b-checkbox checkbox mt-2">
         <input type="hidden" name={@name} value="false" />
         <input type="checkbox" id={@id} name={@name} value="true" checked={@checked} {@rest} />
@@ -482,7 +483,7 @@ defmodule ContaWeb.CoreComponents do
 
   def input(%{type: "select"} = assigns) do
     ~H"""
-    <.field id={@id} name={@name} label={@label} class="is-horizontal" errors={@errors}>
+    <.field id={@id} name={@name} label={@label} class={@class} errors={@errors}>
       <div class={[
         "select",
         "is-fullwidth",
@@ -500,7 +501,7 @@ defmodule ContaWeb.CoreComponents do
 
   def input(%{type: "textarea"} = assigns) do
     ~H"""
-    <.field id={@id} name={@name} label={@label} class="is-horizontal" errors={@errors}>
+    <.field id={@id} name={@name} label={@label} class={@class} errors={@errors}>
       <textarea id={@id} name={@name} class={["textarea", @errors != [] && "is-danger"]} {@rest}><%= Phoenix.HTML.Form.normalize_value("textarea", @value) %></textarea>
     </.field>
     """
@@ -508,7 +509,7 @@ defmodule ContaWeb.CoreComponents do
 
   def input(%{type: "file"} = assigns) do
     ~H"""
-    <.field id={@id} name={@name} label={@label} class="is-horizontal" errors={@errors}>
+    <.field id={@id} name={@name} label={@label} class={@class} errors={@errors}>
       <div class="box">
         <span :if={length(@rest.files) == 0 and length(@rest.upload.entries) == 0}>
           <%= gettext("There are no attachments") %>
@@ -553,7 +554,7 @@ defmodule ContaWeb.CoreComponents do
 
   def input(%{type: "static"} = assigns) do
     ~H"""
-    <.field label={@label} class="is-horizontal">
+    <.field label={@label} class={@class}>
       <input
         type="text"
         value={Phoenix.HTML.Form.normalize_value("text", @value)}
@@ -578,7 +579,7 @@ defmodule ContaWeb.CoreComponents do
   # All other inputs text, datetime-local, url, password, etc. are handled here...
   def input(assigns) do
     ~H"""
-    <.field id={@id} name={@name} label={@label} class="is-horizontal" errors={@errors}>
+    <.field id={@id} name={@name} label={@label} class={@class} errors={@errors}>
       <input
         type={@type}
         name={@name}
@@ -604,7 +605,7 @@ defmodule ContaWeb.CoreComponents do
   def field(assigns) do
     ~H"""
     <div class={["field", @class]}>
-      <div class="field-label is-normal">
+      <div :if={@label} class="field-label is-normal">
         <.label for={@id}><%= @label %></.label>
       </div>
       <div class="field-body">

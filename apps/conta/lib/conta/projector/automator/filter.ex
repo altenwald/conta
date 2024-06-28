@@ -10,6 +10,7 @@ defmodule Conta.Projector.Automator.Filter do
   typed_schema "automator_filters" do
     field :name, :string
     field :automator, :string
+    field :type, Ecto.Enum, values: ~w[invoice expense entry all]a, default: :all
     field :description, :string
     field :output, Ecto.Enum, values: ~w[json xlsx]a
     embeds_many :params, Param, on_replace: :delete
@@ -18,7 +19,7 @@ defmodule Conta.Projector.Automator.Filter do
   end
 
   @required_fields ~w[name code automator output]a
-  @optional_fields ~w[language description]a
+  @optional_fields ~w[type language description]a
 
   @doc false
   def changeset(model \\ %__MODULE__{}, params) do

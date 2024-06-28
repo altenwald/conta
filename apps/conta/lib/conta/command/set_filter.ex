@@ -6,6 +6,7 @@ defmodule Conta.Command.SetFilter do
 
   typed_embedded_schema do
     field :name, :string
+    field :type, Ecto.Enum, values: ~w[invoice expense entry all]a, default: :all
     field :description, :string
     field :automator, :string
     field :output, Ecto.Enum, values: ~w[json xlsx]a
@@ -19,7 +20,7 @@ defmodule Conta.Command.SetFilter do
   end
 
   @required_fields ~w[name automator code output]a
-  @optional_fields ~w[description language]a
+  @optional_fields ~w[type description language]a
 
   @doc false
   def changeset(model \\ %__MODULE__{}, params) do

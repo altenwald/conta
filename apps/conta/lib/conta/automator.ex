@@ -37,6 +37,16 @@ defmodule Conta.Automator do
     |> Repo.all()
   end
 
+  def list_filters_by_type(type, automator \\ "default") do
+    from(
+      f in Filter,
+      where: f.automator == ^automator,
+      where: f.type in [^type, :all],
+      order_by: f.name
+    )
+    |> Repo.all()
+  end
+
   def get_remove_shortcut(id) when is_binary(id),
     do: get_remove_shortcut(get_shortcut!(id))
 
