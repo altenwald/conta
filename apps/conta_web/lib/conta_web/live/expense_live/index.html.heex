@@ -5,19 +5,44 @@
   </.breadcrumbs>
 
   <div class="card tile is-child has-table has-mobile-sort-spaced">
+    <form class="card-filter" phx-change="filters">
+      <div class="field">
+        <.link patch={~p"/books/expenses/new"} class="button">
+          <div class="icon-text">
+            <span class="icon mr-2"><FontAwesome.circle_plus /></span>
+            <span><%= gettext("New Expense") %></span>
+          </div>
+        </.link>
+      </div>
+      <.input
+        class=""
+        type="select"
+        name="term-and-year"
+        options={terms_and_years()}
+        prompt={gettext("All")}
+        value={@term_and_year}
+      />
+      <.input class="" type="select" name="filter" options={filters()} prompt="" value={@filter} />
+      <div class="field">
+        <.link
+          class="button is-info"
+          {if(@filter == "",
+            do: [disabled: "disabled"],
+            else: [
+              href: ~p"/books/expenses/run/#{@filter}?#{filters(assigns)}",
+              target: "_blank"
+            ])}
+        >
+          <div class="icon-text">
+            <span class="icon mr-2"><FontAwesome.download /></span>
+            <span><%= gettext("Download") %></span>
+          </div>
+        </.link>
+      </div>
+    </form>
     <div class="card-content">
       <div class="b-table has-pagination">
         <div class="table-wrapper has-mobile-cards">
-          <div class="field is-grouped">
-            <div class="control">
-              <.link patch={~p"/books/expenses/new"} class="button">
-                <div class="icon-text">
-                  <span class="icon mr-2"><FontAwesome.circle_plus /></span>
-                  <span><%= gettext("New Expense") %></span>
-                </div>
-              </.link>
-            </div>
-          </div>
           <.table id="books_expenses" rows={@streams.books_expenses}>
             <:action :let={{_id, expense}}>
               <.link

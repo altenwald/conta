@@ -67,12 +67,20 @@ defmodule ContaWeb.InvoiceController do
   end
 
   def run(conn, %{"automator_id" => id} = params) do
-    filters = Map.delete(params, "automation_id")
+    filters = [
+      term: params["term"],
+      year: params["year"],
+      status: params["status"]
+    ]
+
     invoices = Book.list_invoices_filtered(filters)
     params = %{"invoices" => invoices}
 
     with filter when filter != nil <- Automator.get_filter(id),
-         params = Map.new(Automator.cast(filter, params)),
+         params =
+           Automator.cast(filter, params)
+           |> Map.new()
+           |> Map.put("filename", "invoices.xlsx"),
          {:ok, {mimetype, file, content}} <-
            Automator.run_filter(filter.automator, filter, params) do
       conn

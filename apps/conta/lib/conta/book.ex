@@ -14,8 +14,13 @@ defmodule Conta.Book do
 
   @due_in_days 30
 
-  def get_date_range do
+  def get_invoice_date_range do
     from(i in Invoice, select: {max(i.invoice_date), min(i.invoice_date)})
+    |> Repo.one()
+  end
+
+  def get_expense_date_range do
+    from(e in Expense, select: {max(e.invoice_date), min(e.invoice_date)})
     |> Repo.one()
   end
 
@@ -46,6 +51,13 @@ defmodule Conta.Book do
     |> Repo.all()
   end
 
+  def list_expenses_by_term_and_year(term, year) do
+    from(e in Expense, order_by: [desc: :invoice_number])
+    |> by_term(term)
+    |> by_year(year)
+    |> Repo.all()
+  end
+
   defp by_status(query, "paid") do
     from(i in query, where: not is_nil(i.paid_date))
   end
@@ -67,6 +79,13 @@ defmodule Conta.Book do
   defp filter(query, nil, _f), do: query
 
   defp filter(query, value, f), do: f.(query, value)
+
+  def list_simple_expenses_filtered(filters, limit \\ :infinity, offset \\ 0) do
+    list_simple_expenses_query(limit, offset)
+    |> filter(filters[:term], &by_term/2)
+    |> filter(filters[:year], &by_year/2)
+    |> Repo.all()
+  end
 
   def list_simple_expenses(limit \\ :infinity, offset \\ 0) do
     list_simple_expenses_query(limit, offset)

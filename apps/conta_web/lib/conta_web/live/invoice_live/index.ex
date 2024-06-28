@@ -22,7 +22,8 @@ defmodule ContaWeb.InvoiceLive.Index do
   end
 
   defp filters do
-    for filter <- Automator.list_filters(), do: {filter.description || filter.name, filter.id}
+    for filter <- Automator.list_filters_by_type(:invoice),
+        do: {filter.description || filter.name, filter.id}
   end
 
   defp invoice_statuses do
@@ -33,7 +34,7 @@ defmodule ContaWeb.InvoiceLive.Index do
   end
 
   defp terms_and_years do
-    {max_date, min_date} = Book.get_date_range()
+    {max_date, min_date} = Book.get_invoice_date_range()
 
     Stream.unfold(min_date, fn date ->
       if Date.compare(date, max_date) != :gt do

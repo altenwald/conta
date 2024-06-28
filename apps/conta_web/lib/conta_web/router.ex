@@ -143,6 +143,8 @@ defmodule ContaWeb.Router do
         live "/:id/edit", ExpenseLive.Index, :edit
         live "/:id/duplicate", ExpenseLive.Index, :duplicate
 
+        get "/run/:automator_id", ExpenseController, :run
+
         get "/:id/download/:attachment_id", ExpenseController, :download
       end
 
