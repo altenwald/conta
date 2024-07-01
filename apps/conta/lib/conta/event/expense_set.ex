@@ -14,6 +14,7 @@ defmodule Conta.Event.ExpenseSet do
   @derive Jason.Encoder
   typed_embedded_schema do
     field :action, Ecto.Enum, values: ~w[insert update]a
+    field :name, :string
     field :invoice_number, :string
     field :invoice_date, :date
     field :due_date, :date
@@ -30,7 +31,7 @@ defmodule Conta.Event.ExpenseSet do
   end
 
   @required_fields ~w[action invoice_number invoice_date category subtotal_price tax_price total_price currency]a
-  @optional_fields ~w[due_date comments]a
+  @optional_fields ~w[name due_date comments]a
 
   @doc false
   def changeset(model \\ %__MODULE__{}, params) do

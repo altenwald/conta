@@ -7,8 +7,9 @@ defmodule Conta.Projector.Book.Invoice do
 
   @currencies Enum.map(Map.keys(Money.Currency.all()), &{&1, to_string(&1)})
 
-  @derive {Jason.Encoder, only: ~w[id invoice_number invoice_date template paid_date due_date type subtotal_price tax_price total_price currency comments destination_country client company payment_method details inserted_at updated_at]a}
+  @derive {Jason.Encoder, only: ~w[id name invoice_number invoice_date template paid_date due_date type subtotal_price tax_price total_price currency comments destination_country client company payment_method details inserted_at updated_at]a}
   typed_schema "book_invoices" do
+    field :name, :string
     field :template, :string, default: "default"
     field :invoice_number, :string
     field :invoice_date, :date
@@ -78,7 +79,7 @@ defmodule Conta.Projector.Book.Invoice do
   end
 
   @required_fields ~w[invoice_number invoice_date type subtotal_price tax_price total_price destination_country]a
-  @optional_fields ~w[paid_date due_date comments template currency]a
+  @optional_fields ~w[name paid_date due_date comments template currency]a
 
   @doc false
   def changeset(model \\ %__MODULE__{}, params) do

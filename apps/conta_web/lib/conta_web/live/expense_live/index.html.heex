@@ -95,8 +95,12 @@
             <:col :let={{_id, expense}} label={gettext("Invoice Date")}>
               <%= expense.invoice_date %>
             </:col>
-            <:col :let={{_id, expense}} label={gettext("Provider")}>
-              <%= expense.provider.name %>
+            <:col :let={{_id, expense}} label={gettext("Name / Provider")}>
+              <%= if name = expense.name do %>
+                <strong><%= name %></strong> <br /><%= expense.provider.name %>
+              <% else %>
+                <%= expense.provider.name %>
+              <% end %>
             </:col>
             <:col :let={{_id, expense}} label={gettext("Subtotal")} class="has-text-right">
               <%= Money.new(expense.subtotal_price, expense.currency) %>

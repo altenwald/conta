@@ -25,6 +25,7 @@ defmodule ContaWeb.ExpenseLive.FormComponent do
             phx-submit="save"
           >
             <.input field={@form[:nif]} type="text" label={gettext("Company NIF")} disabled="true" />
+            <.input field={@form[:name]} type="text" label={gettext("Name")} />
             <.input field={@form[:invoice_number]} type="text" label={gettext("Invoice Number")} />
             <.input field={@form[:invoice_date]} type="date" label={gettext("Invoice Date")} />
             <.input field={@form[:due_date]} type="date" label={gettext("Due Date")} />

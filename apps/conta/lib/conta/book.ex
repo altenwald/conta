@@ -101,6 +101,7 @@ defmodule Conta.Book do
       ],
       select: %Expense{
         id: e.id,
+        name: e.name,
         invoice_number: e.invoice_number,
         invoice_date: e.invoice_date,
         due_date: e.due_date,

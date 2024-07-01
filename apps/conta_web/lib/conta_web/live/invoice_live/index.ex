@@ -26,6 +26,12 @@ defmodule ContaWeb.InvoiceLive.Index do
         do: {filter.description || filter.name, filter.id}
   end
 
+  defp get_client(%_{client: nil, destination_country: country}) do
+    gettext("Customer from %{country}", country: Countries.get(country).name)
+  end
+
+  defp get_client(%_{client: client}), do: client.name
+
   defp invoice_statuses do
     [
       {gettext("Paid"), "paid"},
