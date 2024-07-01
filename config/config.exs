@@ -12,6 +12,22 @@ config :conta, Conta.EventStore, serializer: Conta.Commanded.Serializer
 
 config :conta, ecto_repos: [Conta.Repo]
 
+config :conta, Conta.Commanded.Application,
+  snapshotting: %{
+    Conta.Aggregate.Automator => [
+      snapshot_every: 10,
+      snapshot_version: 1
+    ],
+    Conta.Aggregate.Company => [
+      snapshot_every: 10,
+      snapshot_version: 1
+    ],
+    Conta.Aggregate.Ledger => [
+      snapshot_every: 10,
+      snapshot_version: 1
+    ]
+  }
+
 # Configures the mailer
 #
 # By default it uses the "Local" adapter which stores the emails
