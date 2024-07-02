@@ -46,7 +46,7 @@ defmodule ContaWeb.InvoiceLive.Index do
       if Date.compare(date, max_date) != :gt do
         year = date.year
         term = "Q#{div(date.month - 1, 3) + 1}"
-        {"#{year} #{term}", Date.add(date, 15)}
+        {"#{year} #{term}", Date.add(date, 1)}
       end
     end)
     |> Enum.uniq()

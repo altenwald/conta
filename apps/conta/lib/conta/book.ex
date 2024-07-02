@@ -280,6 +280,7 @@ defmodule Conta.Book do
     %SetExpense{
       action: :update,
       nif: expense.company.nif,
+      name: expense.name,
       provider_nif: expense.provider.nif,
       invoice_number: expense.invoice_number,
       invoice_date: expense.invoice_date,
@@ -314,6 +315,7 @@ defmodule Conta.Book do
 
     %SetInvoice{
       action: :update,
+      name: invoice.name,
       nif: invoice.company.nif,
       client_nif: invoice.client && invoice.client.nif,
       template: invoice.template,
