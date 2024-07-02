@@ -20,8 +20,16 @@ defmodule Conta.Commanded.Serializer do
   """
   def deserialize("{}", []), do: %{}
 
-  def deserialize(binary, config) do
-    struct = String.to_existing_atom(config[:type])
+  def deserialize(binary, config) when is_list(config) do
+    deserialize(binary, Map.new(config))
+  end
+
+  def deserialize(binary, %{type: "Elixir.Conta.Aggregate." <> _}) do
+    Jason.decode!(binary)
+  end
+
+  def deserialize(binary, %{type: type}) do
+    struct = String.to_existing_atom(type)
 
     binary
     |> Jason.decode!()
