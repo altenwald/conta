@@ -9,6 +9,8 @@ defmodule Conta.Aggregate.Automator do
   alias Conta.Event.ShortcutRemoved
   alias Conta.Event.ShortcutSet
 
+  @derive Jason.Encoder
+
   @type t() :: %__MODULE__{
     shortcuts: MapSet.t(String.t()),
     filters: MapSet.t(String.t())

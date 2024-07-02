@@ -19,6 +19,8 @@ defmodule Conta.Aggregate.Ledger do
   @type account_name() :: [String.t()]
   @type account_id() :: String.t()
 
+  @derive Jason.Encoder
+
   @type t() :: %__MODULE__{
     name: String.t(),
     accounts: %{account_id() => Account.t()},

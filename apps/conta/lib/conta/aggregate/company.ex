@@ -24,6 +24,8 @@ defmodule Conta.Aggregate.Company do
   alias Conta.Event.PaymentMethodSet
   alias Conta.Event.TemplateSet
 
+  @derive Jason.Encoder
+
   @type t() :: %__MODULE__{
     nif: nil | String.t(),
     name: nil | String.t(),

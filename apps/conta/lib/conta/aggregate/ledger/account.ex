@@ -10,6 +10,8 @@ defmodule Conta.Aggregate.Ledger.Account do
 
   @primary_key false
 
+  @derive Jason.Encoder
+
   typed_embedded_schema do
     field :id, :binary_id, primary_key: true
     field :name, {:array, :string}

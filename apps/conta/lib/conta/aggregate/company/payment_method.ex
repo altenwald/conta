@@ -4,6 +4,8 @@ defmodule Conta.Aggregate.Company.PaymentMethod do
 
   @primary_key false
 
+  @derive Jason.Encoder
+
   typed_embedded_schema do
     field :name, :string
     field :slug, :string
