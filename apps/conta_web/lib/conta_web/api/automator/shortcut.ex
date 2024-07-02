@@ -28,39 +28,39 @@ defmodule ContaWeb.Api.Automator.Shortcut do
     else
       conn
       |> put_status(:not_found)
-      |> json(%{"status" => "error", "reason" => "empty page"})
+      |> json("empty page")
     end
   end
 
   def show(conn, %{"id" => id}) do
     if shortcut = Automator.get_shortcut(id) do
-      json(conn, %{"status" => "ok", "shortcut" => shortcut})
+      json(conn, shortcut)
     else
       conn
       |> put_status(:not_found)
-      |> json(%{"status" => "error", "reason" => "shortcut not found"})
+      |> json("shortcut not found")
     end
   end
 
   def delete(conn, %{"id" => id}) do
     with shortcut when shortcut != nil <- Automator.get_shortcut(id),
          :ok <- dispatch(Automator.get_remove_shortcut(shortcut)) do
-      json(conn, %{"status" => "ok"})
+      json(conn, "ok")
     else
       nil ->
         conn
         |> put_status(:not_found)
-        |> json(%{"status" => "error", "reason" => "shortcut not found"})
+        |> json("shortcut not found")
 
       {:error, reason} when is_atom(reason) ->
         conn
         |> put_status(:bad_request)
-        |> json(%{"status" => "error", "errors" => %{"dispatch" => [reason]}})
+        |> json(%{"errors" => %{"dispatch" => [reason]}})
 
       {:error, errors} when is_map(errors) ->
         conn
         |> put_status(:bad_request)
-        |> json(%{"status" => "error", "errors" => errors})
+        |> json(%{"errors" => errors})
     end
   end
 
@@ -77,24 +77,24 @@ defmodule ContaWeb.Api.Automator.Shortcut do
 
     with true <- changeset.valid?,
          :ok <- dispatch(SetShortcut.to_command(changeset)) do
-      json(conn, %{"status" => "ok"})
+      json(conn, "ok")
     else
       false ->
         {:error, errors} = get_result(changeset)
 
         conn
         |> put_status(:bad_request)
-        |> json(%{"status" => "error", "errors" => errors})
+        |> json(%{"errors" => errors})
 
       {:error, reason} when is_atom(reason) ->
         conn
         |> put_status(:bad_request)
-        |> json(%{"status" => "error", "errors" => %{"dispatch" => [reason]}})
+        |> json(%{"errors" => %{"dispatch" => [reason]}})
 
       {:error, errors} when is_map(errors) ->
         conn
         |> put_status(:bad_request)
-        |> json(%{"status" => "error", "errors" => errors})
+        |> json(%{"errors" => errors})
     end
   end
 
@@ -104,12 +104,12 @@ defmodule ContaWeb.Api.Automator.Shortcut do
     with shortcut when shortcut != nil <- Automator.get_shortcut(id),
          params = Map.new(Automator.cast(shortcut, params)),
          :ok <- Automator.run_shortcut(shortcut.automator, shortcut, params) do
-      json(conn, %{"status" => "ok"})
+      json(conn, "ok")
     else
       {:error, reason} ->
         conn
         |> put_status(:bad_request)
-        |> json(%{"status" => "error", "errors" => reason})
+        |> json(%{"errors" => reason})
     end
   end
 end
