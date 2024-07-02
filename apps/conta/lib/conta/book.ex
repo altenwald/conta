@@ -220,6 +220,7 @@ defmodule Conta.Book do
   def get_duplicate_expense(%Expense{} = expense) do
     %SetExpense{
       action: :insert,
+      name: expense.name,
       nif: expense.company.nif,
       provider_nif: expense.provider.nif,
       invoice_number: expense.invoice_number,
@@ -243,6 +244,7 @@ defmodule Conta.Book do
 
     %SetInvoice{
       action: :insert,
+      name: invoice.name,
       nif: invoice.company.nif,
       client_nif: invoice.client && invoice.client.nif,
       template: invoice.template,
