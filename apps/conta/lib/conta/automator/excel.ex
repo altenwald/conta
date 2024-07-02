@@ -16,7 +16,7 @@ defmodule Conta.Automator.Excel do
 
   def export([%{"name" => _, "rows" => _, "headers" => _}|_] = workbook, filename) do
     set_cell = fn {content, idx}, sheet, jdx ->
-      Sheet.set_cell(sheet, "#{col(idx)}#{jdx}", to_str(content))
+      Sheet.set_cell(sheet, "#{col(idx)}#{jdx}", to_cell(content))
     end
 
     workbook
@@ -60,14 +60,14 @@ defmodule Conta.Automator.Excel do
     |> export(filename)
   end
 
-  defp to_str(atom) when is_atom(atom), do: to_string(atom)
-  defp to_str(integer) when is_integer(integer), do: to_string(integer)
-  defp to_str(float) when is_float(float), do: to_string(float)
-  defp to_str(string) when is_binary(string), do: string
-  defp to_str(date) when is_struct(date, Date), do: to_string(date)
-  defp to_str(datetime) when is_struct(datetime, DateTime), do: to_string(datetime)
-  defp to_str(datetime) when is_struct(datetime, NaiveDateTime), do: to_string(datetime)
-  defp to_str(_otherwise), do: "(cannot convert)"
+  defp to_cell(atom) when is_atom(atom), do: to_string(atom)
+  defp to_cell(integer) when is_integer(integer), do: integer
+  defp to_cell(float) when is_float(float), do: float
+  defp to_cell(string) when is_binary(string), do: string
+  defp to_cell(date) when is_struct(date, Date), do: to_string(date)
+  defp to_cell(datetime) when is_struct(datetime, DateTime), do: to_string(datetime)
+  defp to_cell(datetime) when is_struct(datetime, NaiveDateTime), do: to_string(datetime)
+  defp to_cell(_otherwise), do: "(cannot convert)"
 
   defp to_list(struct) when is_struct(struct), do: to_list(Map.from_struct(struct))
   defp to_list(map) when is_map(map), do: Map.values(map)
