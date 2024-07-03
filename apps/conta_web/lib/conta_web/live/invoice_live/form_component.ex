@@ -263,7 +263,7 @@ defmodule ContaWeb.InvoiceLive.FormComponent do
   defp get_client_country(nil), do: nil
 
   defp get_client_country(nif) do
-    if client = Directory.get_contact(nif) do
+    if client = Directory.get_contact_by_nif(nif) do
       client.country
     end
   end

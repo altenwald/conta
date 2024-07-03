@@ -1,6 +1,5 @@
 defmodule Conta.Command.SetContact do
   use TypedEctoSchema
-  import Conta.EctoHelpers
   import Ecto.Changeset
 
   @primary_key false
@@ -25,6 +24,9 @@ defmodule Conta.Command.SetContact do
     model
     |> cast(params, @required_fields ++ @optional_fields)
     |> validate_required(@required_fields)
-    |> get_result()
+  end
+
+  def to_command(changeset) do
+    apply_changes(changeset)
   end
 end

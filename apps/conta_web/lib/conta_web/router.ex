@@ -166,6 +166,15 @@ defmodule ContaWeb.Router do
           live "/:id/show/edit", EntryLive.Show, :edit
         end
       end
+
+      scope "/directories/contacts/" do
+        live "/", ContactLive.Index, :index
+        live "/new", ContactLive.Index, :new
+        live "/:id/edit", ContactLive.Index, :edit
+
+        live "/:id", ContactLive.Show, :show
+        live "/:id/show/edit", ContactLive.Show, :edit
+      end
     end
   end
 

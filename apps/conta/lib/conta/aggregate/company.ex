@@ -24,7 +24,24 @@ defmodule Conta.Aggregate.Company do
   alias Conta.Event.PaymentMethodSet
   alias Conta.Event.TemplateSet
 
-  @derive Jason.Encoder
+  defimpl Jason.Encoder do
+    def encode(value, _opts) do
+      value
+      |> Map.update!(:invoice_numbers, fn invoice_numbers ->
+        Map.new(invoice_numbers, fn {key, data} ->
+          {key, Enum.to_list(data)}
+        end)
+      end)
+      |> Map.update!(:expense_numbers, fn expense_numbers ->
+        Map.new(expense_numbers, fn {key, data} ->
+          {key, Enum.map(data, &Tuple.to_list/1)}
+        end)
+      end)
+      |> Map.update!(:template_names, &Enum.to_list/1)
+      |> Map.from_struct()
+      |> Jason.encode!()
+    end
+  end
 
   @type t() :: %__MODULE__{
     nif: nil | String.t(),
@@ -66,8 +83,12 @@ defmodule Conta.Aggregate.Company do
       state: params["state"],
       country: params["country"],
       details: params["details"],
-      invoice_numbers: params["invoice_numbers"],
-      expense_numbers: params["expense_numbers"],
+      invoice_numbers: Map.new(params["invoice_numbers"], fn {key, data} ->
+        {key, MapSet.new(data)}
+      end),
+      expense_numbers: Map.new(params["expense_numbers"], fn {key, data} ->
+        {key, MapSet.new(data, &List.to_tuple/1)}
+      end),
       contacts: Map.new(params["contacts"], fn {key, data} ->
         {key, Contact.changeset(data)}
       end),

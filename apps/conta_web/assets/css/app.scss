@@ -146,3 +146,7 @@ $modal-content-width: 1024px !default;
 .card-filter .field:not(:last-child) {
   margin-right: 0.75rem;
 }
+
+.is-text-nowrap {
+  text-wrap: nowrap;
+}

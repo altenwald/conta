@@ -735,7 +735,7 @@ defmodule ContaWeb.CoreComponents do
           <td :for={col <- @col} class={["is-vcentered", col[:class]]}>
             <%= render_slot(col, @row_item.(row)) %>
           </td>
-          <td :if={@action != []}>
+          <td :if={@action != []} class="is-text-nowrap">
             <%= for action <- @action do %>
               <%= render_slot(action, @row_item.(row)) %>
             <% end %>
@@ -748,7 +748,7 @@ defmodule ContaWeb.CoreComponents do
           <td :for={col <- @col} :if={is_nil(title)} class={["is-vcentered", col[:class]]}>
             <%= render_slot(col, @row_item.({row.id, row})) %>
           </td>
-          <td :if={@action != [] and is_nil(title)}>
+          <td :if={@action != [] and is_nil(title)} class="is-text-nowrap">
             <%= for action <- @action do %>
               <%= render_slot(action, @row_item.({row.id, row})) %>
             <% end %>

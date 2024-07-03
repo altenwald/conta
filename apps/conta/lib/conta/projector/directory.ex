@@ -5,6 +5,8 @@ defmodule Conta.Projector.Directory do
     name: __MODULE__,
     consistency: Application.compile_env(:conta, :consistency, :eventual)
 
+  require Logger
+
   alias Conta.Event.ContactRemoved
   alias Conta.Event.ContactSet
   alias Conta.Projector.Directory.Contact
@@ -31,4 +33,21 @@ defmodule Conta.Projector.Directory do
       multi
     end
   end)
+
+  @impl Conta.Projector
+  def after_update(%ContactSet{}, _metadata, changes) do
+    event_name = "event:contact_set"
+    contact = changes[:contact]
+    Logger.debug("sending broadcast for event #{inspect(event_name)}")
+    Phoenix.PubSub.broadcast(Conta.PubSub, event_name, {:contact_set, contact})
+  end
+
+  def after_update(%ContactRemoved{}, _metadata, changes) do
+    event_name = "event:contact_removed"
+    contact = changes[:contact]
+    Logger.debug("sending broadcast for event #{inspect(event_name)}")
+    Phoenix.PubSub.broadcast(Conta.PubSub, event_name, {:contact_removed, contact})
+  end
+
+  def after_update(_event, _metadata, _changes), do: :ok
 end

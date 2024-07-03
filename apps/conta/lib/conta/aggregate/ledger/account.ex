@@ -31,15 +31,16 @@ defmodule Conta.Aggregate.Ledger.Account do
     |> validate_required(@required_fields)
     |> get_result()
     |> case do
-      {:error, _} = error ->
-        error
-
-      account ->
-        Map.update!(account, :balances, fn balances ->
-          Map.new(balances, fn {currency, amount} ->
-            {String.to_existing_atom(currency), amount}
-          end)
-        end)
+      {:error, _} = error -> error
+      account -> update_balances(account)
     end
+  end
+
+  defp update_balances(account) do
+    Map.update!(account, :balances, fn balances ->
+      Map.new(balances, fn {currency, amount} ->
+        {String.to_existing_atom(currency), amount}
+      end)
+    end)
   end
 end
