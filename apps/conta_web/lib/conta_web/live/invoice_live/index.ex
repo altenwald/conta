@@ -17,11 +17,12 @@ defmodule ContaWeb.InvoiceLive.Index do
      socket
      |> stream(:books_invoices, Book.list_invoices())
      |> assign(:filter, "")
+     |> assign(:filters, list_filters())
      |> assign(:term_and_year, "")
      |> assign(:invoice_status, "")}
   end
 
-  defp filters do
+  defp list_filters do
     for filter <- Automator.list_filters_by_type(:invoice),
         do: {filter.description || filter.name, filter.id}
   end

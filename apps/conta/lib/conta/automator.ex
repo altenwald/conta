@@ -18,8 +18,9 @@ defmodule Conta.Automator do
   alias Conta.Repo
 
   @default_xlsx_name "export.xlsx"
+  @default_automator "automator"
 
-  def list_shortcuts(automator \\ "default") do
+  def list_shortcuts(automator \\ @default_automator) do
     from(
       s in Shortcut,
       where: s.automator == ^automator,
@@ -28,7 +29,7 @@ defmodule Conta.Automator do
     |> Repo.all()
   end
 
-  def list_filters(automator \\ "default") do
+  def list_filters(automator \\ @default_automator) do
     from(
       f in Filter,
       where: f.automator == ^automator,
@@ -37,7 +38,7 @@ defmodule Conta.Automator do
     |> Repo.all()
   end
 
-  def list_filters_by_type(type, automator \\ "default") do
+  def list_filters_by_type(type, automator \\ @default_automator) do
     from(
       f in Filter,
       where: f.automator == ^automator,
@@ -67,8 +68,11 @@ defmodule Conta.Automator do
     }
   end
 
-  def get_set_shortcut(id) when is_binary(id),
-    do: get_set_shortcut(get_shortcut!(id))
+  def get_set_shortcut(id) when is_binary(id) do
+    if shortcut = get_shortcut(id) do
+      get_set_shortcut(shortcut)
+    end
+  end
 
   def get_set_shortcut(%Shortcut{} = shortcut) do
     %SetShortcut{
@@ -86,8 +90,11 @@ defmodule Conta.Automator do
     }
   end
 
-  def get_set_filter(id) when is_binary(id),
-    do: get_set_filter(get_filter!(id))
+  def get_set_filter(id) when is_binary(id) do
+    if filter = get_filter(id) do
+      get_set_filter(filter)
+    end
+  end
 
   def get_set_filter(%Filter{} = filter) do
     %SetFilter{
@@ -106,31 +113,31 @@ defmodule Conta.Automator do
     }
   end
 
-  def get_shortcut_by_name(automator \\ "default", name) do
+  def get_shortcut_by_name(automator \\ @default_automator, name) do
     Repo.get_by(Shortcut, name: name, automator: automator)
   end
 
-  def get_filter_by_name(automator \\ "default", name) do
+  def get_filter_by_name(automator \\ @default_automator, name) do
     Repo.get_by(Filter, name: name, automator: automator)
   end
 
-  def get_shortcut(automator \\ "default", id) do
+  def get_shortcut(automator \\ @default_automator, id) do
     Repo.get_by(Shortcut, id: id, automator: automator)
   end
 
-  def get_shortcut!(automator \\ "default", id) do
+  def get_shortcut!(automator \\ @default_automator, id) do
     Repo.get_by!(Shortcut, id: id, automator: automator)
   end
 
-  def get_filter(automator \\ "default", id) do
+  def get_filter(automator \\ @default_automator, id) do
     Repo.get_by(Filter, id: id, automator: automator)
   end
 
-  def get_filter!(automator \\ "default", id) do
+  def get_filter!(automator \\ @default_automator, id) do
     Repo.get_by!(Filter, id: id, automator: automator)
   end
 
-  def run_shortcut(automator \\ "default", name, params)
+  def run_shortcut(automator \\ @default_automator, name, params)
 
   def run_shortcut(automator, name, params) when is_binary(name) do
     if shortcut = get_shortcut_by_name(name) do
@@ -154,7 +161,7 @@ defmodule Conta.Automator do
 
   defp run(%_{code: code, language: :lua}, params), do: Lua.run(code, params)
 
-  def run_filter(automator \\ "default", name, params)
+  def run_filter(automator \\ @default_automator, name, params)
 
   def run_filter(automator, name, params) when is_binary(name) do
     if filter = get_filter_by_name(name) do

@@ -72,6 +72,12 @@ defmodule ContaWeb.Api.Automator.Shortcut do
     set_shortcut(conn, Automator.get_set_shortcut(id), params)
   end
 
+  defp set_shortcut(conn, nil, _params) do
+    conn
+    |> put_status(:not_found)
+    |> json("shortcut not found")
+  end
+
   defp set_shortcut(conn, set_shortcut, params) do
     changeset = SetShortcut.changeset(set_shortcut, params)
 

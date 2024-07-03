@@ -10,7 +10,7 @@ defmodule Aggregate.AutomatorTest do
       automator = %Automator{}
 
       command = %SetShortcut{
-        automator: "default",
+        automator: "automator",
         name: "credit cash",
         code: "-- something in Lua",
         language: "lua"
@@ -19,7 +19,7 @@ defmodule Aggregate.AutomatorTest do
       event = Automator.execute(automator, command)
 
       assert %ShortcutSet{
-        automator: "default",
+        automator: "automator",
         name: "credit cash",
         code: "-- something in Lua",
         language: :lua

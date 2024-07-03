@@ -55,6 +55,29 @@ defmodule Conta.Aggregate.Company do
             payment_methods: %{},
             template_names: MapSet.new(["default"])
 
+  @doc false
+  def changeset(params) do
+    %__MODULE__{
+      nif: params["nif"],
+      name: params["name"],
+      address: params["address"],
+      postcode: params["postcode"],
+      city: params["city"],
+      state: params["state"],
+      country: params["country"],
+      details: params["details"],
+      invoice_numbers: params["invoice_numbers"],
+      expense_numbers: params["expense_numbers"],
+      contacts: Map.new(params["contacts"], fn {key, data} ->
+        {key, Contact.changeset(data)}
+      end),
+      payment_methods: Map.new(params["payment_methods"], fn {key, data} ->
+        {key, PaymentMethod.changeset(data)}
+      end),
+      template_names: MapSet.new(params["template_names"])
+    }
+  end
+
   def execute(_company, %SetCompany{} = command) do
     params = Map.from_struct(command)
     CompanySet.changeset(params)

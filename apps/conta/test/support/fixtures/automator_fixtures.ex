@@ -8,7 +8,7 @@ defmodule Conta.AutomatorFixtures do
   def shortcut_factory do
     %Conta.Projector.Automator.Shortcut{
       name: "credit cash",
-      automator: "default",
+      automator: "automator",
       description: "write spend cash down",
       code: "-- Lua code\n",
       language: :lua

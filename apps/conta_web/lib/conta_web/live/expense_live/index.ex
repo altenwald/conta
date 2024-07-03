@@ -17,10 +17,11 @@ defmodule ContaWeb.ExpenseLive.Index do
      socket
      |> stream(:books_expenses, Book.list_simple_expenses())
      |> assign(:filter, "")
+     |> assign(:filters, list_filters())
      |> assign(:term_and_year, "")}
   end
 
-  defp filters do
+  defp list_filters do
     for filter <- Automator.list_filters_by_type(:expense),
         do: {filter.description || filter.name, filter.id}
   end

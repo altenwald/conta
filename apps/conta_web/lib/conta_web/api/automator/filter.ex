@@ -7,6 +7,8 @@ defmodule ContaWeb.Api.Automator.Filter do
   alias Conta.Automator
   alias Conta.Command.SetFilter
 
+  @default_automator "automator"
+
   def index(conn, _params) do
     filters = Automator.list_filters()
 
@@ -60,11 +62,17 @@ defmodule ContaWeb.Api.Automator.Filter do
   end
 
   def create(conn, params) do
-    set_filter(conn, %SetFilter{}, params)
+    set_filter(conn, %SetFilter{automator: @default_automator}, params)
   end
 
   def update(conn, %{"id" => id} = params) do
     set_filter(conn, Automator.get_set_filter(id), params)
+  end
+
+  defp set_filter(conn, nil, _params) do
+    conn
+    |> put_status(:not_found)
+    |> json("filter not found")
   end
 
   defp set_filter(conn, set_filter, params) do

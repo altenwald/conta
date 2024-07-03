@@ -18,6 +18,14 @@ defmodule Conta.Aggregate.Automator do
   defstruct shortcuts: MapSet.new(),
             filters: MapSet.new()
 
+  @doc false
+  def changeset(params) do
+    %__MODULE__{
+      shortcuts: MapSet.new(params["shortcuts"]),
+      filters: MapSet.new(params["filters"])
+    }
+  end
+
   def execute(_automator, %SetShortcut{} = command) do
     command
     |> Map.from_struct()

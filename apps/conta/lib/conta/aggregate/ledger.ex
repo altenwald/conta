@@ -19,7 +19,7 @@ defmodule Conta.Aggregate.Ledger do
   @type account_name() :: [String.t()]
   @type account_id() :: String.t()
 
-  @derive Jason.Encoder
+  @derive {Jason.Encoder, only: ~w[name accounts]a}
 
   @type t() :: %__MODULE__{
     name: String.t(),
@@ -29,6 +29,20 @@ defmodule Conta.Aggregate.Ledger do
   defstruct name: nil,
             accounts: %{},
             account_names: %{}
+
+  @doc false
+  def changeset(params) do
+    accounts =
+      Map.new(params["accounts"], fn {key, account} ->
+        {key, Account.changeset(account)}
+      end)
+
+    %__MODULE__{
+      name: params["name"],
+      accounts: accounts,
+      account_names: Map.new(Map.values(accounts), &{&1.name, &1.id})
+    }
+  end
 
   @valid_currencies Map.keys(Money.Currency.all())
 

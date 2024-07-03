@@ -1,5 +1,6 @@
 defmodule Conta.Aggregate.Company.Contact do
   use TypedEctoSchema
+  import Conta.EctoHelpers
   import Ecto.Changeset
 
   @primary_key false
@@ -20,18 +21,11 @@ defmodule Conta.Aggregate.Company.Contact do
   @required_fields ~w[name nif address postcode city country]a
   @optional_fields ~w[intracommunity state]a
 
-  def new(params) do
-    %__MODULE__{}
+  @doc false
+  def changeset(model \\ %__MODULE__{}, params) do
+    model
     |> cast(params, @required_fields ++ @optional_fields)
     |> validate_required(@required_fields)
-    |> case do
-      %Ecto.Changeset{valid?: true} = changeset ->
-        changeset
-        |> apply_changes()
-        |> Map.from_struct()
-
-      %Ecto.Changeset{valid?: false, errors: errors} ->
-        {:error, errors}
-    end
+    |> get_result()
   end
 end

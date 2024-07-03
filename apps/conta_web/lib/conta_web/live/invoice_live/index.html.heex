@@ -30,8 +30,16 @@
         prompt={gettext("All")}
         value={@invoice_status}
       />
-      <.input class="" type="select" name="filter" options={filters()} prompt="" value={@filter} />
-      <div class="field">
+      <.input
+        :if={@filters != []}
+        class=""
+        type="select"
+        name="filter"
+        options={@filters}
+        prompt=""
+        value={@filter}
+      />
+      <div :if={@filters != []} class="field">
         <.link
           class="button is-info"
           {if(@filter == "",
