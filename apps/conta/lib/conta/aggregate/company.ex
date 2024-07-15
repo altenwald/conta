@@ -28,13 +28,13 @@ defmodule Conta.Aggregate.Company do
     def encode(value, _opts) do
       value
       |> Map.update!(:invoice_numbers, fn invoice_numbers ->
-        Map.new(invoice_numbers, fn {key, data} ->
-          {key, Enum.to_list(data)}
+        Map.new(invoice_numbers, fn {year, invoice_numbers_set} ->
+          {year, Enum.to_list(invoice_numbers_set)}
         end)
       end)
       |> Map.update!(:expense_numbers, fn expense_numbers ->
-        Map.new(expense_numbers, fn {key, data} ->
-          {key, Enum.map(data, &Tuple.to_list/1)}
+        Map.new(expense_numbers, fn {year, expense_numbers_set} ->
+          {year, Enum.map(expense_numbers_set, &Tuple.to_list/1)}
         end)
       end)
       |> Map.update!(:template_names, &Enum.to_list/1)
@@ -83,11 +83,11 @@ defmodule Conta.Aggregate.Company do
       state: params["state"],
       country: params["country"],
       details: params["details"],
-      invoice_numbers: Map.new(params["invoice_numbers"], fn {key, data} ->
-        {key, MapSet.new(data)}
+      invoice_numbers: Map.new(params["invoice_numbers"], fn {year, invoice_numbers_list} ->
+        {String.to_integer(year), MapSet.new(invoice_numbers_list)}
       end),
-      expense_numbers: Map.new(params["expense_numbers"], fn {key, data} ->
-        {key, MapSet.new(data, &List.to_tuple/1)}
+      expense_numbers: Map.new(params["expense_numbers"], fn {year, expense_numbers_list} ->
+        {String.to_integer(year), MapSet.new(expense_numbers_list, &List.to_tuple/1)}
       end),
       contacts: Map.new(params["contacts"], fn {key, data} ->
         {key, Contact.changeset(data)}
