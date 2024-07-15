@@ -62,7 +62,7 @@ defmodule ContaWeb.EntryLive.FormComponent.AccountTransaction do
       amount: Money.subtract(main_entry.debit, main_entry.credit) |> Money.to_decimal(),
       breakdown: main_entry.breakdown,
       entries:
-        for %Conta.Projector.Ledger.Entry{} = entry <- entries do
+        for %Conta.Projector.Ledger.Entry{} = entry <- entries, main_entry.breakdown do
           %__MODULE__.Entry{
             id: entry.id,
             description: entry.description,

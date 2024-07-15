@@ -133,6 +133,7 @@ defmodule ContaWeb.EntryLive.FormComponent do
                 <.input field={@form[:change_currency]} type="hidden" />
               <% else %>
                 <.input field={@form[:amount]} label={gettext("Amount")} type="number" step=".01" />
+                <.input field={@form[:change_amount]} type="hidden" value={@form[:amount].value} />
               <% end %>
             <% end %>
           </.simple_form>
@@ -332,7 +333,9 @@ defmodule ContaWeb.EntryLive.FormComponent do
 
     params =
       if params["breakdown"] == "true" do
-        Map.update!(params, "entries", &set_currency_for_entries(&1, accounts))
+        params
+        |> Map.put_new("entries", [])
+        |> Map.update!("entries", &set_currency_for_entries(&1, accounts))
       else
         params
         |> Map.put("currency", get_currency(accounts, params["account_name"]))
