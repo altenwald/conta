@@ -20,6 +20,7 @@ defmodule Conta.Event.TransactionRemoved do
   def changeset(model \\ %__MODULE__{}, params) when not is_struct(params) do
     model
     |> cast(params, @required_fields ++ @optional_fields)
+    |> cast_embed(:entries)
     |> validate_required(@required_fields)
     |> get_result()
   end

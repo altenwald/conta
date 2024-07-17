@@ -5,6 +5,7 @@ defmodule Conta.Projector.Stats do
     name: __MODULE__,
     consistency: Application.compile_env(:conta, :consistency, :eventual)
 
+  import Conta.MoneyHelpers
   import Ecto.Query, only: [from: 2]
 
   alias Conta.Event.AccountCreated
@@ -28,7 +29,8 @@ defmodule Conta.Projector.Stats do
         id: account.id,
         name: account.name,
         ledger: account.ledger,
-        type: account.type
+        type: account.type,
+        currency: account.currency
       })
 
     Ecto.Multi.insert(multi, :create_account, account)
@@ -68,10 +70,10 @@ defmodule Conta.Projector.Stats do
       account = accounts[entry.account_name]
 
       multi
-      |> maybe_update_income(account.type, on_date, idx, entry)
-      |> maybe_update_outcome(account.type, on_date, idx, entry)
-      |> maybe_update_patrimony(account.type, on_date, idx, entry)
-      |> maybe_update_pnl(account.type, on_date, idx, entry)
+      |> maybe_update_income(account.type, account.currency, on_date, idx, entry)
+      |> maybe_update_outcome(account.type, account.currency, on_date, idx, entry)
+      |> maybe_update_patrimony(account.type, account.currency, on_date, idx, entry)
+      |> maybe_update_pnl(account.type, account.currency, on_date, idx, entry)
     end)
   end)
 
@@ -92,56 +94,61 @@ defmodule Conta.Projector.Stats do
       inverse_entry = Map.merge(entry, %{credit: entry.debit, debit: entry.credit})
 
       multi
-      |> maybe_update_income(account.type, on_date, idx, inverse_entry)
-      |> maybe_update_outcome(account.type, on_date, idx, inverse_entry)
-      |> maybe_update_patrimony(account.type, on_date, idx, inverse_entry)
-      |> maybe_update_pnl(account.type, on_date, idx, inverse_entry)
+      |> maybe_update_income(account.type, account.currency, on_date, idx, inverse_entry)
+      |> maybe_update_outcome(account.type, account.currency, on_date, idx, inverse_entry)
+      |> maybe_update_patrimony(account.type, account.currency, on_date, idx, inverse_entry)
+      |> maybe_update_pnl(account.type, account.currency, on_date, idx, inverse_entry)
     end)
   end)
 
-  defp maybe_update_income(multi, :revenue, on_date, idx, entry) do
+  defp maybe_update_income(multi, :revenue, currency, on_date, idx, entry) do
     income =
       %Income{
         account_name: entry.account_name,
         year: on_date.year,
         month: on_date.month,
-        currency: entry.credit.currency,
+        currency: currency,
         balance: Money.subtract(entry.credit, entry.debit)
       }
 
-    update = [inc: [balance: Money.subtract(entry.credit, entry.debit)]]
+    update = [
+      inc: [balance: Money.subtract(entry.credit, entry.debit)],
+      set: [updated_at: NaiveDateTime.utc_now()]
+    ]
+
     opts = [on_conflict: update, conflict_target: ~w[account_name year month currency]a]
     Ecto.Multi.insert(multi, {:income, idx}, income, opts)
   end
 
-  defp maybe_update_income(multi, _type, _on_date, _idx, _entry), do: multi
+  defp maybe_update_income(multi, _type, _currency, _on_date, _idx, _entry), do: multi
 
-  defp maybe_update_outcome(multi, :expenses, on_date, idx, entry) do
+  defp maybe_update_outcome(multi, :expenses, currency, on_date, idx, entry) do
     balance = Money.subtract(entry.debit, entry.credit)
+
     outcome =
       %Outcome{
         account_name: entry.account_name,
         year: on_date.year,
         month: on_date.month,
-        currency: entry.credit.currency,
+        currency: currency,
         balance: balance
       }
 
-    update = [inc: [balance: balance]]
+    update = [inc: [balance: balance], set: [updated_at: NaiveDateTime.utc_now()]]
     opts = [on_conflict: update, conflict_target: ~w[account_name year month currency]a]
     Ecto.Multi.insert(multi, {:outcome, idx}, outcome, opts)
   end
 
-  defp maybe_update_outcome(multi, _type, _on_date, _idx, _entry), do: multi
+  defp maybe_update_outcome(multi, _type, _currency, _on_date, _idx, _entry), do: multi
 
-  defp maybe_update_patrimony(multi, type, on_date, idx, entry)
+  defp maybe_update_patrimony(multi, type, currency, on_date, idx, entry)
        when type in [:liabilities, :assets] do
     # even when liabilities and assets are increased in a different way, we need to
     # compound the data as (assets - liabilities) so if we keep the amount changing
     # the symbol (same for liabilities and assets) we could get the correct value
     # for the patrimony.
     amount = Money.subtract(entry.debit, entry.credit)
-    opts = [year: on_date.year, month: on_date.month, currency: amount.currency]
+    opts = [year: on_date.year, month: on_date.month, currency: currency]
 
     if Repo.get_by(Patrimony, opts) do
       query =
@@ -149,15 +156,19 @@ defmodule Conta.Projector.Stats do
           p in Patrimony,
           where:
             p.year == ^on_date.year and p.month == ^on_date.month and
-              p.currency == ^amount.currency
+              p.currency == ^currency
         )
 
-      updates = [inc: [balance: amount, amount: amount]]
+      updates = [
+        inc: [balance: amount, amount: amount],
+        set: [updated_at: NaiveDateTime.utc_now()]
+      ]
+
       Ecto.Multi.update_all(multi, {:patrimony, idx}, query, updates)
     else
       from(
         p in Patrimony,
-        where: p.currency == ^amount.currency,
+        where: p.currency == ^currency,
         order_by: [desc: p.year, desc: p.month],
         limit: 1
       )
@@ -168,12 +179,16 @@ defmodule Conta.Projector.Stats do
             %Patrimony{
               year: on_date.year,
               month: on_date.month,
-              currency: amount.currency,
+              currency: currency,
               amount: amount,
               balance: amount
             }
 
-          update = [inc: [balance: amount, amount: amount]]
+          update = [
+            inc: [balance: amount, amount: amount],
+            set: [updated_at: NaiveDateTime.utc_now()]
+          ]
+
           opts = [on_conflict: update, conflict_target: ~w[year month currency]a]
           Ecto.Multi.insert(multi, {:patrimony, idx}, patrimony, opts)
 
@@ -182,41 +197,57 @@ defmodule Conta.Projector.Stats do
             %Patrimony{
               year: on_date.year,
               month: on_date.month,
-              currency: amount.currency,
+              currency: currency,
               amount: amount,
               balance: Money.add(patrimony.balance, amount)
             }
 
-          update = [inc: [balance: amount, amount: amount]]
+          update = [
+            inc: [balance: amount, amount: amount],
+            set: [updated_at: NaiveDateTime.utc_now()]
+          ]
+
           opts = [on_conflict: update, conflict_target: ~w[year month currency]a]
           Ecto.Multi.insert(multi, {:patrimony, idx}, patrimony, opts)
       end
     end
   end
 
-  defp maybe_update_patrimony(multi, _type, _on_date, _idx, _entry), do: multi
+  defp maybe_update_patrimony(multi, _type, _currency, _on_date, _idx, _entry), do: multi
 
-  defp maybe_update_pnl(multi, type, on_date, idx, entry) when type in [:revenue, :expenses] do
-    currency = entry.credit.currency
+  defp maybe_update_pnl(multi, type, currency, on_date, idx, entry)
+       when type in [:revenue, :expenses] do
     zero = Money.new(0, currency)
-    profits = if type == :revenue, do: Money.subtract(entry.credit, entry.debit), else: zero
-    loses = if type == :expenses, do: Money.subtract(entry.debit, entry.credit), else: zero
+    credit = to_money(entry.credit, currency)
+    debit = to_money(entry.debit, currency)
+    profits = if type == :revenue, do: Money.subtract(credit, debit), else: zero
+    loses = if type == :expenses, do: Money.subtract(debit, credit), else: zero
     balance = Money.subtract(profits, loses)
 
     profits_loses =
       %ProfitsLoses{
         year: on_date.year,
         month: on_date.month,
-        currency: balance.currency,
+        currency: currency,
         profits: profits,
         loses: loses,
         balance: balance
       }
 
-    update = [inc: [profits: profits, loses: loses, balance: balance]]
+    update = [
+      inc: [
+        profits: profits.amount,
+        loses: loses.amount,
+        balance: balance.amount
+      ],
+      set: [
+        updated_at: NaiveDateTime.utc_now()
+      ]
+    ]
+
     opts = [on_conflict: update, conflict_target: ~w[year month currency]a]
     Ecto.Multi.insert(multi, {:profits_loses, idx}, profits_loses, opts)
   end
 
-  defp maybe_update_pnl(multi, _type, _on_date, _idx, _entry), do: multi
+  defp maybe_update_pnl(multi, _type, _currency, _on_date, _idx, _entry), do: multi
 end

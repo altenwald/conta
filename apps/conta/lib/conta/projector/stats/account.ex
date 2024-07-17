@@ -1,5 +1,5 @@
 defmodule Conta.Projector.Stats.Account do
-  use Ecto.Schema
+  use TypedEctoSchema
   import Ecto.Changeset
 
   @typedoc """
@@ -55,16 +55,17 @@ defmodule Conta.Projector.Stats.Account do
   @primary_key {:id, :binary_id, autogenerate: true}
   @foreign_key_type :binary_id
 
-  schema "stats_accounts" do
+  typed_schema "stats_accounts" do
     field(:name, {:array, :string})
     field(:ledger, :string, default: "default")
     field(:type, Ecto.Enum, values: @account_types)
+    field(:currency, Money.Ecto.Currency.Type, default: :EUR) :: atom()
 
     timestamps(type: :utc_datetime_usec)
   end
 
   @required_fields ~w[id name]a
-  @optional_fields ~w[ledger type]a
+  @optional_fields ~w[ledger type currency]a
 
   @doc false
   def changeset(model \\ %__MODULE__{}, params) do
