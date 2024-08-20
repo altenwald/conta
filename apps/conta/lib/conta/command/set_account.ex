@@ -48,7 +48,7 @@ defmodule Conta.Command.SetAccount do
       |> String.trim()
       |> String.split(".")
 
-    (simple_name ++ parent_name)
+    (parent_name ++ simple_name)
     |> Enum.reject(& &1 == "")
     |> case do
       [] -> changeset
