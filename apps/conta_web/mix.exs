@@ -41,7 +41,7 @@ defmodule ContaWeb.MixProject do
       {:esbuild, "~> 0.8", runtime: Mix.env() == :dev},
       {:tailwind, "~> 0.2", runtime: Mix.env() == :dev},
       {:dart_sass, "~> 0.1", runtime: Mix.env() == :dev},
-      {:bulma, "~> 0.9"},
+      {:bulma, "~> 1.0"},
       {:fontawesome, "~> 0.3"},
       {:telemetry_metrics, "~> 1.0"},
       {:telemetry_poller, "~> 1.0"},
@@ -51,7 +51,7 @@ defmodule ContaWeb.MixProject do
       {:countries_i18n, "~> 0.0", only: :dev},
       {:countries, "~> 1.6"},
       {:plug_cowboy, "~> 2.6"},
-      {:chromic_pdf, "~> 1.15.0"},
+      {:chromic_pdf, "~> 1.15"},
       {:doctor, ">= 0.0.0", only: [:dev, :test], runtime: false},
       {:sobelow, ">= 0.0.0", only: [:dev, :test], rutnime: false}
     ]
