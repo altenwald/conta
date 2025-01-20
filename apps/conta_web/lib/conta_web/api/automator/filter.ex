@@ -21,7 +21,7 @@ defmodule ContaWeb.Api.Automator.Filter do
             "id" => filter.id,
             "name" => filter.name,
             "output" => filter.output,
-            "langauge" => filter.language,
+            "language" => filter.language,
             "description" => filter.description,
             "code" => filter.code
           }
