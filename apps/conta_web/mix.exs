@@ -41,7 +41,7 @@ defmodule ContaWeb.MixProject do
       {:esbuild, "~> 0.8", runtime: Mix.env() == :dev},
       {:tailwind, "~> 0.2", runtime: Mix.env() == :dev},
       {:dart_sass, "~> 0.1", runtime: Mix.env() == :dev},
-      {:bulma, "~> 1.0"},
+      {:bulma, "~> 0.9"},
       {:fontawesome, "~> 0.3"},
       {:telemetry_metrics, "~> 1.0"},
       {:telemetry_poller, "~> 1.0"},
