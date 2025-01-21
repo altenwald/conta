@@ -90,8 +90,10 @@ defmodule ContaWeb.Router do
       # TODO
       # resources "/accounts", Account, only: [:index, :show, :create, :update, :delete]
 
+      post "/accounts/transaction", Entry, :create
+
       scope "/accounts/:account_name/" do
-        resources "/entries", Entry, only: [:index, :show, :create, :update, :delete]
+        resources "/entries", Entry, only: [:index, :show]
       end
     end
 
