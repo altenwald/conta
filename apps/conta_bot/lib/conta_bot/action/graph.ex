@@ -75,6 +75,7 @@ defmodule ContaBot.Action.Graph do
 
     case Resvg.svg_string_to_png_buffer(graph, resources_dir: "/tmp") do
       {:ok, image} ->
+        image = IO.iodata_to_binary(image)
         ExGram.send_photo(get_chat_id(context), {:file_content, image, "patrimony.png"})
         delete(context, context.update.callback_query.message)
 
@@ -93,6 +94,7 @@ defmodule ContaBot.Action.Graph do
 
     case Resvg.svg_string_to_png_buffer(graph, resources_dir: "/tmp") do
       {:ok, image} ->
+        image = IO.iodata_to_binary(image)
         ExGram.send_photo(get_chat_id(context), {:file_content, image, "outcome.png"})
         delete(context, context.update.callback_query.message)
 
@@ -111,6 +113,7 @@ defmodule ContaBot.Action.Graph do
 
     case Resvg.svg_string_to_png_buffer(graph, resources_dir: "/tmp") do
       {:ok, image} ->
+        image = IO.iodata_to_binary(image)
         ExGram.send_photo(get_chat_id(context), {:file_content, image, "income.png"})
         delete(context, context.update.callback_query.message)
 
@@ -129,6 +132,7 @@ defmodule ContaBot.Action.Graph do
 
     case Resvg.svg_string_to_png_buffer(graph, resources_dir: "/tmp") do
       {:ok, image} ->
+        image = IO.iodata_to_binary(image)
         ExGram.send_photo(get_chat_id(context), {:file_content, image, "pnl.png"})
         delete(context, context.update.callback_query.message)
 
