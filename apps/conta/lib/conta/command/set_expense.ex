@@ -21,6 +21,7 @@ defmodule Conta.Command.SetExpense do
     field :currency, :string
     field :comments, :string
     field :payment_method, :string
+
     embeds_many :attachments, Attachment, on_replace: :delete do
       field :name, :string
       field :file, :binary

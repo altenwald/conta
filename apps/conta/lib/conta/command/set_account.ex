@@ -37,19 +37,19 @@ defmodule Conta.Command.SetAccount do
     simple_name =
       changeset
       |> get_field(:simple_name, "")
-      |> then(& &1 || "")
+      |> then(&(&1 || ""))
       |> String.trim()
       |> List.wrap()
 
     parent_name =
       changeset
       |> get_field(:parent_name, "")
-      |> then(& &1 || "")
+      |> then(&(&1 || ""))
       |> String.trim()
       |> String.split(".")
 
     (parent_name ++ simple_name)
-    |> Enum.reject(& &1 == "")
+    |> Enum.reject(&(&1 == ""))
     |> case do
       [] -> changeset
       name -> put_change(changeset, :name, name)

@@ -36,15 +36,17 @@ defmodule Conta.Stats do
   end
 
   defp adjust_currency(%Patrimony{currency: currency, amount: amount, balance: balance} = patrimony) do
-    %Patrimony{patrimony |
-      amount: Money.new(amount.amount, currency),
-      balance: Money.new(balance.amount, currency)
+    %Patrimony{
+      patrimony
+      | amount: Money.new(amount.amount, currency),
+        balance: Money.new(balance.amount, currency)
     }
   end
 
   def graph_patrimony(currency) when is_atom(currency) do
     data = list_patrimony(currency, 12) |> Enum.reverse()
     headers = Enum.map(data, &to_date/1)
+
     options = [
       type: :stacked,
       data_labels: true,
@@ -81,6 +83,7 @@ defmodule Conta.Stats do
 
   defp top_accounts(table, groups, months) do
     {month, year} = get_months(months)
+
     from(
       t in table,
       where: t.year > ^year or (t.year == ^year and t.month >= ^month),
@@ -156,6 +159,7 @@ defmodule Conta.Stats do
 
   defp to_name(account_name, accounts) do
     account_name = Enum.join(account_name, ".")
+
     if account_name in accounts do
       account_name
     else
@@ -187,7 +191,7 @@ defmodule Conta.Stats do
       [date, profits, loses, balance]
     end)
     |> Enum.reverse()
-    |> Dataset.new(["Months"|headers])
+    |> Dataset.new(["Months" | headers])
     |> Plot.new(BarChart, 640, 480, options)
     |> Plot.titles("", "")
     |> Plot.axis_labels("", "")
@@ -225,9 +229,9 @@ defmodule Conta.Stats do
       fn {_date, name, balance} -> {name, to_float(balance)} end
     )
     |> Enum.map(fn {date, values} ->
-      [date|process_values(values, headers)]
+      [date | process_values(values, headers)]
     end)
-    |> Dataset.new(["Months"|headers])
+    |> Dataset.new(["Months" | headers])
     |> Plot.new(BarChart, 640, 480, options)
     |> Plot.titles("", "")
     |> Plot.axis_labels("", "")
@@ -237,8 +241,9 @@ defmodule Conta.Stats do
 
   defp process_values(values, headers) do
     values = Map.new(values)
+
     Enum.map(headers, fn account_name ->
-        values[account_name] || 0
+      values[account_name] || 0
     end)
   end
 

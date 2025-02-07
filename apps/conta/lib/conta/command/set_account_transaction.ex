@@ -7,6 +7,7 @@ defmodule Conta.Command.SetAccountTransaction do
   typed_embedded_schema do
     field :ledger, :string, default: "default"
     field :on_date, :date
+
     embeds_many :entries, Entry, primary_key: false do
       @typep currency() :: atom()
 

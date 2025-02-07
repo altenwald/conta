@@ -36,12 +36,12 @@ defmodule Conta.Projector.BookTest do
       assert :ok = Book.handle(event, metadata)
 
       assert %Book.PaymentMethod{
-        id: _,
-        method: :gateway,
-        name: "Stripe Payments",
-        nif: "A55666777",
-        slug: "stripe"
-      } = Repo.get_by!(Book.PaymentMethod, nif: "A55666777", slug: "stripe")
+               id: _,
+               method: :gateway,
+               name: "Stripe Payments",
+               nif: "A55666777",
+               slug: "stripe"
+             } = Repo.get_by!(Book.PaymentMethod, nif: "A55666777", slug: "stripe")
     end
 
     test "update successfully", metadata do
@@ -58,23 +58,23 @@ defmodule Conta.Projector.BookTest do
         }
 
       assert %Book.PaymentMethod{
-        id: ^payment_method_id,
-        method: :gateway,
-        name: "Paypal Wallet",
-        nif: "A55666777",
-        slug: "paypal"
-      } = Repo.get!(Book.PaymentMethod, payment_method_id)
+               id: ^payment_method_id,
+               method: :gateway,
+               name: "Paypal Wallet",
+               nif: "A55666777",
+               slug: "paypal"
+             } = Repo.get!(Book.PaymentMethod, payment_method_id)
 
       assert :ok = Book.handle(event, metadata)
 
       assert %Book.PaymentMethod{
-        id: ^payment_method_id,
-        method: :gateway,
-        name: "PayPal Wallet",
-        nif: "A55666777",
-        slug: "paypal",
-        details: "Email business@paypal.com"
-      } = Repo.get!(Book.PaymentMethod, payment_method_id)
+               id: ^payment_method_id,
+               method: :gateway,
+               name: "PayPal Wallet",
+               nif: "A55666777",
+               slug: "paypal",
+               details: "Email business@paypal.com"
+             } = Repo.get!(Book.PaymentMethod, payment_method_id)
     end
   end
 
@@ -129,47 +129,47 @@ defmodule Conta.Projector.BookTest do
       assert :ok = Book.handle(event, metadata)
 
       assert %Book.Invoice{
-        client: %Book.Invoice.Client{
-          name: "My client",
-          nif: "B123456789",
-          intracommunity: false,
-          address: "My client's address",
-          postcode: "14000",
-          city: "Cordoba",
-          state: "Cordoba",
-          country: "ES"
-        },
-        company: %Book.Invoice.Company{
-          name: "Great Company SA",
-          nif: "A55666777",
-          address: "My Full Address",
-          postcode: "28000",
-          city: "Madrid",
-          state: "Madrid",
-          country: "ES"
-        },
-        destination_country: "ES",
-        details: [
-          %Book.Invoice.Detail{
-            description: "Consultancy",
-            tax: 21,
-            base_price: 100_00,
-            units: 1,
-            tax_price: 21_00,
-            total_price: 12_100
-          }
-        ],
-        invoice_date: ~D[2023-12-30],
-        invoice_number: "2023-00001",
-        payment_method: %Book.Invoice.PaymentMethod{
-          method: :gateway,
-          details: "myaccount@paypal.com"
-        },
-        subtotal_price: 100_00,
-        tax_price: 21_00,
-        total_price: 121_00,
-        type: :service
-      } = Repo.get_by!(Book.Invoice, invoice_number: "2023-00001")
+               client: %Book.Invoice.Client{
+                 name: "My client",
+                 nif: "B123456789",
+                 intracommunity: false,
+                 address: "My client's address",
+                 postcode: "14000",
+                 city: "Cordoba",
+                 state: "Cordoba",
+                 country: "ES"
+               },
+               company: %Book.Invoice.Company{
+                 name: "Great Company SA",
+                 nif: "A55666777",
+                 address: "My Full Address",
+                 postcode: "28000",
+                 city: "Madrid",
+                 state: "Madrid",
+                 country: "ES"
+               },
+               destination_country: "ES",
+               details: [
+                 %Book.Invoice.Detail{
+                   description: "Consultancy",
+                   tax: 21,
+                   base_price: 100_00,
+                   units: 1,
+                   tax_price: 21_00,
+                   total_price: 12_100
+                 }
+               ],
+               invoice_date: ~D[2023-12-30],
+               invoice_number: "2023-00001",
+               payment_method: %Book.Invoice.PaymentMethod{
+                 method: :gateway,
+                 details: "myaccount@paypal.com"
+               },
+               subtotal_price: 100_00,
+               tax_price: 21_00,
+               total_price: 121_00,
+               type: :service
+             } = Repo.get_by!(Book.Invoice, invoice_number: "2023-00001")
     end
 
     test "update successfully", metadata do
@@ -222,85 +222,85 @@ defmodule Conta.Projector.BookTest do
       _invoice = insert(:invoice, %{invoice_number: "2023-00001", invoice_date: "2023-12-30"})
 
       assert %Conta.Projector.Book.Invoice{
-        client: nil,
-        company: %Conta.Projector.Book.Invoice.Company{
-          name: "Great Company SA",
-          nif: "A55666777",
-          address: "My Full Address",
-          postcode: "28000",
-          city: "Madrid",
-          state: "Madrid",
-          country: "ES"
-        },
-        destination_country: "ES",
-        details: [
-          %Conta.Projector.Book.Invoice.Detail{
-            description: "Consultancy",
-            tax: 21,
-            base_price: 100_00,
-            units: 1,
-            tax_price: 21_00,
-            total_price: 12_100
-          }
-        ],
-        invoice_date: ~D[2023-12-30],
-        invoice_number: "2023-00001",
-        payment_method: %Conta.Projector.Book.Invoice.PaymentMethod{
-          method: :gateway,
-          details: "myaccount@paypal.com"
-        },
-        subtotal_price: 100_00,
-        tax_price: 21_00,
-        total_price: 121_00,
-        type: :service
-      } = Repo.get_by!(Conta.Projector.Book.Invoice, invoice_number: "2023-00001")
+               client: nil,
+               company: %Conta.Projector.Book.Invoice.Company{
+                 name: "Great Company SA",
+                 nif: "A55666777",
+                 address: "My Full Address",
+                 postcode: "28000",
+                 city: "Madrid",
+                 state: "Madrid",
+                 country: "ES"
+               },
+               destination_country: "ES",
+               details: [
+                 %Conta.Projector.Book.Invoice.Detail{
+                   description: "Consultancy",
+                   tax: 21,
+                   base_price: 100_00,
+                   units: 1,
+                   tax_price: 21_00,
+                   total_price: 12_100
+                 }
+               ],
+               invoice_date: ~D[2023-12-30],
+               invoice_number: "2023-00001",
+               payment_method: %Conta.Projector.Book.Invoice.PaymentMethod{
+                 method: :gateway,
+                 details: "myaccount@paypal.com"
+               },
+               subtotal_price: 100_00,
+               tax_price: 21_00,
+               total_price: 121_00,
+               type: :service
+             } = Repo.get_by!(Conta.Projector.Book.Invoice, invoice_number: "2023-00001")
 
       assert :ok = Book.handle(event, metadata)
 
       assert %Book.Invoice{
-        client: %Book.Invoice.Client{
-          name: "My client",
-          nif: "B123456789",
-          intracommunity: false,
-          address: "My client's address",
-          postcode: "14000",
-          city: "Cordoba",
-          state: "Cordoba",
-          country: "ES"
-        },
-        company: %Conta.Projector.Book.Invoice.Company{
-          name: "Great Company SA",
-          nif: "A55666777",
-          address: "My Full Address",
-          postcode: "28000",
-          city: "Madrid",
-          state: "Madrid",
-          country: "ES"
-        },
-        destination_country: "ES",
-        details: [
-          %Conta.Projector.Book.Invoice.Detail{
-            description: "Consultancy",
-            tax: 21,
-            base_price: 200_00,
-            units: 1,
-            tax_price: 42_00,
-            total_price: 242_00
-          }
-        ],
-        invoice_date: ~D[2023-12-30],
-        invoice_number: "2023-00001",
-        payment_method: %Conta.Projector.Book.Invoice.PaymentMethod{
-          slug: "paypal",
-          name: "PayPal",
-          method: :gateway,
-          details: "myaccount@paypal.com"
-        },
-        subtotal_price: 100_00,
-        tax_price: 21_00,
-        total_price: 121_00,
-        type: :service
-      } = Repo.get_by!(Conta.Projector.Book.Invoice, invoice_number: "2023-00001")
+               client: %Book.Invoice.Client{
+                 name: "My client",
+                 nif: "B123456789",
+                 intracommunity: false,
+                 address: "My client's address",
+                 postcode: "14000",
+                 city: "Cordoba",
+                 state: "Cordoba",
+                 country: "ES"
+               },
+               company: %Conta.Projector.Book.Invoice.Company{
+                 name: "Great Company SA",
+                 nif: "A55666777",
+                 address: "My Full Address",
+                 postcode: "28000",
+                 city: "Madrid",
+                 state: "Madrid",
+                 country: "ES"
+               },
+               destination_country: "ES",
+               details: [
+                 %Conta.Projector.Book.Invoice.Detail{
+                   description: "Consultancy",
+                   tax: 21,
+                   base_price: 200_00,
+                   units: 1,
+                   tax_price: 42_00,
+                   total_price: 242_00
+                 }
+               ],
+               invoice_date: ~D[2023-12-30],
+               invoice_number: "2023-00001",
+               payment_method: %Conta.Projector.Book.Invoice.PaymentMethod{
+                 slug: "paypal",
+                 name: "PayPal",
+                 method: :gateway,
+                 details: "myaccount@paypal.com"
+               },
+               subtotal_price: 100_00,
+               tax_price: 21_00,
+               total_price: 121_00,
+               type: :service
+             } = Repo.get_by!(Conta.Projector.Book.Invoice, invoice_number: "2023-00001")
     end
   end
 end

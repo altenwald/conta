@@ -15,19 +15,8 @@ defmodule ContaWeb.ContactLive.FormComponent do
           <h2><%= @title %></h2>
         </header>
         <section class="modal-card-body">
-          <.simple_form
-            for={@form}
-            id="contact-form"
-            phx-target={@myself}
-            phx-change="validate"
-            phx-submit="save"
-          >
-            <.input
-              field={@form[:company_nif]}
-              type="text"
-              label={gettext("Company NIF")}
-              disabled="true"
-            />
+          <.simple_form for={@form} id="contact-form" phx-target={@myself} phx-change="validate" phx-submit="save">
+            <.input field={@form[:company_nif]} type="text" label={gettext("Company NIF")} disabled="true" />
             <.input field={@form[:nif]} type="text" label={gettext("Contact NIF")} />
             <.input field={@form[:name]} type="text" label={gettext("Name")} />
             <.input field={@form[:intracommunity]} type="checkbox" label={gettext("Intracommunity?")} />

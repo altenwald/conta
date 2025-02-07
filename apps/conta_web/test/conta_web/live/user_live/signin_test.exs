@@ -45,9 +45,7 @@ defmodule ContaWeb.UserLive.SigninTest do
       {:ok, lv, _html} = live(conn, ~p"/signin")
 
       form =
-        form(lv, "#login_form",
-          user: %{email: "test@email.com", password: "123456", remember_me: true}
-        )
+        form(lv, "#login_form", user: %{email: "test@email.com", password: "123456", remember_me: true})
 
       conn = submit_form(form, conn)
 

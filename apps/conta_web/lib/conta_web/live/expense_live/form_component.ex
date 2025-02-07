@@ -17,13 +17,7 @@ defmodule ContaWeb.ExpenseLive.FormComponent do
           <h2><%= @title %></h2>
         </header>
         <section class="modal-card-body">
-          <.simple_form
-            for={@form}
-            id="expense-form"
-            phx-target={@myself}
-            phx-change="validate"
-            phx-submit="save"
-          >
+          <.simple_form for={@form} id="expense-form" phx-target={@myself} phx-change="validate" phx-submit="save">
             <.input field={@form[:nif]} type="text" label={gettext("Company NIF")} disabled="true" />
             <.input field={@form[:name]} type="text" label={gettext("Name")} />
             <.input field={@form[:invoice_number]} type="text" label={gettext("Invoice Number")} />
@@ -57,19 +51,9 @@ defmodule ContaWeb.ExpenseLive.FormComponent do
               options={list_currencies()}
               prompt={gettext("Choose a currency...")}
             />
-            <.input
-              field={@form[:subtotal_price]}
-              type="number"
-              step=".01"
-              label={gettext("Subtotal")}
-            />
+            <.input field={@form[:subtotal_price]} type="number" step=".01" label={gettext("Subtotal")} />
             <.input field={@form[:tax_price]} type="number" step=".01" label={gettext("Tax Price")} />
-            <.input
-              field={@form[:total_price]}
-              type="number"
-              step=".01"
-              label={gettext("Total Price")}
-            />
+            <.input field={@form[:total_price]} type="number" step=".01" label={gettext("Total Price")} />
             <.input
               field={@form[:attachments]}
               type="file"

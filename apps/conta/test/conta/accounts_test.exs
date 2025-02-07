@@ -513,6 +513,7 @@ defmodule Conta.AccountsTest do
       assert Accounts.fetch_user_by_api_token(token) == {:ok, user}
       assert Accounts.fetch_user_by_api_token("invalid") == :error
       user_token = Accounts.fetch_api_token_by_user(user)
+
       {now_sec, _} =
         NaiveDateTime.utc_now()
         |> NaiveDateTime.add(365, :day)

@@ -23,6 +23,7 @@ defmodule Conta.EctoHelpers do
   def empty?(nil), do: true
   def empty?([]), do: true
   def empty?(%{} = map) when map_size(map) == 0, do: true
+
   def empty?(str) when is_binary(str) do
     String.trim(str) == ""
   end

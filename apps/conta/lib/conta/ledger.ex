@@ -33,7 +33,7 @@ defmodule Conta.Ledger do
       [] ->
         {:error, :transaction_not_found}
 
-      [entry|_] = entries ->
+      [entry | _] = entries ->
         %RemoveAccountTransaction{
           ledger: "default",
           on_date: entry.on_date,
@@ -229,7 +229,8 @@ defmodule Conta.Ledger do
       query when limit != nil ->
         from(e in query, limit: ^limit)
 
-      query -> query
+      query ->
+        query
     end
     |> Repo.all()
     |> Enum.map(&adjust_currency(&1, account.currency))
@@ -295,10 +296,11 @@ defmodule Conta.Ledger do
   end
 
   defp adjust_currency(%Entry{} = entry, currency) do
-    %Entry{entry |
-      credit: Money.new(entry.credit.amount, currency),
-      debit: Money.new(entry.debit.amount, currency),
-      balance: Money.new(entry.balance.amount, currency)
+    %Entry{
+      entry
+      | credit: Money.new(entry.credit.amount, currency),
+        debit: Money.new(entry.debit.amount, currency),
+        balance: Money.new(entry.balance.amount, currency)
     }
   end
 end

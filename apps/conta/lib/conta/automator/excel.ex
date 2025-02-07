@@ -14,7 +14,7 @@ defmodule Conta.Automator.Excel do
 
   def export([], filename), do: export(%{}, filename)
 
-  def export([%{"name" => _, "rows" => _, "headers" => _}|_] = workbook, filename) do
+  def export([%{"name" => _, "rows" => _, "headers" => _} | _] = workbook, filename) do
     set_cell = fn {content, idx}, sheet, jdx ->
       Sheet.set_cell(sheet, "#{col(idx)}#{jdx}", to_cell(content))
     end
@@ -45,11 +45,13 @@ defmodule Conta.Automator.Excel do
 
   def export(workbook, filename) when is_map(workbook) do
     workbook
-    |> Enum.map(fn {sheet_name, [first_row|_] = sheet_data} ->
+    |> Enum.map(fn {sheet_name, [first_row | _] = sheet_data} ->
       headers = Map.keys(first_row)
+
       rows =
         for row <- sheet_data do
           row = if(is_struct(row), do: Map.from_struct(row), else: row)
+
           for head <- headers do
             row[head]
           end

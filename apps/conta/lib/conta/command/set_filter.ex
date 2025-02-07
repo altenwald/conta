@@ -10,11 +10,13 @@ defmodule Conta.Command.SetFilter do
     field :description, :string
     field :automator, :string
     field :output, Ecto.Enum, values: ~w[json xlsx]a
+
     embeds_many :params, Param do
       field :name, :string
       field :type, Ecto.Enum, values: ~w[string date integer money currency options account_name table]a
       field :options, {:array, :string}
     end
+
     field :code, :string
     field :language, Ecto.Enum, values: ~w[lua php]a, default: :lua
   end

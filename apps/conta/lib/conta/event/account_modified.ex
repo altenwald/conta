@@ -28,6 +28,7 @@ defmodule Conta.Event.AccountModified do
 
   def changed_anything?(model, params) do
     changeset = cast(model, params, @required_fields ++ @optional_fields)
+
     Enum.any?(
       @required_fields ++ @optional_fields,
       &changed?(changeset, &1)

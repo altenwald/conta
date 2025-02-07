@@ -75,9 +75,7 @@
             </:action>
             <:action :let={{id, entry}}>
               <.link
-                phx-click={
-                  JS.push("delete", value: %{id: entry.transaction_id}) |> hide("##{id}")
-                }
+                phx-click={JS.push("delete", value: %{id: entry.transaction_id}) |> hide("##{id}")}
                 class="button is-danger is-light"
                 data-confirm={gettext("Are you sure?")}
                 title={gettext("Delete")}

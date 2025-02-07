@@ -44,8 +44,7 @@ defmodule ContaWeb.Api.Ledger.Entry do
               "credit" => Money.to_decimal(entry.credit),
               "debit" => Money.to_decimal(entry.debit),
               "balance" => Money.to_decimal(entry.balance),
-              "related_account_name" =>
-                Enum.join(entry.related_account_name || ["-- Breakdown"], ".")
+              "related_account_name" => Enum.join(entry.related_account_name || ["-- Breakdown"], ".")
             }
           end,
         "page" => page,
@@ -86,8 +85,7 @@ defmodule ContaWeb.Api.Ledger.Entry do
           "debit" => Money.to_decimal(entry.debit),
           "balance" => Money.to_decimal(entry.balance),
           "account_name" => account_name_str,
-          "related_account_name" =>
-            Enum.join(entry.related_account_name || ["-- Breakdown"], "."),
+          "related_account_name" => Enum.join(entry.related_account_name || ["-- Breakdown"], "."),
           "breakdown" => entry.breakdown,
           "transaction_id" => entry.transaction_id,
           "updated_at" => entry.updated_at,

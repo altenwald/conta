@@ -8,7 +8,9 @@ defmodule Conta.Projector.Book.Expense do
 
   @currencies Enum.map(Map.keys(Money.Currency.all()), &{&1, to_string(&1)})
 
-  @derive {Jason.Encoder, only: ~w[id name invoice_number invoice_date due_date category subtotal_price tax_price total_price comments currency provider company payment_method num_attachments inserted_at updated_at]a}
+  @derive {Jason.Encoder,
+           only:
+             ~w[id name invoice_number invoice_date due_date category subtotal_price tax_price total_price comments currency provider company payment_method num_attachments inserted_at updated_at]a}
   typed_schema "book_expenses" do
     field :name, :string
     field :invoice_number, :string

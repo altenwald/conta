@@ -78,13 +78,14 @@ defmodule Conta.Automator do
     %SetShortcut{
       name: shortcut.name,
       automator: shortcut.automator,
-      params: for %Param{} = shortcut_param <- shortcut.params do
-        %SetShortcut.Param{
-          name: shortcut_param.name,
-          type: shortcut_param.type,
-          options: shortcut_param.options
-        }
-      end,
+      params:
+        for %Param{} = shortcut_param <- shortcut.params do
+          %SetShortcut.Param{
+            name: shortcut_param.name,
+            type: shortcut_param.type,
+            options: shortcut_param.options
+          }
+        end,
       code: shortcut.code,
       language: shortcut.language
     }
@@ -101,13 +102,14 @@ defmodule Conta.Automator do
       name: filter.name,
       automator: filter.automator,
       output: filter.output,
-      params: for %Param{} = filter_param <- filter.params do
-        %SetFilter.Param{
-          name: filter_param.name,
-          type: filter_param.type,
-          options: filter_param.options
-        }
-      end,
+      params:
+        for %Param{} = filter_param <- filter.params do
+          %SetFilter.Param{
+            name: filter_param.name,
+            type: filter_param.type,
+            options: filter_param.options
+          }
+        end,
       code: filter.code,
       language: filter.language
     }
@@ -175,6 +177,7 @@ defmodule Conta.Automator do
     with :ok <- validate_params(filter.params, params),
          {:ok, result} <- run(filter, params) do
       Logger.debug("received data from #{filter.language} filter script: #{inspect(result)}")
+
       filter.output
       |> case do
         :json -> Jason.encode(result)
@@ -199,6 +202,7 @@ defmodule Conta.Automator do
       %SetAccountTransaction{} = command ->
         Logger.debug("processing command: #{inspect(command)}")
         result = dispatch(command)
+
         if result == :ok do
           {:cont, :ok}
         else
@@ -218,6 +222,7 @@ defmodule Conta.Automator do
       %SetInvoice{} = command ->
         Logger.debug("processing command: #{inspect(command)}")
         result = dispatch(command)
+
         if result == :ok do
           {:cont, :ok}
         else
@@ -231,12 +236,13 @@ defmodule Conta.Automator do
 
   defp validate_params([], _params), do: :ok
 
-  defp validate_params([%Param{name: name}|_], params) when not is_map_key(params, name) do
+  defp validate_params([%Param{name: name} | _], params) when not is_map_key(params, name) do
     {:error, %{name => ["can't be blank"]}}
   end
 
-  defp validate_params([%Param{type: :table} = param|automator_params], params) do
+  defp validate_params([%Param{type: :table} = param | automator_params], params) do
     param_value = params[param.name]
+
     if is_list(param_value) or is_map(param_value) do
       validate_params(automator_params, params)
     else
@@ -244,8 +250,9 @@ defmodule Conta.Automator do
     end
   end
 
-  defp validate_params([%Param{type: :account_name} = param|automator_params], params) do
+  defp validate_params([%Param{type: :account_name} = param | automator_params], params) do
     param_value = params[param.name]
+
     if is_list(param_value) and Enum.all?(param_value, &is_binary/1) do
       validate_params(automator_params, params)
     else
@@ -253,7 +260,7 @@ defmodule Conta.Automator do
     end
   end
 
-  defp validate_params([%Param{type: :string} = param|automator_params], params) do
+  defp validate_params([%Param{type: :string} = param | automator_params], params) do
     if is_binary(params[param.name]) do
       validate_params(automator_params, params)
     else
@@ -261,7 +268,8 @@ defmodule Conta.Automator do
     end
   end
 
-  defp validate_params([%Param{type: type} = param|automator_params], params) when type in [:money, :integer] do
+  defp validate_params([%Param{type: type} = param | automator_params], params)
+       when type in [:money, :integer] do
     if is_integer(params[param.name]) or match?({_, ""}, Integer.parse(params[param.name] || "")) do
       validate_params(automator_params, params)
     else
@@ -269,7 +277,7 @@ defmodule Conta.Automator do
     end
   end
 
-  defp validate_params([%Param{type: :currency} = param|automator_params], params) do
+  defp validate_params([%Param{type: :currency} = param | automator_params], params) do
     currencies =
       Money.Currency.all()
       |> Map.keys()
@@ -282,7 +290,7 @@ defmodule Conta.Automator do
     end
   end
 
-  defp validate_params([%Param{type: :options} = param|automator_params], params) do
+  defp validate_params([%Param{type: :options} = param | automator_params], params) do
     if params[param.name] in param.options do
       validate_params(automator_params, params)
     else
@@ -290,8 +298,9 @@ defmodule Conta.Automator do
     end
   end
 
-  defp validate_params([%Param{type: :date} = param|automator_params], params) do
+  defp validate_params([%Param{type: :date} = param | automator_params], params) do
     value = params[param.name]
+
     cond do
       is_struct(value, Date) ->
         validate_params(automator_params, params)
@@ -321,65 +330,69 @@ defmodule Conta.Automator do
 
   defp cast([], _params, acc), do: Enum.reverse(acc)
 
-  defp cast([%Param{type: :table, name: name}|automator_params], params, acc) do
-    cast(automator_params, params, [{name, to_list(params[name])}|acc])
+  defp cast([%Param{type: :table, name: name} | automator_params], params, acc) do
+    cast(automator_params, params, [{name, to_list(params[name])} | acc])
   end
 
-  defp cast([%Param{type: :account_name, name: name}|automator_params], params, acc) when not is_map_key(params, name) do
-    cast(automator_params, params, [{name, nil}|acc])
+  defp cast([%Param{type: :account_name, name: name} | automator_params], params, acc)
+       when not is_map_key(params, name) do
+    cast(automator_params, params, [{name, nil} | acc])
   end
 
-  defp cast([%Param{type: :account_name, name: name}|automator_params], params, acc) do
-    cast(automator_params, params, [{name, String.split(params[name], ".")}|acc])
+  defp cast([%Param{type: :account_name, name: name} | automator_params], params, acc) do
+    cast(automator_params, params, [{name, String.split(params[name], ".")} | acc])
   end
 
-  defp cast([%Param{type: :string, name: name}|automator_params], params, acc) do
-    cast(automator_params, params, [{name, params[name]}|acc])
+  defp cast([%Param{type: :string, name: name} | automator_params], params, acc) do
+    cast(automator_params, params, [{name, params[name]} | acc])
   end
 
-  defp cast([%Param{type: type, name: name}|automator_params], params, acc) when type in [:money, :integer] do
+  defp cast([%Param{type: type, name: name} | automator_params], params, acc)
+       when type in [:money, :integer] do
     value = params[name]
+
     cond do
       is_integer(value) ->
-        cast(automator_params, params, [{name, value}|acc])
+        cast(automator_params, params, [{name, value} | acc])
 
       is_float(value) ->
-        cast(automator_params, params, [{name, ceil(value * 100)}|acc])
+        cast(automator_params, params, [{name, ceil(value * 100)} | acc])
 
       is_binary(value) and match?({_, ""}, Integer.parse(value)) ->
-        cast(automator_params, params, [{name, String.to_integer(value)}|acc])
+        cast(automator_params, params, [{name, String.to_integer(value)} | acc])
 
       :else ->
-        cast(automator_params, params, [{name, nil}|acc])
+        cast(automator_params, params, [{name, nil} | acc])
     end
   end
 
-  defp cast([%Param{type: :currency, name: name}|automator_params], params, acc) do
+  defp cast([%Param{type: :currency, name: name} | automator_params], params, acc) do
     currencies =
       Money.Currency.all()
       |> Map.keys()
       |> Enum.map(&to_string/1)
 
     if params[name] in currencies do
-      cast(automator_params, params, [{name, String.to_atom(params[name])}|acc])
+      cast(automator_params, params, [{name, String.to_atom(params[name])} | acc])
     else
       cast(automator_params, params, [{name, nil} | acc])
     end
   end
 
-  defp cast([%Param{type: :options, name: name, options: options}|automator_params], params, acc) do
+  defp cast([%Param{type: :options, name: name, options: options} | automator_params], params, acc) do
     if params[name] in options do
-      cast(automator_params, params, [{name, params[name]}|acc])
+      cast(automator_params, params, [{name, params[name]} | acc])
     else
-      cast(automator_params, params, [{name, nil}|acc])
+      cast(automator_params, params, [{name, nil} | acc])
     end
   end
 
-  defp cast([%Param{type: :date, name: name}|automator_params], params, acc) do
+  defp cast([%Param{type: :date, name: name} | automator_params], params, acc) do
     value = params[name] || ""
+
     case Date.from_iso8601(value) do
-      {:ok, _date} -> cast(automator_params, params, [{name, value}|acc])
-      {:error, _} -> cast(automator_params, params, [{name, nil}|acc])
+      {:ok, _date} -> cast(automator_params, params, [{name, value} | acc])
+      {:error, _} -> cast(automator_params, params, [{name, nil} | acc])
     end
   end
 end

@@ -104,9 +104,7 @@ defmodule ContaWeb.UserLive.Settings do
                     </strong>
                   </p>
                   <p>
-                    <%= gettext(
-                      "You MUST save the token generated because it is not stored in the database."
-                    ) %>
+                    <%= gettext("You MUST save the token generated because it is not stored in the database.") %>
                   </p>
                   <p :if={assigns[:token]}>
                     <strong><%= @token %></strong>

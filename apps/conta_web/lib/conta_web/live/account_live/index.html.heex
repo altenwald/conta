@@ -82,12 +82,7 @@
   </div>
 </section>
 
-<.modal
-  :if={@live_action in [:new, :edit]}
-  id="account-modal"
-  show
-  on_cancel={JS.patch(~p"/ledger/accounts")}
->
+<.modal :if={@live_action in [:new, :edit]} id="account-modal" show on_cancel={JS.patch(~p"/ledger/accounts")}>
   <.live_component
     module={ContaWeb.AccountLive.FormComponent}
     id={@account.name || :new}

@@ -43,12 +43,14 @@ defmodule Conta.Projector.Ledger do
         currency: account.currency
       })
 
-    update = [set: [
-      notes: account.notes,
-      parent_id: parent_id,
-      type: account.type,
-      currency: account.currency
-    ]]
+    update = [
+      set: [
+        notes: account.notes,
+        parent_id: parent_id,
+        type: account.type,
+        currency: account.currency
+      ]
+    ]
 
     opts = [
       on_conflict: update,
@@ -81,8 +83,10 @@ defmodule Conta.Projector.Ledger do
     Enum.reduce(account.balances, multi, fn balance, multi ->
       prev_query =
         from(
-          b in Balance, as: :balance,
-          join: a in assoc(b, :account), as: :account,
+          b in Balance,
+          as: :balance,
+          join: a in assoc(b, :account),
+          as: :account,
           where: ^get_acc_name_cond(event.prev_name, balance.currency),
           update: [inc: [amount: ^Money.neg(balance.amount)]]
         )
@@ -91,13 +95,17 @@ defmodule Conta.Projector.Ledger do
         from(
           a in Account,
           where: fragment("?[:?]", a.name, ^length(event.prev_name)) == ^event.prev_name,
-          update: [set: [name: fragment("? || ?[?:]", ^event.new_name, a.name, ^(length(event.prev_name) + 1))]]
+          update: [
+            set: [name: fragment("? || ?[?:]", ^event.new_name, a.name, ^(length(event.prev_name) + 1))]
+          ]
         )
 
       new_query =
         from(
-          b in Balance, as: :balance,
-          join: a in assoc(b, :account), as: :account,
+          b in Balance,
+          as: :balance,
+          join: a in assoc(b, :account),
+          as: :account,
           where: ^get_acc_name_cond(event.new_name, balance.currency),
           update: [inc: [amount: ^balance.amount]]
         )
@@ -106,16 +114,29 @@ defmodule Conta.Projector.Ledger do
         from(
           e in Entry,
           where: fragment("?[:?]", e.account_name, ^length(event.prev_name)) == ^event.prev_name,
-          update: [set: [account_name: fragment("? || ?[?:]", ^event.new_name, e.account_name, ^(length(event.prev_name) + 1))]]
+          update: [
+            set: [
+              account_name:
+                fragment("? || ?[?:]", ^event.new_name, e.account_name, ^(length(event.prev_name) + 1))
+            ]
+          ]
         )
 
       rename_related_entries_query =
         from(
           e in Entry,
           where: fragment("?[:?]", e.related_account_name, ^length(event.prev_name)) == ^event.prev_name,
-          update: [set: [
-            related_account_name: fragment("? || ?[?:]", ^event.new_name, e.related_account_name, ^(length(event.prev_name) + 1))
-          ]]
+          update: [
+            set: [
+              related_account_name:
+                fragment(
+                  "? || ?[?:]",
+                  ^event.new_name,
+                  e.related_account_name,
+                  ^(length(event.prev_name) + 1)
+                )
+            ]
+          ]
         )
 
       multi
@@ -123,13 +144,21 @@ defmodule Conta.Projector.Ledger do
       |> Ecto.Multi.update_all({:rename_accounts, event.new_name, balance}, rename_accounts_query, [])
       |> Ecto.Multi.update_all({:add_balances, event.new_name, balance}, new_query, [])
       |> Ecto.Multi.update_all({:rename_entries, event.new_name, balance}, rename_entries_query, [])
-      |> Ecto.Multi.update_all({:rename_related_entries, event.new_name, balance}, rename_related_entries_query, [])
+      |> Ecto.Multi.update_all(
+        {:rename_related_entries, event.new_name, balance},
+        rename_related_entries_query,
+        []
+      )
     end)
-    |> Ecto.Multi.update({:change_parent, event.new_name}, Account.changeset(account, %{parent_id: new_parent.id}))
+    |> Ecto.Multi.update(
+      {:change_parent, event.new_name},
+      Account.changeset(account, %{parent_id: new_parent.id})
+    )
   end)
 
   project(%TransactionCreated{} = transaction, _metadata, fn multi ->
     entries_len = length(transaction.entries)
+
     accounts =
       from(a in Account, select: {a.name, %{id: a.id, currency: a.currency, type: a.type}})
       |> Repo.all()
@@ -205,7 +234,13 @@ defmodule Conta.Projector.Ledger do
 
       multi
       |> remove_account_balances(accounts, entry)
-      |> update_entry_balances(entry.id, entry.account_name, entry.on_date, entry.updated_at, Money.neg(amount))
+      |> update_entry_balances(
+        entry.id,
+        entry.account_name,
+        entry.on_date,
+        entry.updated_at,
+        Money.neg(amount)
+      )
       |> Ecto.Multi.delete({:remove_entry, entry.id}, entry)
     end)
   end)
@@ -252,6 +287,7 @@ defmodule Conta.Projector.Ledger do
 
   defp get_acc_name_cond(account_name, currency) do
     [name | names] = account_names(account_name)
+
     prev_name_cond =
       Enum.reduce(
         names,
@@ -265,7 +301,7 @@ defmodule Conta.Projector.Ledger do
   end
 
   defp account_names(account_name) do
-    Enum.reduce((1..(length(account_name) - 1)//1), [account_name], fn idx, acc ->
+    Enum.reduce(1..(length(account_name) - 1)//1, [account_name], fn idx, acc ->
       {parent, _} = Enum.split(account_name, -idx)
       [parent | acc]
     end)
@@ -288,21 +324,21 @@ defmodule Conta.Projector.Ledger do
   end
 
   defp get_amount(type, %Money{} = credit, %Money{} = debit)
-    when type in ~w[assets expenses]a,
-    do: Money.subtract(debit, credit)
+       when type in ~w[assets expenses]a,
+       do: Money.subtract(debit, credit)
 
   defp get_amount(_type, %Money{} = credit, %Money{} = debit),
     do: Money.subtract(credit, debit)
 
   defp get_amount(type, credit, debit)
-    when type in ~w[assets expenses]a
-    and is_integer(credit)
-    and is_integer(debit),
-    do: debit - credit
+       when type in ~w[assets expenses]a and
+              is_integer(credit) and
+              is_integer(debit),
+       do: debit - credit
 
   defp get_amount(_type, credit, debit)
-    when is_integer(credit) and is_integer(debit),
-    do: credit - debit
+       when is_integer(credit) and is_integer(debit),
+       do: credit - debit
 
   defp upsert_account_balances(multi, idx, accounts, currency, trans_entry) do
     trans_entry.account_name
@@ -343,7 +379,7 @@ defmodule Conta.Projector.Ledger do
 
     Logger.debug(
       "adding amount #{inspect(amount)} greater than or equal to #{on_date}" <>
-      " and greater than #{updated_at} for #{Enum.join(account_name, ".")}"
+        " and greater than #{updated_at} for #{Enum.join(account_name, ".")}"
     )
 
     updates = [inc: [balance: amount]]

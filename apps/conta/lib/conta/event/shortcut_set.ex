@@ -10,11 +10,13 @@ defmodule Conta.Event.ShortcutSet do
     field :name, :string
     field :automator, :string
     field :description, :string
-    embeds_many :params, Param, [primary_key: false, on_replace: :delete] do
+
+    embeds_many :params, Param, primary_key: false, on_replace: :delete do
       field :name, :string
       field :type, Ecto.Enum, values: ~w[string date integer money currency options account_name table]a
       field :options, {:array, :string}
     end
+
     field :code, :string
     field :language, Ecto.Enum, values: ~w[lua php]a, default: :lua
   end

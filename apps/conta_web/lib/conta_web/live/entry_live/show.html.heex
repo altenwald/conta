@@ -3,10 +3,7 @@
     <:breadcrumb label={gettext("Dashboard")} href={~p"/"} />
     <:breadcrumb label={gettext("Accounts")} href={~p"/ledger/accounts"} />
     <:breadcrumb label={Enum.join(@account.name, ".")} href={~p"/ledger/accounts/#{@account}"} />
-    <:breadcrumb
-      label={gettext("Entry")}
-      href={~p"/ledger/accounts/#{@account}/entries/#{@entry}"}
-    />
+    <:breadcrumb label={gettext("Entry")} href={~p"/ledger/accounts/#{@account}/entries/#{@entry}"} />
   </.breadcrumbs>
 
   <div class="card tile is-child has-table has-mobile-sort-spaced">

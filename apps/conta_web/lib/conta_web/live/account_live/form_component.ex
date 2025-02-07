@@ -18,13 +18,7 @@ defmodule ContaWeb.AccountLive.FormComponent do
           <h2><%= @title %></h2>
         </header>
         <section class="modal-card-body">
-          <.simple_form
-            for={@form}
-            id="account-form"
-            phx-target={@myself}
-            phx-change="validate"
-            phx-submit="save"
-          >
+          <.simple_form for={@form} id="account-form" phx-target={@myself} phx-change="validate" phx-submit="save">
             <.input field={@form[:ledger]} type="hidden" value="default" />
             <.input field={@form[:simple_name]} type="text" label={gettext("Name")} />
             <.input

@@ -33,11 +33,11 @@ defmodule Conta.Projector.AutomatorTest do
       assert :ok = Automator.handle(event, metadata)
 
       assert %Automator.Shortcut{
-        automator: "default",
-        name: "credit cash",
-        code: "-- something in Lua",
-        language: :lua
-      } = Repo.get_by!(Automator.Shortcut, name: "credit cash", automator: "default")
+               automator: "default",
+               name: "credit cash",
+               code: "-- something in Lua",
+               language: :lua
+             } = Repo.get_by!(Automator.Shortcut, name: "credit cash", automator: "default")
     end
   end
 end

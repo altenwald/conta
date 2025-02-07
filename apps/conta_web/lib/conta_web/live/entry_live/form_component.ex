@@ -139,11 +139,7 @@ defmodule ContaWeb.EntryLive.FormComponent do
           </.simple_form>
         </section>
         <footer class="modal-card-foot is-at-right">
-          <.button
-            form="account-transaction-form"
-            class="is-primary"
-            phx-disable-with={gettext("Saving...")}
-          >
+          <.button form="account-transaction-form" class="is-primary" phx-disable-with={gettext("Saving...")}>
             <%= gettext("Save Transaction") %>
           </.button>
           <.link class="button" patch={~p"/ledger/accounts/#{@account}/entries"}>

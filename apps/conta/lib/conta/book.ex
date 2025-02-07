@@ -259,17 +259,18 @@ defmodule Conta.Book do
       comments: invoice.comments,
       destination_country: invoice.destination_country,
       payment_method: invoice.payment_method.slug,
-      details: for %Invoice.Detail{} = details <- invoice.details do
-        %SetInvoice.Detail{
-          sku: details.sku,
-          description: details.description,
-          tax: details.tax,
-          base_price: to_money(details.base_price) |> Money.to_decimal(),
-          units: details.units,
-          tax_price: to_money(details.tax_price) |> Money.to_decimal(),
-          total_price: to_money(details.total_price) |> Money.to_decimal()
-        }
-      end
+      details:
+        for %Invoice.Detail{} = details <- invoice.details do
+          %SetInvoice.Detail{
+            sku: details.sku,
+            description: details.description,
+            tax: details.tax,
+            base_price: to_money(details.base_price) |> Money.to_decimal(),
+            units: details.units,
+            tax_price: to_money(details.tax_price) |> Money.to_decimal(),
+            total_price: to_money(details.total_price) |> Money.to_decimal()
+          }
+        end
     }
   end
 
@@ -292,17 +293,18 @@ defmodule Conta.Book do
       currency: expense.currency,
       comments: expense.comments,
       payment_method: expense.payment_method.slug,
-      attachments: for %Expense.Attachment{} = attachment <- expense.attachments do
-        %SetExpense.Attachment{
-          id: attachment.id,
-          name: attachment.name,
-          file: attachment.file,
-          mimetype: attachment.mimetype,
-          size: attachment.size,
-          inserted_at: attachment.inserted_at,
-          updated_at: attachment.updated_at
-        }
-      end
+      attachments:
+        for %Expense.Attachment{} = attachment <- expense.attachments do
+          %SetExpense.Attachment{
+            id: attachment.id,
+            name: attachment.name,
+            file: attachment.file,
+            mimetype: attachment.mimetype,
+            size: attachment.size,
+            inserted_at: attachment.inserted_at,
+            updated_at: attachment.updated_at
+          }
+        end
     }
   end
 
@@ -331,18 +333,19 @@ defmodule Conta.Book do
       comments: invoice.comments,
       destination_country: invoice.destination_country,
       payment_method: invoice.payment_method.slug,
-      details: for %Invoice.Detail{} = details <- invoice.details do
-        %SetInvoice.Detail{
-          id: details.id,
-          sku: details.sku,
-          description: details.description,
-          tax: details.tax,
-          base_price: to_money(details.base_price) |> Money.to_decimal(),
-          units: details.units,
-          tax_price: to_money(details.tax_price) |> Money.to_decimal(),
-          total_price: to_money(details.total_price) |> Money.to_decimal()
-        }
-      end
+      details:
+        for %Invoice.Detail{} = details <- invoice.details do
+          %SetInvoice.Detail{
+            id: details.id,
+            sku: details.sku,
+            description: details.description,
+            tax: details.tax,
+            base_price: to_money(details.base_price) |> Money.to_decimal(),
+            units: details.units,
+            tax_price: to_money(details.tax_price) |> Money.to_decimal(),
+            total_price: to_money(details.total_price) |> Money.to_decimal()
+          }
+        end
     }
   end
 
@@ -370,11 +373,12 @@ defmodule Conta.Book do
   def get_last_invoice_number(year \\ nil)
 
   def get_last_invoice_number(nil) do
-    get_last_invoice_number(Date.utc_today.year)
+    get_last_invoice_number(Date.utc_today().year)
   end
 
   def get_last_invoice_number(year) when is_integer(year) do
     year_str = to_string(year)
+
     from(
       i in Invoice,
       where: fragment("extract(year from ?) = ?", i.invoice_date, ^year),

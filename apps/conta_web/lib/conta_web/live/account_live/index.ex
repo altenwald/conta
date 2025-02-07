@@ -43,6 +43,10 @@ defmodule ContaWeb.AccountLive.Index do
   end
 
   @impl true
+  def handle_event("next-page", _params, socket) do
+    {:noreply, socket}
+  end
+
   def handle_event("delete", %{"id" => id}, socket) do
     account = Ledger.get_account!(id)
 

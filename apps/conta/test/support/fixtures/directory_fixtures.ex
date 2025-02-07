@@ -10,7 +10,7 @@ defmodule Conta.DirectoryFixtures do
       address: "My street",
       postcode: "1111 AA",
       city: "City",
-      country: "NL",
+      country: "NL"
     }
   end
 end

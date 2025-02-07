@@ -49,10 +49,12 @@ defmodule Conta.Projector.Book do
     do: "#{year}-#{String.pad_leading(number, 5, "0")}"
 
   project(%ExpenseRemoved{} = expense_removed, _metadata, fn multi ->
-    expense = Conta.Repo.get_by(Expense, [
+    expense =
+      Conta.Repo.get_by(Expense,
         invoice_number: expense_removed.invoice_number,
         invoice_date: expense_removed.invoice_date
-    ])
+      )
+
     Ecto.Multi.delete(multi, :delete_expense, expense)
   end)
 
@@ -128,7 +130,7 @@ defmodule Conta.Projector.Book do
       |> Map.update(:payment_method, nil, &if(&1 != nil, do: Map.from_struct(&1)))
       |> Map.update(:client, nil, &if(&1 != nil, do: Map.from_struct(&1)))
 
-    old_invoice = Conta.Repo.get_by!(Invoice, [invoice_number: invoice_number])
+    old_invoice = Conta.Repo.get_by!(Invoice, invoice_number: invoice_number)
 
     changeset = Invoice.changeset(old_invoice, params)
 
@@ -147,7 +149,7 @@ defmodule Conta.Projector.Book do
       |> Map.update(:payment_method, nil, &if(&1 != nil, do: Map.from_struct(&1)))
       |> Map.update(:provider, nil, &if(&1 != nil, do: Map.from_struct(&1)))
 
-    old_expense = Conta.Repo.get_by!(Expense, [invoice_number: expense.invoice_number])
+    old_expense = Conta.Repo.get_by!(Expense, invoice_number: expense.invoice_number)
 
     changeset = Expense.changeset(old_expense, params)
 

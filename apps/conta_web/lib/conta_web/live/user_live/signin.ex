@@ -15,12 +15,7 @@ defmodule ContaWeb.UserLive.Signin do
               <div class="box">
                 <.simple_form for={@form} id="login_form" action={~p"/signin"} phx-update="ignore">
                   <.input field={@form[:email]} type="email" label={gettext("Email")} required />
-                  <.input
-                    field={@form[:password]}
-                    type="password"
-                    label={gettext("Password")}
-                    required
-                  />
+                  <.input field={@form[:password]} type="password" label={gettext("Password")} required />
 
                   <:actions>
                     <.input
@@ -36,11 +31,7 @@ defmodule ContaWeb.UserLive.Signin do
                   </:actions>
                   <:actions>
                     <div class="has-text-right full-width">
-                      <.button
-                        type="submit"
-                        phx-disable-with={gettext("Logging in...")}
-                        class="button is-primary"
-                      >
+                      <.button type="submit" phx-disable-with={gettext("Logging in...")} class="button is-primary">
                         <%= gettext("Sign in") %>
                       </.button>
                     </div>

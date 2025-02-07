@@ -12,9 +12,9 @@ defmodule Conta.Aggregate.Automator do
   @derive Jason.Encoder
 
   @type t() :: %__MODULE__{
-    shortcuts: MapSet.t(String.t()),
-    filters: MapSet.t(String.t())
-  }
+          shortcuts: MapSet.t(String.t()),
+          filters: MapSet.t(String.t())
+        }
   defstruct shortcuts: MapSet.new(),
             filters: MapSet.new()
 

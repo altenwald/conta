@@ -32,24 +32,25 @@ defmodule Conta.Projector.DirectoryTest do
         postcode: "1111 AA",
         city: "City",
         state: "State",
-        country: "NL",
+        country: "NL"
       }
 
       assert :ok = Directory.handle(event, metadata)
 
       clauses = [company_nif: event.company_nif, nif: event.nif]
+
       assert %Directory.Contact{
-        id: _,
-        company_nif: "A55666777",
-        name: "John Smith",
-        nif: "B11222333",
-        intracommunity: false,
-        address: "Smith street",
-        postcode: "1111 AA",
-        city: "City",
-        state: "State",
-        country: "NL",
-      } = Repo.get_by!(Directory.Contact, clauses)
+               id: _,
+               company_nif: "A55666777",
+               name: "John Smith",
+               nif: "B11222333",
+               intracommunity: false,
+               address: "Smith street",
+               postcode: "1111 AA",
+               city: "City",
+               state: "State",
+               country: "NL"
+             } = Repo.get_by!(Directory.Contact, clauses)
     end
 
     test "update successfully", metadata do
@@ -67,24 +68,25 @@ defmodule Conta.Projector.DirectoryTest do
         postcode: "1111 AA",
         city: "City",
         state: "State",
-        country: "NL",
+        country: "NL"
       }
 
       assert :ok = Directory.handle(event, metadata)
 
       clauses = [company_nif: company_nif, nif: nif]
+
       assert %Directory.Contact{
-        id: ^id,
-        company_nif: ^company_nif,
-        name: "John Smith",
-        nif: ^nif,
-        intracommunity: false,
-        address: "Smith street",
-        postcode: "1111 AA",
-        city: "City",
-        state: "State",
-        country: "NL",
-      } = Repo.get_by!(Directory.Contact, clauses)
+               id: ^id,
+               company_nif: ^company_nif,
+               name: "John Smith",
+               nif: ^nif,
+               intracommunity: false,
+               address: "Smith street",
+               postcode: "1111 AA",
+               city: "City",
+               state: "State",
+               country: "NL"
+             } = Repo.get_by!(Directory.Contact, clauses)
     end
 
     test "remove successfully", metadata do

@@ -128,9 +128,7 @@ defmodule ContaWeb.ExpenseLive.Index do
 
   @impl true
   def handle_info({:expense_set, expense}, socket) do
-    Logger.debug(
-      "adding expense to the stream #{expense.provider.name} #{expense.invoice_number}"
-    )
+    Logger.debug("adding expense to the stream #{expense.provider.name} #{expense.invoice_number}")
 
     {:noreply, stream_insert(socket, :books_expenses, expense, at: 0)}
   end

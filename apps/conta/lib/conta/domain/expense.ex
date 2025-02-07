@@ -1,5 +1,4 @@
 defmodule Conta.Domain.Expense do
-
   @categories ~w[
     computers
     bank_fees

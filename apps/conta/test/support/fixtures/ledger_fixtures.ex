@@ -3,6 +3,7 @@ defmodule Conta.LedgerFixtures do
 
   def account_factory do
     id = Ecto.UUID.generate()
+
     %Conta.Projector.Ledger.Account{
       id: id,
       name: ["Assets"],
@@ -23,6 +24,7 @@ defmodule Conta.LedgerFixtures do
 
   def entry_factory do
     id = Ecto.UUID.generate()
+
     %Conta.Projector.Ledger.Entry{
       id: id,
       on_date: ~D[2024-01-01],

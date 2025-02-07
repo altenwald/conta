@@ -40,23 +40,11 @@
             </div>
           </div>
           <section class="section">
-            <.input
-              type="static"
-              label={gettext("Account name")}
-              value={Enum.join(@account.name, ".")}
-            />
+            <.input type="static" label={gettext("Account name")} value={Enum.join(@account.name, ".")} />
             <.input type="static" label={gettext("Ledger")} value={@account.ledger} />
             <.input type="static" label={gettext("Type")} value={@account.type} />
-            <.input
-              type="static"
-              label={gettext("Currency")}
-              value={get_currency(@account.currency)}
-            />
-            <.input
-              type="static"
-              label={gettext("Notes")}
-              value={@account.notes || gettext("No notes")}
-            />
+            <.input type="static" label={gettext("Currency")} value={get_currency(@account.currency)} />
+            <.input type="static" label={gettext("Notes")} value={@account.notes || gettext("No notes")} />
             <.field class="is-horizontal" label={gettext("Balances")}>
               <.simple_table id="balances" rows={@account.balances}>
                 <:col :let={balance} class="has-text-right is-money" label={gettext("Amount")}>

@@ -63,13 +63,7 @@ defmodule ContaWeb.CoreComponents do
           <img src={@logo_url} width="112" height="28" />
         </a>
 
-        <a
-          role="button"
-          class="navbar-burger"
-          aria-label="menu"
-          aria-expanded="false"
-          data-target="navbarMenu"
-        >
+        <a role="button" class="navbar-burger" aria-label="menu" aria-expanded="false" data-target="navbarMenu">
           <span aria-hidden="true"></span>
           <span aria-hidden="true"></span>
           <span aria-hidden="true"></span>
@@ -276,8 +270,7 @@ defmodule ContaWeb.CoreComponents do
     >
       <div :if={@title} class="message-header">
         <p><%= @title %></p>
-        <button phx-click={JS.add_class("close", to: "#" <> @id)} class="delete" aria-label="delete">
-        </button>
+        <button phx-click={JS.add_class("close", to: "#" <> @id)} class="delete" aria-label="delete"></button>
       </div>
       <div class="message-body">
         <%= msg %>
@@ -567,12 +560,7 @@ defmodule ContaWeb.CoreComponents do
 
   def input(%{type: "hidden"} = assigns) do
     ~H"""
-    <input
-      type="hidden"
-      name={@name}
-      value={Phoenix.HTML.Form.normalize_value("text", @value)}
-      {@rest}
-    />
+    <input type="hidden" name={@name} value={Phoenix.HTML.Form.normalize_value("text", @value)} {@rest} />
     """
   end
 

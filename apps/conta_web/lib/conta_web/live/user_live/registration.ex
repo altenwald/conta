@@ -30,12 +30,7 @@ defmodule ContaWeb.UserLive.Registration do
                   </.error>
 
                   <.input field={@form[:email]} type="email" label={gettext("Email")} required />
-                  <.input
-                    field={@form[:password]}
-                    type="password"
-                    label={gettext("Password")}
-                    required
-                  />
+                  <.input field={@form[:password]} type="password" label={gettext("Password")} required />
 
                   <:actions>
                     <div class="has-text-right full-width">

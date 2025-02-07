@@ -15,6 +15,7 @@ defmodule Conta.Projector.Directory do
   project(%ContactSet{} = contact, _metadata, fn multi ->
     params = Map.from_struct(contact)
     changeset = Contact.changeset(params)
+
     update =
       params
       |> Map.delete(:nif)
@@ -27,6 +28,7 @@ defmodule Conta.Projector.Directory do
 
   project(%ContactRemoved{} = event, _metadata, fn multi ->
     clauses = Map.from_struct(event)
+
     if contact = Repo.get_by(Contact, clauses) do
       Ecto.Multi.delete(multi, :contact, contact)
     else

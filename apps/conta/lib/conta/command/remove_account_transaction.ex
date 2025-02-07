@@ -10,6 +10,7 @@ defmodule Conta.Command.RemoveAccountTransaction do
     field :ledger, :string, default: "default"
     field :on_date, :date
     field :transaction_id, :binary_id
+
     embeds_many :entries, Entry, primary_key: false do
       field :account_name, {:array, :string}
       field(:credit, Money.Ecto.Amount.Type, default: Money.new(0)) :: Money.t()

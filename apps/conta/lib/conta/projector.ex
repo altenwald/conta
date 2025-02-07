@@ -45,8 +45,7 @@ defmodule Conta.Projector do
         # a check to ensure that the event has not already been projected.
         update_projection_version =
           from(pv in ProjectionVersion,
-            where:
-              pv.projection_name == ^projection_name and pv.last_seen_event_number < ^event_number,
+            where: pv.projection_name == ^projection_name and pv.last_seen_event_number < ^event_number,
             update: [set: [last_seen_event_number: ^event_number]]
           )
 

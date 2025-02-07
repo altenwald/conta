@@ -22,10 +22,10 @@ defmodule Conta.Aggregate.Ledger do
   @derive {Jason.Encoder, only: ~w[name accounts]a}
 
   @type t() :: %__MODULE__{
-    name: String.t(),
-    accounts: %{account_id() => Account.t()},
-    account_names: %{required(account_name()) => account_id()}
-  }
+          name: String.t(),
+          accounts: %{account_id() => Account.t()},
+          account_names: %{required(account_name()) => account_id()}
+        }
   defstruct name: nil,
             accounts: %{},
             account_names: %{}
@@ -55,10 +55,10 @@ defmodule Conta.Aggregate.Ledger do
     {:error, :missing_ledger}
   end
 
-  # new account
+  #  new account
   def execute(%__MODULE__{} = ledger, %SetAccount{id: nil} = command) do
     cond do
-      # account name exists
+      #  account name exists
       account_id = ledger.account_names[command.name] ->
         # transform to update
         execute(ledger, %SetAccount{command | id: account_id})
@@ -82,10 +82,12 @@ defmodule Conta.Aggregate.Ledger do
 
       account = ledger.accounts[command.id] ->
         Logger.info("update existing account #{account.name}")
+
         account_modified =
           account
           |> Map.from_struct()
           |> AccountModified.changeset()
+
         params = Map.from_struct(command)
 
         [
@@ -153,7 +155,7 @@ defmodule Conta.Aggregate.Ledger do
       :else ->
         {entries, _accounts} =
           Enum.map_reduce(transaction.entries, ledger, fn entry, ledger ->
-            ledger = update_ledger(ledger, entry, & &1 + &2)
+            ledger = update_ledger(ledger, entry, &(&1 + &2))
             account_id = ledger.account_names[entry.account_name]
             account = ledger.accounts[account_id]
             currency = account.currency
@@ -195,7 +197,7 @@ defmodule Conta.Aggregate.Ledger do
       :else ->
         {entries, _accounts} =
           Enum.map_reduce(entries, ledger, fn entry, ledger ->
-            ledger = update_ledger(ledger, entry, & &1 - &2)
+            ledger = update_ledger(ledger, entry, &(&1 - &2))
             account_id = ledger.account_names[entry.account_name]
             account = ledger.accounts[account_id]
             currency = account.currency
@@ -301,6 +303,7 @@ defmodule Conta.Aggregate.Ledger do
   defp empty_balances(%__MODULE__{} = ledger, name) do
     id = ledger.account_names[name]
     account = %Account{} = ledger.accounts[id]
+
     account.balances
     |> Enum.all?(fn {_currency, amount} when is_integer(amount) ->
       amount == 0
@@ -335,7 +338,7 @@ defmodule Conta.Aggregate.Ledger do
         new_account_name = change_parent(prev_account_name, event.prev_name, event.new_name)
         new_account = %Account{account | name: new_account_name}
 
-        {[new_account|new_accounts], ledger}
+        {[new_account | new_accounts], ledger}
       end)
 
     Enum.reduce(new_accounts, ledger, &add_account(&2, &1))
@@ -357,12 +360,12 @@ defmodule Conta.Aggregate.Ledger do
   end
 
   def apply(%__MODULE__{} = ledger, %TransactionCreated{entries: entries}) do
-    update = & &1 + &2
+    update = &(&1 + &2)
     Enum.reduce(entries, ledger, &update_account_balance(&1, &2, update))
   end
 
   def apply(%__MODULE__{} = ledger, %TransactionRemoved{entries: entries}) do
-    update = & &1 - &2
+    update = &(&1 - &2)
     Enum.reduce(entries, ledger, &update_account_balance(&1, &2, update))
   end
 
