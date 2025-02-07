@@ -33,7 +33,8 @@ defmodule ContaWeb.InvoiceController do
       view_template: "root_print.html",
       page_title: invoice.invoice_number,
       inner_content: ContaWeb.InvoiceHTML.show(content_opts),
-      invoice: invoice
+      invoice: invoice,
+      embedded: true
     }
 
     html =

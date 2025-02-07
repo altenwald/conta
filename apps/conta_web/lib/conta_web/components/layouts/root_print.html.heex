@@ -5,10 +5,17 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title><%= @invoice.invoice_number %></title>
-    <link rel="stylesheet" type="text/css" href={url(~p"/assets/app.css")} />
-    <link rel="stylesheet" type="text/css" href={url(~p"/assets/print.css")} />
-    <script defer phx-track-static type="text/javascript" src={~p"/assets/print.js"}>
-    </script>
+    <%= if assigns[:embedded] do %>
+      <style type="text/css">
+        <%= File.read!(Application.app_dir(:conta_web) <> "/priv/static/assets/app.css") %>
+        <%= File.read!(Application.app_dir(:conta_web) <> "/priv/static/assets/print.css") %>
+      </style>
+    <% else %>
+      <link rel="stylesheet" type="text/css" href={url(~p"/assets/app.css")} />
+      <link rel="stylesheet" type="text/css" href={url(~p"/assets/print.css")} />
+      <script defer phx-track-static type="text/javascript" src={~p"/assets/print.js"}>
+      </script>
+    <% end %>
     <.favicon />
   </head>
   <body>
