@@ -248,7 +248,8 @@ defmodule ContaWeb.EntryLive.FormComponent do
      |> assign(assigns)
      |> assign(
        accounts: accounts,
-       different_currency?: different_currency?(accounts, changeset)
+       different_currency?: different_currency?(accounts, changeset),
+       params: params
      )
      |> assign_form(changeset)
      |> assign_currencies()}
