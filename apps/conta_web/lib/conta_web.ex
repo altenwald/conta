@@ -42,8 +42,9 @@ defmodule ContaWeb do
         formats: [:html, :json],
         layouts: [html: ContaWeb.Layouts]
 
+      use Gettext, backend: ContaWeb.Gettext
+
       import Plug.Conn
-      import ContaWeb.Gettext
 
       unquote(verified_routes())
     end
@@ -51,11 +52,10 @@ defmodule ContaWeb do
 
   def api do
     quote do
-      use Phoenix.Controller,
-        formats: [:json]
+      use Phoenix.Controller, formats: [:json]
+      use Gettext, backend: ContaWeb.Gettext
 
       import Plug.Conn
-      import ContaWeb.Gettext
     end
   end
 
@@ -91,11 +91,12 @@ defmodule ContaWeb do
 
   defp html_helpers do
     quote do
+      # Translation
+      use Gettext, backend: ContaWeb.Gettext
       # HTML escaping functionality
       import Phoenix.HTML
-      # Core UI components and translation
+      # Core UI components
       import ContaWeb.CoreComponents
-      import ContaWeb.Gettext
 
       # Shortcut for generating JS commands
       alias Phoenix.LiveView.JS

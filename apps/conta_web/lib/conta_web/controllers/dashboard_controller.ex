@@ -6,7 +6,7 @@ defmodule ContaWeb.DashboardController do
     with true <- type in ~w[outcome income pnl patrimony],
          true <- is_currency(currency) do
       image =
-        svg(type, String.to_atom(currency))
+        svg(type, String.to_existing_atom(currency))
         |> to_png()
 
       conn

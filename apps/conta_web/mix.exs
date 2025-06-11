@@ -53,7 +53,7 @@ defmodule ContaWeb.MixProject do
       {:plug_cowboy, "~> 2.6"},
       {:chromic_pdf, "~> 1.15"},
       {:doctor, ">= 0.0.0", only: [:dev, :test], runtime: false},
-      {:sobelow, ">= 0.0.0", only: [:dev, :test], rutnime: false}
+      {:sobelow, ">= 0.0.0", only: [:dev, :test], runtime: false}
     ]
   end
 

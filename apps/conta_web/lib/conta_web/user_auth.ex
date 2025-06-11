@@ -1,7 +1,7 @@
 defmodule ContaWeb.UserAuth do
   use ContaWeb, :verified_routes
+  use Gettext, backend: ContaWeb.Gettext
 
-  import ContaWeb.Gettext
   import Plug.Conn
   import Phoenix.Controller
 

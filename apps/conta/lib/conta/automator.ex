@@ -157,7 +157,6 @@ defmodule Conta.Automator do
     else
       {:error, _} = error -> error
       {:ok, return} -> {:error, {:invalid_code_return, return}}
-      {:error, compile, _stacktrace} -> {:error, compile}
     end
   end
 
@@ -187,10 +186,6 @@ defmodule Conta.Automator do
         {:ok, {filename, content}} -> {:ok, {"application/vnd.ms-excel", to_string(filename), content}}
         {:ok, content} -> {:ok, {"application/json", nil, content}}
       end
-    else
-      {:error, _} = error -> error
-      {:ok, return} -> {:error, {:invalid_code_return, return}}
-      {:error, compile, _stacktrace} -> {:error, compile}
     end
   end
 

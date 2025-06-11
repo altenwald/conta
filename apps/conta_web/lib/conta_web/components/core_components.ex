@@ -15,8 +15,7 @@ defmodule ContaWeb.CoreComponents do
   Icons are provided by [heroicons](https://heroicons.com). See `icon/1` for usage.
   """
   use Phoenix.Component
-
-  import ContaWeb.Gettext
+  use Gettext, backend: ContaWeb.Gettext
 
   alias Phoenix.HTML.Form, as: HtmlForm
   alias Phoenix.LiveView.JS
