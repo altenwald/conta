@@ -11,7 +11,7 @@
           <div class="field is-grouped">
             <div class="control">
               <.link patch={~p"/ledger/accounts/new"} class="button">
-                <span class="icon mr-2"><FontAwesome.circle_plus /></span>
+                <.icon name="hero-plus-circle" class="mr-2" />
                 <span><%= gettext("New Account") %></span>
               </.link>
             </div>
@@ -27,9 +27,7 @@
                 title={gettext("Open")}
                 navigate={~p"/ledger/accounts/#{account}/entries"}
               >
-                <span class="icon">
-                  <FontAwesome.folder_open />
-                </span>
+                <.icon name="hero-folder-open" class="mr-2" />
               </.link>
             </:action>
             <:action :let={{_id, account}}>
@@ -38,9 +36,7 @@
                 title={gettext("Show")}
                 navigate={~p"/ledger/accounts/#{account}"}
               >
-                <span class="icon">
-                  <FontAwesome.eye />
-                </span>
+                <.icon name="hero-eye" class="mr-2" />
               </.link>
             </:action>
             <:action :let={{_id, account}}>
@@ -49,9 +45,7 @@
                 patch={~p"/ledger/accounts/#{account}/edit"}
                 title={gettext("Edit")}
               >
-                <span class="icon">
-                  <FontAwesome.pencil />
-                </span>
+                <.icon name="hero-pencil" class="mr-2" />
               </.link>
             </:action>
             <:action :let={{_id, account}}>
@@ -61,9 +55,7 @@
                 data-confirm={gettext("Are you sure?")}
                 title={gettext("Delete")}
               >
-                <span class="icon">
-                  <FontAwesome.trash_can />
-                </span>
+                <.icon name="hero-trash" class="mr-2" />
               </.link>
             </:action>
             <:col :let={{_id, account}} label={gettext("name")}>

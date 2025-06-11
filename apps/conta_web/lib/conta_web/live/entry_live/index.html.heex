@@ -16,12 +16,12 @@
         <div class="table-wrapper has-mobile-cards">
           <div class="field is-grouped">
             <div class="control">
-              <.search label={gettext("entry to search")} value={@search} />
+              <.input type="text" label={gettext("entry to search")} value={@search} />
             </div>
             <div class="control">
               <.link patch={~p"/ledger/accounts/#{@account}/entries/new"} class="button">
                 <div class="icon-text">
-                  <span class="icon mr-2"><FontAwesome.circle_plus /></span>
+                  <span class="icon mr-2"><.icon name="hero-circle-plus" /></span>
                   <span><%= gettext("New Entry") %></span>
                 </div>
               </.link>
@@ -29,7 +29,7 @@
             <div :if={assigns[:streams] != nil and @streams.ledger_entries != nil} class="control">
               <.button phx-click="reload">
                 <div class="icon-text">
-                  <span class="icon mr-2"><FontAwesome.recycle /></span>
+                  <.icon name="hero-arrow-path" class="mr-2" />
                   <span><%= gettext("Reload") %></span>
                 </div>
               </.button>
@@ -57,9 +57,7 @@
                 patch={~p"/ledger/accounts/#{@account}/entries/#{entry.transaction_id}/duplicate"}
                 title={gettext("Duplicate")}
               >
-                <span class="icon">
-                  <FontAwesome.copy />
-                </span>
+                <.icon name="hero-clipboard-document" class="mr-2" />
               </.link>
             </:action>
             <:action :let={{_id, entry}}>
@@ -68,9 +66,7 @@
                 patch={~p"/ledger/accounts/#{@account}/entries/#{entry.transaction_id}/edit"}
                 title={gettext("Edit")}
               >
-                <span class="icon">
-                  <FontAwesome.pencil />
-                </span>
+                <.icon name="hero-pencil" class="mr-2" />
               </.link>
             </:action>
             <:action :let={{id, entry}}>
@@ -80,9 +76,7 @@
                 data-confirm={gettext("Are you sure?")}
                 title={gettext("Delete")}
               >
-                <span class="icon">
-                  <FontAwesome.trash_can />
-                </span>
+                <.icon name="hero-trash" class="mr-2" />
               </.link>
             </:action>
             <:col :let={{_id, entry}} label={gettext("description")}>

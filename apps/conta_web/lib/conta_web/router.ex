@@ -14,13 +14,13 @@ defmodule ContaWeb.Router do
                                "connect-src wss://#{@host};" <>
                                "img-src 'self' blob:;" <>
                                "style-src 'self' https://fonts.googleapis.com;" <>
-                               "font-src data: https://fonts.gstatic.com;"
+                               "font-src data: https://fonts.gstatic.com https://fonts.googleapis.com;"
   else
     @content_security_policy "default-src 'self' 'unsafe-eval' 'unsafe-inline' https://cdn.tailwindcss.com;" <>
                                "connect-src ws://localhost:*;" <>
                                "img-src 'self' blob:;" <>
                                "style-src 'self' https://fonts.googleapis.com;" <>
-                               "font-src data: https://fonts.gstatic.com;"
+                               "font-src data: https://fonts.gstatic.com https://fonts.googleapis.com;"
   end
 
   pipeline :browser do

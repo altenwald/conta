@@ -21,9 +21,7 @@
                 phx-click={JS.push_focus()}
               >
                 <div class="icon-text">
-                  <span class="icon mr-2">
-                    <FontAwesome.pencil />
-                  </span>
+                  <.icon name="hero-pencil" class="mr-2" />
                   <span><%= gettext("Edit account") %></span>
                 </div>
               </.link>
@@ -31,9 +29,7 @@
             <div class="control">
               <.link class="button is-info" href={~p"/ledger/accounts/#{@account.id}/entries"}>
                 <div class="icon-text">
-                  <span class="icon mr-2">
-                    <FontAwesome.folder_open />
-                  </span>
+                  <.icon name="hero-folder-open" class="mr-2" />
                   <span><%= gettext("Entries") %></span>
                 </div>
               </.link>
@@ -45,22 +41,24 @@
             <.input type="static" label={gettext("Type")} value={@account.type} />
             <.input type="static" label={gettext("Currency")} value={get_currency(@account.currency)} />
             <.input type="static" label={gettext("Notes")} value={@account.notes || gettext("No notes")} />
-            <.field class="is-horizontal" label={gettext("Balances")}>
-              <.simple_table id="balances" rows={@account.balances}>
+            <div class="field flex">
+              <.label>{gettext("Balances")}</.label>
+              <.table id="balances" rows={@account.balances}>
                 <:col :let={balance} class="has-text-right is-money" label={gettext("Amount")}>
                   <%= %Money{balance.amount | currency: balance.currency} %>
                 </:col>
-              </.simple_table>
-            </.field>
-            <.field :if={@subaccounts != []} class="is-horizontal" label={gettext("Subaccounts")}>
-              <.simple_table id="subaccounts" rows={@subaccounts}>
+              </.table>
+            </div>
+            <div class="field flex" :if={@subaccounts != []}>
+              <.label>{gettext("Subaccounts")}</.label>
+              <.table id="subaccounts" rows={@subaccounts}>
                 <:col :let={account} label={gettext("Name")}>
                   <.link href={~p"/ledger/accounts/#{account}"}>
                     <%= Enum.join(account.name, ".") %>
                   </.link>
                 </:col>
-              </.simple_table>
-            </.field>
+              </.table>
+            </div>
           </section>
         </div>
       </div>

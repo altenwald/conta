@@ -9,7 +9,7 @@
       <div class="field">
         <.link patch={~p"/books/invoices/new"} class="button">
           <div class="icon-text">
-            <span class="icon mr-2"><FontAwesome.circle_plus /></span>
+            <.icon name="hero-plus-circle" class="mr-2" />
             <span><%= gettext("New Invoice") %></span>
           </div>
         </.link>
@@ -50,7 +50,7 @@
             ])}
         >
           <div class="icon-text">
-            <span class="icon mr-2"><FontAwesome.download /></span>
+            <.icon name="hero-arrow-down-tray" class="mr-2" />
             <span><%= gettext("Download") %></span>
           </div>
         </.link>
@@ -66,9 +66,7 @@
           >
             <:action :let={{_id, invoice}}>
               <.link class="button is-info is-light" href={~p"/books/invoices/#{invoice}"} target="_blank">
-                <span class="icon">
-                  <FontAwesome.file_invoice />
-                </span>
+                <.icon name="hero-document-currency-euro" class="mr-2" />
               </.link>
             </:action>
             <:action :let={{_id, invoice}}>
@@ -77,9 +75,7 @@
                 patch={~p"/books/invoices/#{invoice}/duplicate"}
                 title={gettext("Duplicate")}
               >
-                <span class="icon">
-                  <FontAwesome.copy />
-                </span>
+                <.icon name="hero-document-duplicate" class="mr-2" />
               </.link>
             </:action>
             <:action :let={{_id, invoice}}>
@@ -88,9 +84,7 @@
                 patch={~p"/books/invoices/#{invoice}/edit"}
                 title={gettext("Edit")}
               >
-                <span class="icon">
-                  <FontAwesome.pencil />
-                </span>
+                <.icon name="hero-pencil" class="mr-2" />
               </.link>
             </:action>
             <:action :let={{id, invoice}}>
@@ -100,9 +94,7 @@
                 data-confirm={gettext("Are you sure?")}
                 title={gettext("Delete")}
               >
-                <span class="icon">
-                  <FontAwesome.trash_can />
-                </span>
+                <.icon name="hero-trash" class="mr-2" />
               </.link>
             </:action>
             <:col :let={{_id, invoice}} label={gettext("Invoice Number")}>
@@ -120,23 +112,19 @@
             </:col>
             <:col :let={{_id, invoice}} label={gettext("Paid?")} class="has-text-centered">
               <%= if invoice.paid_date do %>
-                <span class="icon is-small has-text-success">
-                  <FontAwesome.check />
-                </span>
+                <.icon name="hero-check" class="mr-2 text-success text-sm" />
               <% else %>
-                <span class="icon is-small has-text-danger">
-                  <FontAwesome.xmark />
-                </span>
+                <.icon name="hero-x-mark" class="mr-2 text-error text-sm" />
               <% end %>
             </:col>
             <:col :let={{_id, invoice}} label={gettext("Subtotal")} class="has-text-right">
-              <%= Money.new(invoice.subtotal_price, invoice.currency) %>
+              {Money.new(invoice.subtotal_price, invoice.currency)}
             </:col>
             <:col :let={{_id, invoice}} label={gettext("Tax")} class="has-text-right">
-              <%= Money.new(invoice.tax_price, invoice.currency) %>
+              {Money.new(invoice.tax_price, invoice.currency)}
             </:col>
             <:col :let={{_id, invoice}} label={gettext("Total")} class="has-text-right">
-              <%= Money.new(invoice.total_price, invoice.currency) %>
+              {Money.new(invoice.total_price, invoice.currency)}
             </:col>
           </.table>
         </div>

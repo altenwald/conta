@@ -9,7 +9,7 @@
       <div class="field">
         <.link patch={~p"/books/expenses/new"} class="button">
           <div class="icon-text">
-            <span class="icon mr-2"><FontAwesome.circle_plus /></span>
+            <.icon name="hero-plus-circle" class="mr-2" />
             <span><%= gettext("New Expense") %></span>
           </div>
         </.link>
@@ -42,7 +42,7 @@
             ])}
         >
           <div class="icon-text">
-            <span class="icon mr-2"><FontAwesome.download /></span>
+            <.icon name="hero-arrow-down-tray" class="mr-2" />
             <span><%= gettext("Download") %></span>
           </div>
         </.link>
@@ -58,9 +58,7 @@
                 class="button is-info is-light"
                 href={~p"/books/expenses/#{expense}/download/#{idx}"}
               >
-                <span class="icon">
-                  <FontAwesome.file_invoice />
-                </span>
+                <.icon name="hero-document-currency-euro" class="mr-2" />
               </.link>
             </:action>
             <:action :let={{_id, expense}}>
@@ -69,9 +67,7 @@
                 patch={~p"/books/expenses/#{expense}/edit"}
                 title={gettext("Edit")}
               >
-                <span class="icon">
-                  <FontAwesome.pencil />
-                </span>
+                <.icon name="hero-pencil" class="mr-2" />
               </.link>
             </:action>
             <:action :let={{_id, expense}}>
@@ -80,9 +76,7 @@
                 patch={~p"/books/expenses/#{expense}/duplicate"}
                 title={gettext("Duplicate")}
               >
-                <span class="icon">
-                  <FontAwesome.copy />
-                </span>
+                <.icon name="hero-document-duplicate" class="mr-2" />
               </.link>
             </:action>
             <:action :let={{id, expense}}>
@@ -92,9 +86,7 @@
                 data-confirm={gettext("Are you sure?")}
                 title={gettext("Delete")}
               >
-                <span class="icon">
-                  <FontAwesome.trash_can />
-                </span>
+                <.icon name="hero-trash" class="mr-2" />
               </.link>
             </:action>
             <:col :let={{_id, expense}} label={gettext("Invoice Number")}>

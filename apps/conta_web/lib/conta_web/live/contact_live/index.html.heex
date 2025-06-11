@@ -9,7 +9,7 @@
       <div class="field">
         <.link patch={~p"/directories/contacts/new"} class="button">
           <div class="icon-text">
-            <span class="icon mr-2"><FontAwesome.circle_plus /></span>
+            <.icon name="hero-plus-circle" class="mr-2" />
             <span><%= gettext("New Contact") %></span>
           </div>
         </.link>
@@ -25,9 +25,7 @@
                 patch={~p"/directories/contacts/#{contact}/edit"}
                 title={gettext("Edit")}
               >
-                <span class="icon">
-                  <FontAwesome.pencil />
-                </span>
+                <.icon name="hero-pencil" class="mr-2" />
               </.link>
             </:action>
             <:action :let={{id, contact}}>
@@ -37,9 +35,7 @@
                 data-confirm={gettext("Are you sure?")}
                 title={gettext("Delete")}
               >
-                <span class="icon">
-                  <FontAwesome.trash_can />
-                </span>
+                <.icon name="hero-trash" class="mr-2" />
               </.link>
             </:action>
             <:col :let={{_id, contact}} label={gettext("NIF")}>

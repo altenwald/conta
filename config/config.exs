@@ -86,7 +86,7 @@ config :esbuild,
 
 # Configure tailwind (the version is required)
 config :tailwind,
-  version: "3.3.2",
+  version: "3.4.6",
   default: [
     args: ~w(
       --config=tailwind.config.js
@@ -103,14 +103,6 @@ config :logger, :console,
 
 # Use Jason for JSON parsing in Phoenix
 config :phoenix, :json_library, Jason
-
-config :dart_sass,
-  version: "1.58.0",
-  default: [
-    args:
-      ~w(--load-path=../../../deps/bulma --load-path=../assets/vendor/bulma-checkbox css:../priv/static/assets),
-    cd: Path.expand("../apps/conta_web/assets", __DIR__)
-  ]
 
 config :tesla, adapter: {Tesla.Adapter.Finch, name: ContaBot.Finch}
 

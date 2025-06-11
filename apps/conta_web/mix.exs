@@ -35,16 +35,15 @@ defmodule ContaWeb.MixProject do
       {:phoenix_html, "~> 4.0"},
       {:phoenix_html_helpers, "~> 1.0"},
       {:phoenix_live_reload, "~> 1.4", only: :dev},
-      {:phoenix_live_view, "~> 0.20"},
+      {:phoenix_live_view, "~> 1.0"},
       {:floki, ">= 0.30.0", only: :test},
       {:phoenix_live_dashboard, "~> 0.8"},
       {:esbuild, "~> 0.8", runtime: Mix.env() == :dev},
       {:tailwind, "~> 0.2", runtime: Mix.env() == :dev},
-      {:dart_sass, "~> 0.1", runtime: Mix.env() == :dev},
-      {:bulma, "~> 0.9"},
-      {:fontawesome, "~> 0.3"},
+      {:ex_heroicons, "~> 3.1"},
+      {:heroicons, github: "tailwindlabs/heroicons", tag: "v2.1.1", sparse: "optimized", app: false, compile: false, depth: 1},
       {:telemetry_metrics, "~> 1.0"},
-      {:telemetry_poller, "~> 1.0"},
+      {:telemetry_poller, "~> 1.1"},
       {:gettext, "~> 0.24"},
       {:conta, in_umbrella: true},
       {:jason, "~> 1.4"},
@@ -53,7 +52,7 @@ defmodule ContaWeb.MixProject do
       {:plug_cowboy, "~> 2.6"},
       {:chromic_pdf, "~> 1.15"},
       {:doctor, ">= 0.0.0", only: [:dev, :test], runtime: false},
-      {:sobelow, ">= 0.0.0", only: [:dev, :test], rutnime: false}
+      {:sobelow, ">= 0.0.0", only: [:dev, :test], runtime: false}
     ]
   end
 

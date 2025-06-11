@@ -28,11 +28,11 @@ defmodule Conta.Automator.Lua do
 
   def run(code, params) do
     params
-    |> Enum.reduce(:luerl.init(), fn {name, value}, state ->
-      :luerl.set_table([name], value, state)
+    |> Enum.reduce(Luerl.init(), fn {name, value}, state ->
+      Luerl.set_table_keys(state, [name], value)
     end)
     ### XXX: we have to use here charlist because binary breaks the collation.
-    |> then(&:luerl.eval(to_charlist(code), &1))
+    |> Luerl.do(to_charlist(code))
     |> process_data()
     |> case do
       {:error, line, reason} -> {:error, "line #{line} error #{inspect(reason)}"}

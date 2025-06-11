@@ -15,11 +15,58 @@ defmodule ContaWeb.CoreComponents do
   Icons are provided by [heroicons](https://heroicons.com). See `icon/1` for usage.
   """
   use Phoenix.Component
-
-  import ContaWeb.Gettext
+  use Gettext, backend: ContaWeb.Gettext
 
   alias Phoenix.HTML.Form, as: HtmlForm
   alias Phoenix.LiveView.JS
+
+  @doc """
+  Renders a [Heroicon](https://heroicons.com).
+
+  Heroicons come in three styles – outline, solid, and mini.
+  By default, the outline style is used, but solid and mini may
+  be applied by using the `-solid` and `-mini` suffix.
+
+  You can customize the size and colors of the icons by setting
+  width, height, and background color classes.
+
+  Icons are extracted from the `deps/heroicons` directory and bundled within
+  your compiled app.css by the plugin in your `assets/tailwind.config.js`.
+
+  ## Examples
+
+      <.icon name="hero-x-mark-solid" />
+      <.icon name="hero-arrow-path" class="ml-1 w-3 h-3 animate-spin" />
+  """
+  attr :name, :string, required: true
+  attr :class, :string, default: nil
+  attr :title, :string, default: nil
+
+  def icon(%{name: "hero-" <> _} = assigns) do
+    ~H"""
+    <% {name, type} = split_name_type(@name) %>
+    <Heroicons.icon name={name} type={type} class={@class} title={@title} />
+    """
+  end
+
+  defp split_name_type("hero-" <> name) do
+    cond do
+      String.ends_with?(name, "-outline") ->
+        {String.replace_suffix(name, "-outline", ""), "outline"}
+
+      String.ends_with?(name, "-solid") ->
+        {String.replace_suffix(name, "-solid", ""), "solid"}
+
+      String.ends_with?(name, "-mini") ->
+        {String.replace_suffix(name, "-mini", ""), "mini"}
+
+      String.ends_with?(name, "-micro") ->
+        {String.replace_suffix(name, "-micro", ""), "micro"}
+
+      :else ->
+        {name, "outline"}
+    end
+  end
 
   @doc """
   Renders a header with title.
@@ -53,46 +100,47 @@ defmodule ContaWeb.CoreComponents do
   """
   attr :logo_url, :string, required: true
   attr :class, :string, default: nil
+  slot :navbar_start
+  slot :navbar_end
   slot :inner_block, required: true
 
   def nav(assigns) do
     ~H"""
-    <nav class={["navbar", @class]} role="navigation" aria-label="main navigation">
-      <div class="navbar-brand">
-        <a class="navbar-item" href="/">
-          <img src={@logo_url} width="112" height="28" />
-        </a>
-
-        <a role="button" class="navbar-burger" aria-label="menu" aria-expanded="false" data-target="navbarMenu">
-          <span aria-hidden="true"></span>
-          <span aria-hidden="true"></span>
-          <span aria-hidden="true"></span>
+    <div class={["navbar bg-base-200", @class]}>
+      <div class="navbar-start">
+        <div class="dropdown">
+          <div tabindex="0" role="button" class="btn btn-ghost lg:hidden">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              class="h-5 w-5"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h8m-8 6h16" />
+            </svg>
+          </div>
+          <ul
+            tabindex="0"
+            class="menu menu-sm dropdown-content bg-base-100 rounded-box z-[1] mt-3 w-52 p-2 shadow"
+          >
+            {render_slot(@navbar_start)}
+          </ul>
+        </div>
+        <a href={"/"} class="flex items-center">
+          <img src={@logo_url} class="h-6 mr-3 sm:h-9 block" alt="Conta" />
         </a>
       </div>
-
-      <div id="navbarMenu" class="navbar-menu">
-        <%= render_slot(@inner_block) %>
+      <div class="navbar-center hidden lg:flex">
+        <ul class="menu menu-horizontal px-1">
+          {render_slot(@navbar_start)}
+        </ul>
       </div>
-    </nav>
-    """
-  end
-
-  slot :inner_block, required: true
-
-  def navbar_start(assigns) do
-    ~H"""
-    <div class="navbar-start">
-      <%= render_slot(@inner_block) %>
-    </div>
-    """
-  end
-
-  slot :inner_block, required: true
-
-  def navbar_end(assigns) do
-    ~H"""
-    <div class="navbar-end">
-      <%= render_slot(@inner_block) %>
+      <div class="navbar-end">
+        <ul class="menu menu-horizontal px-1">
+          {render_slot(@navbar_end)}
+        </ul>
+      </div>
     </div>
     """
   end
@@ -102,9 +150,7 @@ defmodule ContaWeb.CoreComponents do
 
   def navbar_item(assigns) do
     ~H"""
-    <a class="navbar-item" href={@href}>
-      <%= render_slot(@inner_block) %>
-    </a>
+    <li><a href={@href}>{render_slot(@inner_block)}</a></li>
     """
   end
 
@@ -113,19 +159,20 @@ defmodule ContaWeb.CoreComponents do
 
   def navbar_dropdown(assigns) do
     ~H"""
-    <div class="navbar-item has-dropdown is-hoverable">
-      <a class="navbar-link"><%= @name %></a>
-
-      <div class="navbar-dropdown">
-        <%= render_slot(@inner_block) %>
-      </div>
-    </div>
+    <li>
+      <details>
+        <summary>{@name}</summary>
+        <ul class="p-2">
+          {render_slot(@inner_block)}
+        </ul>
+      </details>
+    </li>
     """
   end
 
   def navbar_divider(assigns) do
     ~H"""
-    <hr class="navbar-divider" />
+    <div class="divider" />
     """
   end
 
@@ -256,26 +303,27 @@ defmodule ContaWeb.CoreComponents do
     assigns = assign_new(assigns, :id, fn -> "flash-#{assigns.kind}" end)
 
     ~H"""
-    <article
+    <div
       :if={msg = render_slot(@inner_block) || Phoenix.Flash.get(@flash, @kind)}
       id={@id}
       role="alert"
       class={[
-        "message toast",
-        @rest[:hidden] && "close",
-        @kind == :info && "is-info is-light",
-        @kind == :error && "is-danger is-light"
+        "fixed top-12 right-2 mr-2 w-80 sm:w-96 z-50 rounded-lg p-3 ring-1",
+        @kind == :info && "bg-success text-stone-700 ring-success fill-success",
+        @kind == :error && "bg-error text-stone-700 shadow-md ring-error fill-error"
       ]}
       {@rest}
     >
-      <div :if={@title} class="message-header">
-        <p><%= @title %></p>
-        <button phx-click={JS.add_class("close", to: "#" <> @id)} class="delete" aria-label="delete"></button>
-      </div>
-      <div class="message-body">
-        <%= msg %>
-      </div>
-    </article>
+      <p :if={@title} class="flex items-center gap-1.5 text-sm font-semibold leading-6">
+        <.icon :if={@kind == :info} name="hero-information-circle-mini" class="h-4 w-4" />
+        <.icon :if={@kind == :error} name="hero-exclamation-circle-mini" class="h-4 w-4" />
+        {@title}
+      </p>
+      <p class="mt-2 text-sm leading-5">{msg}</p>
+      <button type="button" class="group absolute top-1 right-1 p-2" aria-label={gettext("close")}>
+        <.icon name="hero-x-mark-solid" class="h-5 w-5 opacity-40 group-hover:opacity-70" />
+      </button>
+    </div>
     """
   end
 
@@ -292,8 +340,8 @@ defmodule ContaWeb.CoreComponents do
   def flash_group(assigns) do
     ~H"""
     <div id={@id}>
-      <.flash kind={:info} title="Success!" flash={@flash} />
-      <.flash kind={:error} title="Error!" flash={@flash} />
+      <.flash kind={:info} title={gettext("Success!")} flash={@flash} />
+      <.flash kind={:error} title={gettext("Error!")} flash={@flash} />
       <.flash
         id="client-error"
         kind={:error}
@@ -302,12 +350,8 @@ defmodule ContaWeb.CoreComponents do
         phx-connected={hide("#client-error")}
         hidden
       >
-        <div class="icon-text">
-          <span><%= gettext("Attempting to reconnect") %></span>
-          <span class="icon ml-3">
-            <FontAwesome.spinner class="fa-spin" />
-          </span>
-        </div>
+        {gettext("Attempting to reconnect")}
+        <.icon name="hero-arrow-path" class="ml-1 h-3 w-3 animate-spin" />
       </.flash>
 
       <.flash
@@ -318,12 +362,8 @@ defmodule ContaWeb.CoreComponents do
         phx-connected={JS.add_class("close", to: "#server-error")}
         hidden
       >
-        <div class="icon-text">
-          <span><%= gettext("Hang in there while we get back on track") %></span>
-          <span class="icon ml-3">
-            <FontAwesome.arrows_rotate class="fa-spin" />
-          </span>
-        </div>
+        {gettext("Hang in there while we get back on track")}
+        <.icon name="hero-arrow-path" class="ml-1 h-3 w-3 animate-spin" />
       </.flash>
     </div>
     """
@@ -535,7 +575,7 @@ defmodule ContaWeb.CoreComponents do
           <.live_file_input upload={@rest.upload} class="file-input" />
           <span class="file-cta">
             <span class="file-icon">
-              <FontAwesome.upload />
+              <.icon name="hero-arrow-up-tray" />
             </span>
             <span class="file-label"><%= gettext("Upload") %></span>
           </span>
@@ -663,9 +703,7 @@ defmodule ContaWeb.CoreComponents do
     ~H"""
     <p class="help is-danger">
       <span class="icon-text">
-        <span class="icon mr-3">
-          <FontAwesome.triangle_exclamation />
-        </span>
+        <.icon name="hero-exclamation-triangle" class="mr-3" />
         <%= render_slot(@inner_block) %>
       </span>
     </p>
@@ -796,9 +834,7 @@ defmodule ContaWeb.CoreComponents do
     ~H"""
     <div class="mt-3">
       <.link navigate={@navigate} class="icon-text">
-        <span class="icon mr-2">
-          <FontAwesome.arrow_left />
-        </span>
+        <.icon name="hero-arrow-left" class="mr-2" />
         <span><%= render_slot(@inner_block) %></span>
       </.link>
     </div>

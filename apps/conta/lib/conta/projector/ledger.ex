@@ -245,6 +245,83 @@ defmodule Conta.Projector.Ledger do
     end)
   end)
 
+  def candle do
+    from(
+      e in Entry,
+      join: a in Account, on: e.account_name == a.name,
+      select: e,
+      where: a.currency == "EUR",
+      where: fragment("?[:?]::text[]", a.name, 2) == ~w[Activo Bancos],
+      order_by: [asc: e.on_date, asc: e.inserted_at]
+    )
+    |> Repo.all()
+    |> Enum.map(&%Entry{&1 | on_date: Date.beginning_of_month(&1.on_date)})
+    |> Enum.reduce(%{current_date: nil, dates: %{}}, &get_candle_data/2)
+    |> then(& &1.dates)
+  end
+
+  defp get_candle_data(%Entry{on_date: on_date} = entry, %{current_date: on_date} = acc) do
+    new_ending =
+      acc.dates[on_date].ending
+      |> Money.subtract(entry.credit)
+      |> Money.add(entry.debit)
+
+    date_entry = acc.dates[on_date]
+
+    new_max =
+      if Money.cmp(date_entry.max, new_ending) == :lt do
+        new_ending
+      else
+        date_entry.max
+      end
+
+    new_min =
+      if Money.cmp(date_entry.min, new_ending) == :gt do
+        new_ending
+      else
+        date_entry.min
+      end
+
+    acc
+    |> put_in([:dates, on_date, :ending], new_ending)
+    |> put_in([:dates, on_date, :max], new_max)
+    |> put_in([:dates, on_date, :min], new_min)
+  end
+
+  defp get_candle_data(%Entry{on_date: current_date} = entry, %{current_date: nil}) do
+    prev_balance = entry.balance
+
+    %{
+      current_date: current_date,
+      dates: %{
+        current_date => %{
+          beginning: prev_balance,
+          ending: prev_balance,
+          max: prev_balance,
+          min: prev_balance
+        }
+      }
+    }
+  end
+
+  defp get_candle_data(%Entry{} = entry, %{current_date: current_date} = acc) do
+    current_entry = acc.dates[current_date]
+    new_entry = %{
+      beginning: current_entry.ending,
+      ending: current_entry.ending,
+      max: current_entry.ending,
+      min: current_entry.ending
+    }
+    new_date = Date.shift(current_date, month: 1)
+
+    new_acc =
+      acc
+      |> Map.put(:current_date, new_date)
+      |> Map.update!(:dates, &Map.put(&1, new_date, new_entry))
+
+    get_candle_data(entry, new_acc)
+  end
+
   @impl Conta.Projector
   def after_update(%AccountCreated{ledger: ledger}, _metadata, changes) do
     event_name = "event:account_created:#{ledger}"

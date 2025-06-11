@@ -61,6 +61,7 @@ defmodule Conta.MixProject do
       {:resvg, "~> 0.3"},
       {:luerl, "~> 1.1"},
       {:elixlsx, "~> 0.6"},
+      {:countries, "~> 1.6"},
       {:ex_machina, "~> 2.7", only: :test},
       {:doctor, "~> 0.21", only: [:dev, :test], runtime: false}
     ]

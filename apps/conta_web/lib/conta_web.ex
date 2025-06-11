@@ -43,7 +43,7 @@ defmodule ContaWeb do
         layouts: [html: ContaWeb.Layouts]
 
       import Plug.Conn
-      import ContaWeb.Gettext
+      use Gettext, backend: ContaWeb.Gettext
 
       unquote(verified_routes())
     end
@@ -55,7 +55,7 @@ defmodule ContaWeb do
         formats: [:json]
 
       import Plug.Conn
-      import ContaWeb.Gettext
+      use Gettext, backend: ContaWeb.Gettext
     end
   end
 
@@ -95,7 +95,7 @@ defmodule ContaWeb do
       import Phoenix.HTML
       # Core UI components and translation
       import ContaWeb.CoreComponents
-      import ContaWeb.Gettext
+      use Gettext, backend: ContaWeb.Gettext
 
       # Shortcut for generating JS commands
       alias Phoenix.LiveView.JS

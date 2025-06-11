@@ -14,6 +14,111 @@ defmodule Conta.Book do
 
   @due_in_days 30
 
+  @doc """
+  Taxable has 3 states:
+
+  - if belongs to the EU:
+    - if it's signed to avoid taxes: false.
+    - otherwise: true.
+  - otherwise: nil.
+
+  We make a difference between EU citizens and others because citizens or
+  companies out of EU aren't taxable (nil) while EU companies couldn't be
+  taxed (false) but we need to recognize them while we tax citizens and
+  companies who don't signed up in the intra-community register.
+  """
+  @spec taxable?(Invoice.t() | Expense.t()) :: nil | boolean()
+  def taxable?(%Invoice{client: nil, destination_country: country}) do
+    if Countries.get(country).region == "Europe" do
+      true
+    end
+  end
+
+  def taxable?(%Invoice{client: %Invoice.Client{intracommunity: true}}), do: false
+
+  def taxable?(%Invoice{client: %Invoice.Client{country: country}}) do
+    if Countries.get(country).region == "Europe" do
+      true
+    end
+  end
+
+  def taxable?(%Expense{provider: %Expense.Provider{intracommunity: true}}), do: false
+
+  def taxable?(%Expense{provider: %Expense.Provider{country: country}}) do
+    if Countries.get(country).region == "Europe" do
+      true
+    end
+  end
+
+  def get_output(tuples) do
+    to_n = &String.replace(to_string(&1), ".", ",")
+
+    ## Conta.Book.brief_expenses(~D[2025-01-01], ~D[2025-04-01], 0.8829)
+    tuples
+    |> Enum.each(fn {type, base, tax, total, taxable, country, name, nif} ->
+      IO.puts("#{type};#{to_n.(base)};#{tax};#{to_n.(total)};#{taxable};#{country};#{name};#{nif}")
+    end)
+  end
+
+  def brief_invoices(init_date, end_date, usd_to_eur) do
+    from(i in Invoice, where: i.invoice_date >= ^init_date and i.invoice_date < ^end_date)
+    |> Repo.all()
+    |> Enum.flat_map(fn %Invoice{details: details} = invoice ->
+      to_eur =
+        case invoice.currency do
+          :EUR -> & &1 / 100.0
+          :USD -> & &1 * usd_to_eur / 100.0
+        end
+
+      taxable = taxable?(invoice)
+
+      details
+      |> Enum.group_by(& &1.tax)
+      |> Enum.map(fn {tax, details} ->
+        {base, tax_price} =
+          Enum.reduce(details, {0.0, 0.0}, fn %Invoice.Detail{} = detail, {bp, tp} ->
+            {bp + detail.base_price, tp + detail.tax_price}
+          end)
+
+        {
+          invoice.type,
+          to_eur.(base),
+          tax,
+          to_eur.(tax_price),
+          taxable,
+          invoice.destination_country,
+          if(taxable == false, do: invoice.client.name),
+          if(taxable == false, do: invoice.client.nif)
+        }
+      end)
+    end)
+  end
+
+  def brief_expenses(init_date, end_date, usd_to_eur) do
+    from(e in Expense, where: e.invoice_date >= ^init_date and e.invoice_date < ^end_date)
+    |> Repo.all()
+    |> Enum.map(fn %Expense{provider: %Expense.Provider{} = provider} = expense ->
+      to_eur =
+        case expense.currency do
+          :EUR -> & &1 / 100.0
+          :USD -> & &1 * usd_to_eur / 100.0
+        end
+
+      taxable = taxable?(expense)
+
+      {
+        expense.category,
+        to_eur.(expense.subtotal_price),
+        ceil(expense.tax_price / expense.subtotal_price * 100),
+        to_eur.(expense.tax_price),
+        taxable,
+        provider.country,
+        if(taxable == false, do: provider.name),
+        if(taxable == false, do: provider.nif)
+      }
+    end)
+  end
+
   def get_invoice_date_range do
     from(i in Invoice, select: {max(i.invoice_date), min(i.invoice_date)})
     |> Repo.one()

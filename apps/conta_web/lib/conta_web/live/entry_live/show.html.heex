@@ -19,7 +19,7 @@
               >
                 <div class="icon-text">
                   <span class="icon mr-2">
-                    <FontAwesome.pencil />
+                    <.icon name="pencil" />
                   </span>
                   <span><%= gettext("Edit entry") %></span>
                 </div>
@@ -27,9 +27,8 @@
             </div>
           </div>
           <section class="section">
-            <.field class="is-horizontal" label={gettext("Account name")}>
-              <%= @entry.account_name %>
-            </.field>
+            <%# Show input? %>
+            {@entry.account_name}
           </section>
         </div>
       </div>

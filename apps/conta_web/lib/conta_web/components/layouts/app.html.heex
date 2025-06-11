@@ -1,49 +1,37 @@
 <.flash_group flash={@flash} />
 <.nav logo_url={~p{/images/conta_header.png}}>
-  <.navbar_start :if={@current_user}>
-    <.navbar_item href={~p"/dashboard"}><%= gettext("Dashboard") %></.navbar_item>
+  <:navbar_start :if={@current_user}>
+    <.navbar_item href={~p"/dashboard"}>{gettext("Dashboard")}</.navbar_item>
     <.navbar_dropdown name={gettext("Ledger")}>
-      <.navbar_item href={~p"/ledger/accounts"}><%= gettext("Accounts") %></.navbar_item>
+      <.navbar_item href={~p"/ledger/accounts"}>{gettext("Accounts")}</.navbar_item>
     </.navbar_dropdown>
     <.navbar_dropdown name={gettext("Books")}>
-      <.navbar_item href={~p"/books/invoices"}><%= gettext("Invoices") %></.navbar_item>
+      <.navbar_item href={~p"/books/invoices"}>{gettext("Invoices")}</.navbar_item>
       <.navbar_divider />
-      <.navbar_item href={~p"/books/expenses"}><%= gettext("Expenses") %></.navbar_item>
+      <.navbar_item href={~p"/books/expenses"}>{gettext("Expenses")}</.navbar_item>
     </.navbar_dropdown>
     <.navbar_dropdown name={gettext("Directories")}>
       <.navbar_item href={~p"/directories/contacts"}>
-        <%= gettext("Clients & Providers") %>
+        {gettext("Clients & Providers")}
       </.navbar_item>
       <.navbar_item href={~p"/directories/payment-methods"}>
-        <%= gettext("Payment Methods") %>
+        {gettext("Payment Methods")}
       </.navbar_item>
     </.navbar_dropdown>
-  </.navbar_start>
-  <.navbar_end>
-    <.navbar_item>
-      <.buttons :if={@current_user}>
-        <.button disabled class="is-ghost">
-          <%= @current_user.email %>
-        </.button>
-        <.link href={~p"/users/settings"} class="button is-light">
-          <%= gettext("Settings") %>
-        </.link>
-        <.link href={~p"/logout"} class="button is-light">
-          <%= gettext("Logout") %>
-        </.link>
-      </.buttons>
+  </:navbar_start>
+  <:navbar_end>
+    <.navbar_item :if={@current_user} class="disabled">{@current_user.email}</.navbar_item>
+    <.navbar_item :if={@current_user} class="btn btn-default" href={~p"/users/settings"}>{gettext("Settings")}</.navbar_item>
+    <.navbar_item :if={@current_user} class="btn btn-default" href={~p"/logout"}>{gettext("Logout")}</.navbar_item>
 
-      <.buttons :if={is_nil(@current_user)}>
-        <.link class="button is-primary" href={~p"/register"}>
-          <strong><%= gettext("Register") %></strong>
-        </.link>
-        <.link class="button is-light" href={~p"/signin"}>
-          <%= gettext("Sign in") %>
-        </.link>
-      </.buttons>
+    <.navbar_item :if={is_nil(@current_user)} class="btn btn-primary" href={~p"/register"}>
+      <strong>{gettext("Register")}</strong>
     </.navbar_item>
-  </.navbar_end>
+    <.navbar_item :if={is_nil(@current_user)} class="btn btn-default" href={~p"/signin"}>
+      {gettext("Sign in")}
+    </.navbar_item>
+  </:navbar_end>
 </.nav>
 <main class="container">
-  <%= @inner_content %>
+  {@inner_content}
 </main>
