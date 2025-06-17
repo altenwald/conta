@@ -516,7 +516,7 @@ defmodule Conta.AccountsTest do
 
       {now_sec, _} =
         NaiveDateTime.utc_now()
-        |> NaiveDateTime.add(365, :day)
+        |> NaiveDateTime.add(365 * 50, :day)
         |> NaiveDateTime.to_gregorian_seconds()
 
       {token_sec, _} =
