@@ -3,9 +3,13 @@ defmodule Conta.Automator.Lua do
 
   Record.defrecordp(:luerl, Record.extract(:luerl, from_lib: "luerl/include/luerl.hrl"))
 
-  defp process_data({:ok, [data]}), do: process_data(data, "")
+  defp process_data({:ok, [data], state}) do
+    state
+    |> Luerl.decode(data)
+    |> process_data("")
+  end
 
-  defp process_data({:error, {:lua_error, reason, state}, _stacktrace}) do
+  defp process_data({:lua_error, reason, state}) do
     {:current_line, line, _file} = List.keyfind(luerl(state, :cs), :current_line, 0)
     {:error, line, reason}
   end
@@ -13,13 +17,17 @@ defmodule Conta.Automator.Lua do
   defp process_data(data, key) do
     cond do
       is_integer(data) and String.ends_with?(key, "_price") ->
-        Decimal.new(data) |> Decimal.div(100)
+        data
+        |> Decimal.new()
+        |> Decimal.div(100)
 
       not is_list(data) ->
         data
 
       Enum.all?(data, fn {k, _} -> is_integer(k) end) ->
-        Enum.map(data, fn {_, value} -> process_data(value, "") end)
+        data
+        |> Enum.sort()
+        |> Enum.map(fn {_, value} -> process_data(value, "") end)
 
       :else ->
         Map.new(data, fn {k, v} -> {k, process_data(v, k)} end)
@@ -28,11 +36,12 @@ defmodule Conta.Automator.Lua do
 
   def run(code, params) do
     params
-    |> Enum.reduce(:luerl.init(), fn {name, value}, state ->
-      :luerl.set_table([name], value, state)
+    |> Enum.reduce(Luerl.init(), fn {name, value}, state ->
+      {:ok, state} = Luerl.set_table_keys(state, [name], value)
+      state
     end)
     ### XXX: we have to use here charlist because binary breaks the collation.
-    |> then(&:luerl.eval(to_charlist(code), &1))
+    |> Luerl.do(to_charlist(code))
     |> process_data()
     |> case do
       {:error, line, reason} -> {:error, "line #{line} error #{inspect(reason)}"}
