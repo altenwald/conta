@@ -60,7 +60,7 @@ config :conta_web,
 # Configures the endpoint
 config :conta_web, ContaWeb.Endpoint,
   url: [host: "localhost"],
-  adapter: Phoenix.Endpoint.Cowboy2Adapter,
+  adapter: Bandit.PhoenixAdapter,
   render_errors: [
     formats: [html: ContaWeb.ErrorHTML, json: ContaWeb.ErrorJSON],
     layout: false
