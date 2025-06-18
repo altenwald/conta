@@ -16,6 +16,7 @@ defmodule Automator.LuaTest do
     data[key] = value
     return data
     """
+
     params = [{"key", "secret of life"}, {"value", 42}]
     assert {:ok, %{"secret of life" => 42}} = Lua.run(code, params)
   end
@@ -35,6 +36,7 @@ defmodule Automator.LuaTest do
 
     return fib(x)
     """
+
     params = [{"x", 10}]
     assert {:ok, [1, 1, 2, 3, 5, 8, 13, 21, 34, 55]} = Lua.run(code, params)
   end
