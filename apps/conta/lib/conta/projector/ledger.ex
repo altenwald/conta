@@ -62,7 +62,11 @@ defmodule Conta.Projector.Ledger do
 
   project(%AccountRemoved{} = event, _metadata, fn multi ->
     account = Repo.get_by!(Account, ledger: event.ledger, name: event.name)
-    Ecto.Multi.delete(multi, :account_removed, account)
+    balances = from(b in Balance, where: b.account_id == ^account.id)
+
+    multi
+    |> Ecto.Multi.delete_all(:account_balances_removed, balances)
+    |> Ecto.Multi.delete(:account_removed, account)
   end)
 
   project(%AccountModified{} = event, _metadata, fn multi ->
