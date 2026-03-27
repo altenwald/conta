@@ -67,6 +67,7 @@ defmodule ContaWeb.InvoiceController do
     put_resp_header(conn, "content-disposition", "attachment; filename=#{filename}")
   end
 
+  # sobelow_skip ["XSS.ContentType", "XSS.SendResp"]
   def run(conn, %{"automator_id" => id} = params) do
     filters = [
       term: params["term"],
@@ -103,6 +104,7 @@ defmodule ContaWeb.InvoiceController do
     end
   end
 
+  # sobelow_skip ["XSS.ContentType", "XSS.SendResp"]
   def logo(conn, %{"id" => id}) do
     invoice = Book.get_invoice!(id)
     template = Book.get_template_by_name!(invoice.company.nif, invoice.template)

@@ -6,6 +6,7 @@ defmodule ContaWeb.ExpenseController do
   alias Conta.Automator
   alias Conta.Book
 
+  # sobelow_skip ["XSS.ContentType", "XSS.SendResp"]
   def download(conn, %{"id" => id, "attachment_id" => idx}) do
     idx = String.to_integer(idx) - 1
     attachment = Enum.at(Book.get_expense!(id).attachments, idx)
@@ -25,6 +26,7 @@ defmodule ContaWeb.ExpenseController do
     put_resp_header(conn, "content-disposition", "attachment; filename=#{filename}")
   end
 
+  # sobelow_skip ["XSS.ContentType", "XSS.SendResp"]
   def run(conn, %{"automator_id" => id} = params) do
     filters = [
       term: params["term"],

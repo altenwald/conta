@@ -47,20 +47,14 @@ defmodule Conta.Automator.Excel do
     workbook
     |> Enum.map(fn {sheet_name, [first_row | _] = sheet_data} ->
       headers = Map.keys(first_row)
-
-      rows =
-        for row <- sheet_data do
-          row = if(is_struct(row), do: Map.from_struct(row), else: row)
-
-          for head <- headers do
-            row[head]
-          end
-        end
-
+      rows = Enum.map(sheet_data, &get_headers(headers, &1))
       %{"name" => sheet_name, "headers" => headers, "rows" => rows}
     end)
     |> export(filename)
   end
+
+  defp get_headers(headers, row) when is_struct(row), do: get_headers(headers, Map.from_struct(row))
+  defp get_headers(headers, row), do: Enum.map(headers, &row[&1])
 
   defp to_cell(atom) when is_atom(atom), do: to_string(atom)
   defp to_cell(integer) when is_integer(integer), do: integer

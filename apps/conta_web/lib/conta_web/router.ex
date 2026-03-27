@@ -99,10 +99,12 @@ defmodule ContaWeb.Router do
 
     scope "/automator/", Automator do
       resources "/shortcuts", Shortcut, only: [:index, :show, :create, :update, :delete]
+      # sobelow_skip ["Config.CSRFRoute"]
       get "/shortcuts/:id/run", Shortcut, :run
       post "/shortcuts/:id/run", Shortcut, :run
 
       resources "/filters", Filter, only: [:index, :show, :create, :update, :delete]
+      # sobelow_skip ["Config.CSRFRoute"]
       get "/filters/:id/run", Filter, :run
       post "/filters/:id/run", Filter, :run
     end

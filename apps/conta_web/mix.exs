@@ -45,7 +45,7 @@ defmodule ContaWeb.MixProject do
       {:fontawesome, "~> 0.3"},
       {:telemetry_metrics, "~> 1.0"},
       {:telemetry_poller, "~> 1.0"},
-      {:gettext, "~> 0.24"},
+      {:gettext, "~> 1.0"},
       {:conta, in_umbrella: true},
       {:jason, "~> 1.4"},
       {:countries_i18n, "~> 0.0", only: :dev},

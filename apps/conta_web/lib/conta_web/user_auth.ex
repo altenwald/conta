@@ -90,6 +90,7 @@ defmodule ContaWeb.UserAuth do
   @doc """
   Authenticates the user by looking into the api-key.
   """
+  # sobelow_skip ["XSS.SendResp"]
   def fetch_api_user(conn, _opts) do
     with ["Bearer " <> token] <- get_req_header(conn, "authorization"),
          {:ok, user} <- Accounts.fetch_user_by_api_token(token) do

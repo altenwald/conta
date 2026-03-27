@@ -3,10 +3,16 @@ defmodule Conta.Automator.Lua do
 
   Record.defrecordp(:luerl, Record.extract(:luerl, from_lib: "luerl/include/luerl.hrl"))
 
-  defp process_data({:ok, [data]}), do: process_data(data, "")
+  defp process_data({:ok, [data], _state}), do: process_data(data, "")
+  defp process_data({:ok, [], _state}), do: nil
 
-  defp process_data({:error, {:lua_error, reason, state}, _stacktrace}) do
-    {:current_line, line, _file} = List.keyfind(luerl(state, :cs), :current_line, 0)
+  defp process_data({:error, [{_, _, {reason, _}}], _}), do: {:error, nil, reason}
+  defp process_data({:error, [{_, _, reason}], _}), do: {:error, nil, reason}
+
+  defp process_data({:lua_error, reason, state}) do
+    {:current_line, line, _file} =
+      List.keyfind(luerl(state, :cs), :current_line, 0) || {:current_line, nil, nil}
+
     {:error, line, reason}
   end
 
@@ -27,16 +33,21 @@ defmodule Conta.Automator.Lua do
   end
 
   def run(code, params) do
+    # `set_table_keys_dec` handles translation of Erlang to Lua types automatically
     params
     |> Enum.reduce(:luerl.init(), fn {name, value}, state ->
-      :luerl.set_table([name], value, state)
+      {:ok, new_state} = :luerl.set_table_keys_dec([name], value, state)
+      new_state
     end)
-    ### XXX: we have to use here charlist because binary breaks the collation.
-    |> then(&:luerl.eval(to_charlist(code), &1))
+    |> then(&:luerl.do_dec(code, &1))
     |> process_data()
     |> case do
-      {:error, line, reason} -> {:error, "line #{line} error #{inspect(reason)}"}
-      result -> {:ok, result}
+      {:error, line, reason} ->
+        line_info = if line, do: "line #{line} ", else: ""
+        {:error, "#{line_info}error #{inspect(reason)}"}
+
+      result ->
+        {:ok, result}
     end
   end
 end

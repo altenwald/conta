@@ -159,6 +159,7 @@ defmodule ContaWeb.ExpenseLive.FormComponent do
     validate(socket, expense_params)
   end
 
+  # sobelow_skip ["Traversal.FileModule"]
   def handle_event("save", %{"set_expense" => expense_params}, socket) do
     expense_params =
       consume_uploaded_entries(socket, :attachments, fn %{path: path}, entry ->

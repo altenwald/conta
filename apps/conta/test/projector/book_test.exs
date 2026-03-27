@@ -303,4 +303,102 @@ defmodule Conta.Projector.BookTest do
              } = Repo.get_by!(Conta.Projector.Book.Invoice, invoice_number: "2023-00001")
     end
   end
+
+  describe "expense" do
+    test "create successfully", metadata do
+      event =
+        %Conta.Event.ExpenseSet{
+          action: :insert,
+          invoice_number: "EXP-001",
+          invoice_date: ~D"2023-12-30",
+          category: "office_supplies",
+          subtotal_price: Decimal.new("50.00"),
+          tax_price: Decimal.new("10.50"),
+          total_price: Decimal.new("60.50"),
+          currency: "EUR",
+          company: %Conta.Event.Common.Company{
+            nif: "A55666777",
+            name: "Great Company SA",
+            country: "ES"
+          },
+          provider: %Conta.Event.ExpenseSet.Provider{
+            name: "Supermarket",
+            nif: "B99888777",
+            country: "ES"
+          },
+          attachments: []
+        }
+
+      assert :ok = Book.handle(event, metadata)
+
+      assert %Book.Expense{
+               invoice_number: "EXP-001",
+               category: :office_supplies,
+               subtotal_price: 50_00,
+               tax_price: 10_50,
+               total_price: 60_50,
+               currency: :EUR,
+               provider: %Book.Expense.Provider{
+                 name: "Supermarket"
+               }
+             } = Repo.get_by!(Book.Expense, invoice_number: "EXP-001")
+    end
+
+    test "update successfully", metadata do
+      event1 =
+        %Conta.Event.ExpenseSet{
+          action: :insert,
+          invoice_number: "EXP-002",
+          invoice_date: ~D"2023-12-30",
+          category: "office_supplies",
+          subtotal_price: Decimal.new("50.00"),
+          tax_price: Decimal.new("10.50"),
+          total_price: Decimal.new("60.50"),
+          currency: "EUR",
+          company: %Conta.Event.Common.Company{
+            nif: "A55666777",
+            name: "Great Company SA",
+            country: "ES"
+          },
+          provider: %Conta.Event.ExpenseSet.Provider{
+            name: "Supermarket",
+            nif: "B99888777",
+            country: "ES"
+          },
+          attachments: []
+        }
+
+      assert :ok = Book.handle(event1, metadata)
+
+      event2 = %{event1 | action: :update, subtotal_price: Decimal.new("100.00")}
+      metadata2 = %{metadata | event_number: metadata.event_number + 1}
+      assert :ok = Book.handle(event2, metadata2)
+
+      assert %Book.Expense{
+               subtotal_price: 100_00
+             } = Repo.get_by!(Book.Expense, invoice_number: "EXP-002")
+    end
+  end
+
+  describe "template" do
+    test "create successfully", metadata do
+      event =
+        %Conta.Event.TemplateSet{
+          nif: "A55666777",
+          name: "default",
+          css: "body { color: red; }",
+          logo: Base.encode64("dummy-logo-data"),
+          logo_mime_type: "image/png"
+        }
+
+      assert :ok = Book.handle(event, metadata)
+
+      assert %Book.Template{
+               name: "default",
+               css: "body { color: red; }",
+               logo: "dummy-logo-data",
+               logo_mime_type: "image/png"
+             } = Repo.get_by!(Book.Template, name: "default")
+    end
+  end
 end

@@ -55,30 +55,21 @@ defmodule ContaBot.Components do
   end
 
   def answer_select(context, prompt, options, extra_options \\ [], opts \\ []) do
-    extra_buttons =
-      for {label, value} <- extra_options do
-        %InlineKeyboardButton{text: label, callback_data: value}
-      end
-
-    buttons =
-      if Enum.all?(options, &is_tuple/1) do
-        for {label, value} <- options do
-          [%InlineKeyboardButton{text: label, callback_data: value}]
-        end
-      else
-        Enum.map(options, fn
-          {label, value} ->
-            [%InlineKeyboardButton{text: label, callback_data: value}]
-
-          sub_options when is_list(sub_options) ->
-            for {label, value} <- sub_options do
-              %InlineKeyboardButton{text: label, callback_data: value}
-            end
-        end)
-      end ++ [extra_buttons]
-
+    buttons = get_buttons(options) ++ get_buttons(extra_options)
     markup = %InlineKeyboardMarkup{inline_keyboard: buttons}
     answer(context, prompt, [{:reply_markup, markup} | opts])
+  end
+
+  defp get_buttons(options, processed \\ [])
+
+  defp get_buttons([], processed), do: Enum.reverse(processed)
+
+  defp get_buttons([{label, value} | options], processed) do
+    get_buttons(options, [[%InlineKeyboardButton{text: label, callback_data: value}] | processed])
+  end
+
+  defp get_buttons([sub_options | options], processed) when is_list(sub_options) do
+    get_buttons(options, [get_buttons(sub_options) | processed])
   end
 
   def escape_markdown(text) do
