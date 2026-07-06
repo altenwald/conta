@@ -91,7 +91,7 @@ defmodule ContaWeb.UserLive.ResetPasswordTest do
 
       {:ok, conn} =
         lv
-        |> element(~s|a:fl-contains("Sign in")|)
+        |> element(~s|.navbar-end a|, "Sign in")
         |> render_click()
         |> follow_redirect(conn, ~p"/signin")
 
@@ -106,7 +106,7 @@ defmodule ContaWeb.UserLive.ResetPasswordTest do
 
       {:ok, conn} =
         lv
-        |> element(~s|a:not([class*="navbar"])|, "Register")
+        |> element(~s|.navbar-end a|, "Register")
         |> render_click()
         |> follow_redirect(conn, ~p"/register")
 

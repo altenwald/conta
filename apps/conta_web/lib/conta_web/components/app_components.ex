@@ -19,15 +19,23 @@ defmodule ContaWeb.AppComponents do
   alias Phoenix.LiveView.JS
 
   @doc """
-  Renders the navigation elements.
+  Renders the navigation elements. Nav items (`<.navbar_item>`, `<.navbar_dropdown>`)
+  go in the default slot and are shown left/center-aligned; right-aligned actions
+  (user menu, buttons) go in the `:actions` slot.
 
   ## Examples
 
-      <.nav/>
+      <.nav logo_url={~p"/images/logo.png"}>
+        <.navbar_item href={~p"/dashboard"}>Dashboard</.navbar_item>
+        <:actions>
+          <.link href={~p"/logout"} class="btn btn-ghost btn-sm">Logout</.link>
+        </:actions>
+      </.nav>
   """
   attr :logo_url, :string, required: true
   attr :class, :string, default: nil
-  slot :inner_block, required: true
+  slot :inner_block, doc: "left/center-aligned nav items"
+  slot :actions, doc: "right-aligned actions (buttons, user menu)"
 
   def nav(assigns) do
     ~H"""
@@ -43,6 +51,7 @@ defmodule ContaWeb.AppComponents do
             id="mobile-menu"
           >
             {render_slot(@inner_block)}
+            {render_slot(@actions)}
           </ul>
         </div>
         <.link href={~p"/"} class="btn btn-ghost normal-case text-xl px-2">
@@ -50,27 +59,15 @@ defmodule ContaWeb.AppComponents do
         </.link>
       </div>
 
-      <div class="navbar-center hidden lg:flex" id="desktop-menu">
+      <div :if={@inner_block != []} class="navbar-center hidden lg:flex" id="desktop-menu">
         <ul class="menu menu-horizontal px-1">
           {render_slot(@inner_block)}
         </ul>
       </div>
-    </div>
-    """
-  end
 
-  def navbar_start(assigns) do
-    ~H"""
-    {render_slot(@inner_block)}
-    """
-  end
-
-  slot :inner_block, required: true
-
-  def navbar_end(assigns) do
-    ~H"""
-    <div class="navbar-end">
-      {render_slot(@inner_block)}
+      <div class="navbar-end hidden lg:flex">
+        {render_slot(@actions)}
+      </div>
     </div>
     """
   end

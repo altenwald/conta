@@ -75,9 +75,9 @@ defmodule ContaWeb.UserLive.RegistrationTest do
 
       {:ok, conn} =
         lv
-        |> element(~s|a:fl-contains("Sign in")|)
+        |> element(~s|.navbar-end a|, "Sign in")
         |> render_click()
-        |> follow_redirect(conn)
+        |> follow_redirect(conn, ~p"/signin")
 
       assert html_response(conn, 200) =~ "Sign in"
     end
