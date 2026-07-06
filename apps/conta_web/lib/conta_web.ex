@@ -95,8 +95,12 @@ defmodule ContaWeb do
       use Gettext, backend: ContaWeb.Gettext
       # HTML escaping functionality
       import Phoenix.HTML
-      # Core UI components
-      import ContaWeb.CoreComponents
+      # Core UI components from the phx.new scaffold. `input/1`, `button/1`, and
+      # `table/1` are excluded here because ContaWeb.AppComponents (imported below)
+      # provides this app's own versions of those under the same names.
+      import ContaWeb.CoreComponents, except: [input: 1, button: 1, table: 1]
+      # App-specific components (predate/diverge from the phx.new scaffold)
+      import ContaWeb.AppComponents
 
       # Shortcut for generating JS commands
       alias Phoenix.LiveView.JS

@@ -3,6 +3,52 @@ defmodule ContaWeb.Layouts do
 
   embed_templates "layouts/*"
 
+  @doc """
+  Shows the flash group with standard titles and content.
+
+  ## Examples
+
+      <.flash_group flash={@flash} />
+  """
+  attr :flash, :map, required: true, doc: "the map of flash messages"
+  attr :id, :string, default: "flash-group", doc: "the optional id of flash container"
+
+  def flash_group(assigns) do
+    ~H"""
+    <div id={@id}>
+      <.flash kind={:info} title="Success!" flash={@flash} />
+      <.flash kind={:error} title="Error!" flash={@flash} />
+      <.flash
+        id="client-error"
+        kind={:error}
+        title={gettext("We can't find the internet")}
+        phx-disconnected={show(".phx-client-error #client-error")}
+        phx-connected={hide("#client-error")}
+        hidden
+      >
+        <div class="flex items-center gap-2">
+          <span>{gettext("Attempting to reconnect")}</span>
+          <.icon name="hero-arrow-path" class="w-5 h-5 animate-spin" />
+        </div>
+      </.flash>
+
+      <.flash
+        id="server-error"
+        kind={:error}
+        title={gettext("Something went wrong!")}
+        phx-disconnected={JS.remove_class("close", to: "#server-error")}
+        phx-connected={JS.add_class("close", to: "#server-error")}
+        hidden
+      >
+        <div class="flex items-center gap-2">
+          <span>{gettext("Hang in there while we get back on track")}</span>
+          <.icon name="hero-arrow-path" class="w-5 h-5 animate-spin" />
+        </div>
+      </.flash>
+    </div>
+    """
+  end
+
   def favicon(assigns) do
     ~H"""
     <link rel="apple-touch-icon" sizes="180x180" href={~p"/favicon/apple-touch-icon.png"} />
