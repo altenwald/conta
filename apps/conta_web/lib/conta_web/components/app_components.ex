@@ -94,7 +94,7 @@ defmodule ContaWeb.AppComponents do
       <div tabindex="0" role="button" class="flex items-center gap-1">
         {@name} <.icon name="hero-chevron-down" class="w-4 h-4 ml-1" />
       </div>
-      <ul tabindex="0" class="dropdown-content menu p-2 shadow bg-base-100 rounded-box w-52 z-50">
+      <ul tabindex="0" class="dropdown-content menu mt-0 p-2 shadow bg-base-100 rounded-box w-52 z-50">
         {render_slot(@inner_block)}
       </ul>
     </li>
