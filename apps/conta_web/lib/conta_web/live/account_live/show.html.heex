@@ -1,4 +1,4 @@
-<section class="section is-main-section">
+<section class="py-6">
   <.breadcrumbs>
     <:breadcrumb label={gettext("Dashboard")} href={~p"/"} />
     <:breadcrumb label={gettext("Accounts")} href={~p"/ledger/accounts"} />
@@ -9,59 +9,51 @@
     />
   </.breadcrumbs>
 
-  <div class="card tile is-child has-table has-mobile-sort-spaced">
-    <div class="card-content">
-      <div class="b-table has-pagination">
-        <div class="table-wrapper has-mobile-cards">
-          <div class="field is-grouped">
-            <div class="control">
-              <.link
-                class="button"
-                patch={~p"/ledger/accounts/#{@account.id}/show/edit"}
-                phx-click={JS.push_focus()}
-              >
-                <div class="icon-text">
-                  <span class="icon mr-2">
-                    <FontAwesome.pencil />
-                  </span>
-                  <span><%= gettext("Edit account") %></span>
-                </div>
-              </.link>
-            </div>
-            <div class="control">
-              <.link class="button is-info" href={~p"/ledger/accounts/#{@account.id}/entries"}>
-                <div class="icon-text">
-                  <span class="icon mr-2">
-                    <FontAwesome.folder_open />
-                  </span>
-                  <span><%= gettext("Entries") %></span>
-                </div>
-              </.link>
-            </div>
+  <div class="card bg-base-100 shadow-xl border border-base-200 mt-6">
+    <div class="card-body">
+      <div class="flex flex-wrap gap-2 mb-6">
+        <.link
+          class="btn btn-outline"
+          patch={~p"/ledger/accounts/#{@account.id}/show/edit"}
+          phx-click={JS.push_focus()}
+        >
+          <.icon name="hero-pencil" class="w-4 h-4 mr-1" />
+          <span>{gettext("Edit account")}</span>
+        </.link>
+        <.link class="btn btn-info btn-outline" href={~p"/ledger/accounts/#{@account.id}/entries"}>
+          <.icon name="hero-folder-open" class="w-4 h-4 mr-1" />
+          <span>{gettext("Entries")}</span>
+        </.link>
+      </div>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div class="space-y-4">
+          <.input type="static" label={gettext("Account name")} value={Enum.join(@account.name, ".")} />
+          <.input type="static" label={gettext("Ledger")} value={@account.ledger} />
+          <.input type="static" label={gettext("Type")} value={@account.type} />
+          <.input type="static" label={gettext("Currency")} value={get_currency(@account.currency)} />
+          <.input type="static" label={gettext("Notes")} value={@account.notes || gettext("No notes")} />
+        </div>
+
+        <div class="space-y-6">
+          <div :if={@account.balances != []}>
+            <h3 class="text-lg font-bold mb-2">{gettext("Balances")}</h3>
+            <.simple_table id="balances" rows={@account.balances}>
+              <:col :let={balance} class="text-right font-mono" label={gettext("Amount")}>
+                {%Money{balance.amount | currency: balance.currency}}
+              </:col>
+            </.simple_table>
           </div>
-          <section class="section">
-            <.input type="static" label={gettext("Account name")} value={Enum.join(@account.name, ".")} />
-            <.input type="static" label={gettext("Ledger")} value={@account.ledger} />
-            <.input type="static" label={gettext("Type")} value={@account.type} />
-            <.input type="static" label={gettext("Currency")} value={get_currency(@account.currency)} />
-            <.input type="static" label={gettext("Notes")} value={@account.notes || gettext("No notes")} />
-            <.field class="is-horizontal" label={gettext("Balances")}>
-              <.simple_table id="balances" rows={@account.balances}>
-                <:col :let={balance} class="has-text-right is-money" label={gettext("Amount")}>
-                  <%= %Money{balance.amount | currency: balance.currency} %>
-                </:col>
-              </.simple_table>
-            </.field>
-            <.field :if={@subaccounts != []} class="is-horizontal" label={gettext("Subaccounts")}>
-              <.simple_table id="subaccounts" rows={@subaccounts}>
-                <:col :let={account} label={gettext("Name")}>
-                  <.link href={~p"/ledger/accounts/#{account}"}>
-                    <%= Enum.join(account.name, ".") %>
-                  </.link>
-                </:col>
-              </.simple_table>
-            </.field>
-          </section>
+
+          <div :if={@subaccounts != []}>
+            <h3 class="text-lg font-bold mb-2">{gettext("Subaccounts")}</h3>
+            <.simple_table id="subaccounts" rows={@subaccounts}>
+              <:col :let={account} label={gettext("Name")}>
+                <.link href={~p"/ledger/accounts/#{account}"} class="link link-primary">
+                  {Enum.join(account.name, ".")}
+                </.link>
+              </:col>
+            </.simple_table>
+          </div>
         </div>
       </div>
     </div>

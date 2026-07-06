@@ -5,129 +5,142 @@ defmodule ContaWeb.UserLive.Settings do
 
   def render(assigns) do
     ~H"""
-    <section class="hero is-fullheight">
-      <div :if={assigns[:error_message]} class="notification is-danger">
-        <p><%= @error_message %></p>
+    <div class="container mx-auto px-4 py-8 max-w-4xl">
+      <div :if={assigns[:error_message]} class="alert alert-error mb-6 shadow-lg">
+        <.icon name="hero-exclamation-triangle" class="w-6 h-6" />
+        <span>{@error_message}</span>
       </div>
-      <div class="hero-body">
-        <div class="container">
-          <div class="columns is-centered">
-            <div class="column is-12-tablet is-10-desktop is-8-widscreen">
-              <h1 class="is-size-3 mb-3"><%= gettext("Settings") %></h1>
-              <div class="box">
-                <h2 class="is-size-4 mb-3"><%= gettext("Update email") %></h2>
-                <.simple_form
-                  for={@email_form}
-                  id="email_form"
-                  phx-submit="update_email"
-                  phx-change="validate_email"
-                >
-                  <.input field={@email_form[:email]} type="email" label={gettext("Email")} required />
-                  <.input
-                    field={@email_form[:current_password]}
-                    name="current_password"
-                    id="current_password_for_email"
-                    type="password"
-                    label={gettext("Current password")}
-                    value={@email_form_current_password}
-                    required
-                  />
-                  <:actions>
-                    <div class="has-text-right is-full-width">
-                      <.button phx-disable-with={gettext("Changing...")} class="is-primary">
-                        <%= gettext("Change Email") %>
-                      </.button>
-                    </div>
-                  </:actions>
-                </.simple_form>
-              </div>
-              <div class="box">
-                <h2 class="is-size-4 mb-3"><%= gettext("Update Password") %></h2>
-                <.simple_form
-                  for={@password_form}
-                  id="password_form"
-                  action={~p"/signin?_action=password_updated"}
-                  method="post"
-                  phx-change="validate_password"
-                  phx-submit="update_password"
-                  phx-trigger-action={@trigger_submit}
-                >
-                  <input
-                    name={@password_form[:email].name}
-                    type="hidden"
-                    id="hidden_user_email"
-                    value={@current_email}
-                  />
-                  <.input
-                    field={@password_form[:password]}
-                    type="password"
-                    label={gettext("New password")}
-                    required
-                  />
-                  <.input
-                    field={@password_form[:password_confirmation]}
-                    type="password"
-                    label={gettext("Confirm new password")}
-                  />
-                  <.input
-                    field={@password_form[:current_password]}
-                    name="current_password"
-                    type="password"
-                    label={gettext("Current password")}
-                    id="current_password_for_password"
-                    value={@current_password}
-                    required
-                  />
-                  <:actions>
-                    <div class="has-text-right is-full-width">
-                      <.button phx-disable-with={gettext("Changing...")} class="is-primary">
-                        <%= gettext("Change Password") %>
-                      </.button>
-                    </div>
-                  </:actions>
-                </.simple_form>
-              </div>
-              <div class="box">
-                <div class="content">
-                  <h2 class="is-size-4 mb-3"><%= gettext("API Token") %></h2>
-                  <p :if={@api_token}>
-                    <strong>
-                      <%= gettext("Last token was generated %{date}.", date: @api_token.inserted_at) %>
-                    </strong>
-                  </p>
-                  <p :if={@api_token}>
-                    <strong>
-                      <%= gettext(
-                        "It will expire at %{expires}",
-                        expires: Accounts.UserToken.when_it_expires(@api_token)
-                      ) %>
-                    </strong>
-                  </p>
-                  <p>
-                    <%= gettext("You MUST save the token generated because it is not stored in the database.") %>
-                  </p>
-                  <p :if={assigns[:token]}>
-                    <strong><%= @token %></strong>
-                  </p>
-                  <p>
-                    <button
-                      type="button"
-                      class={["button", if(@api_token, do: "is-danger", else: "is-primary")]}
-                      phx-click="generate_token"
-                    >
-                      <%= gettext("Generate") %>
-                    </button>
-                  </p>
-                  <p>
-                    <%= gettext("If a new token is generated the previous one will be removed.") %>
-                  </p>
+
+      <header class="mb-8">
+        <h1 class="text-3xl font-bold text-base-content">{gettext("Settings")}</h1>
+        <p class="text-base-content opacity-70">{gettext("Manage your account settings and API tokens.")}</p>
+      </header>
+
+      <div class="flex flex-col gap-8">
+        <div class="card bg-base-100 shadow-xl border border-base-200">
+          <div class="card-body">
+            <h2 class="card-title text-xl mb-4">{gettext("Update email")}</h2>
+            <.simple_form
+              for={@email_form}
+              id="email_form"
+              phx-submit="update_email"
+              phx-change="validate_email"
+            >
+              <.input field={@email_form[:email]} type="email" label={gettext("Email")} required />
+              <.input
+                field={@email_form[:current_password]}
+                name="current_password"
+                id="current_password_for_email"
+                type="password"
+                label={gettext("Current password")}
+                value={@email_form_current_password}
+                required
+              />
+              <:actions>
+                <div class="card-actions justify-end w-full mt-4">
+                  <.button phx-disable-with={gettext("Changing...")} class="btn-primary">
+                    {gettext("Change Email")}
+                  </.button>
                 </div>
+              </:actions>
+            </.simple_form>
+          </div>
+        </div>
+
+        <div class="card bg-base-100 shadow-xl border border-base-200">
+          <div class="card-body">
+            <h2 class="card-title text-xl mb-4">{gettext("Update Password")}</h2>
+            <.simple_form
+              for={@password_form}
+              id="password_form"
+              action={~p"/signin?_action=password_updated"}
+              method="post"
+              phx-change="validate_password"
+              phx-submit="update_password"
+              phx-trigger-action={@trigger_submit}
+            >
+              <input
+                name={@password_form[:email].name}
+                type="hidden"
+                id="hidden_user_email"
+                value={@current_email}
+              />
+              <.input
+                field={@password_form[:password]}
+                type="password"
+                label={gettext("New password")}
+                required
+              />
+              <.input
+                field={@password_form[:password_confirmation]}
+                type="password"
+                label={gettext("Confirm new password")}
+              />
+              <.input
+                field={@password_form[:current_password]}
+                name="current_password"
+                type="password"
+                label={gettext("Current password")}
+                id="current_password_for_password"
+                value={@current_password}
+                required
+              />
+              <:actions>
+                <div class="card-actions justify-end w-full mt-4">
+                  <.button phx-disable-with={gettext("Changing...")} class="btn-primary">
+                    {gettext("Change Password")}
+                  </.button>
+                </div>
+              </:actions>
+            </.simple_form>
+          </div>
+        </div>
+
+        <div class="card bg-base-100 shadow-xl border border-base-200">
+          <div class="card-body">
+            <h2 class="card-title text-xl mb-4">{gettext("API Token")}</h2>
+            <div class="space-y-4">
+              <div :if={@api_token} class="stats shadow bg-base-200 w-full">
+                <div class="stat">
+                  <div class="stat-title text-sm opacity-70">{gettext("Last generated")}</div>
+                  <div class="stat-value text-base opacity-90">{@api_token.inserted_at}</div>
+                </div>
+                <div class="stat">
+                  <div class="stat-title text-sm opacity-70">{gettext("Expires at")}</div>
+                  <div class="stat-value text-base opacity-90">
+                    {Accounts.UserToken.when_it_expires(@api_token)}
+                  </div>
+                </div>
+              </div>
+
+              <div class="alert alert-warning shadow-sm">
+                <.icon name="hero-information-circle" class="w-6 h-6 flex-shrink-0" />
+                <span class="text-sm">
+                  {gettext("You MUST save the token generated because it is not stored in the database.")}
+                </span>
+              </div>
+
+              <div :if={assigns[:token]} class="alert alert-info shadow-sm break-all font-mono text-center">
+                <strong>{@token}</strong>
+              </div>
+
+              <div class="card-actions items-center justify-between mt-4">
+                <p class="text-xs opacity-60">
+                  {gettext("Generating a new token will invalidate the previous one.")}
+                </p>
+                <button
+                  type="button"
+                  class={["btn", if(@api_token, do: "btn-error btn-outline", else: "btn-primary")]}
+                  phx-click="generate_token"
+                >
+                  {gettext("Generate New Token")}
+                </button>
               </div>
             </div>
           </div>
         </div>
       </div>
-    </section>
+    </div>
     """
   end
 

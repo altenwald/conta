@@ -7,22 +7,22 @@ defmodule ContaWeb.UserLive.ConfirmationInstructions do
     ~H"""
     <section class="hero is-fullheight">
       <div :if={assigns[:error_message]} class="notification is-danger">
-        <p><%= @error_message %></p>
+        <p>{@error_message}</p>
       </div>
       <div class="hero-body">
         <div class="container">
           <div class="columns is-centered">
             <div class="column is-6-tablet is-5-desktop is-4-widscreen">
-              <h1 class="is-size-3 mb-3"><%= gettext("Confirmation Instructions") %></h1>
+              <h1 class="is-size-3 mb-3">{gettext("Confirmation Instructions")}</h1>
               <div class="box">
-                <p class="mb-2"><%= gettext("No confirmation instructions received?") %></p>
-                <p class="mb-2"><%= gettext("We'll send a new confirmation link to your inbox") %></p>
+                <p class="mb-2">{gettext("No confirmation instructions received?")}</p>
+                <p class="mb-2">{gettext("We'll send a new confirmation link to your inbox")}</p>
                 <.simple_form for={@form} id="resend_confirmation_form" phx-submit="send_instructions">
                   <.input field={@form[:email]} type="email" label="Email" required />
                   <:actions>
                     <div class="has-text-right is-full-width">
                       <.button phx-disable-with={gettext("Sending...")} class="is-primary">
-                        <%= gettext("Resend confirmation instructions") %>
+                        {gettext("Resend confirmation instructions")}
                       </.button>
                     </div>
                   </:actions>

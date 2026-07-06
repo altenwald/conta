@@ -16,9 +16,9 @@ defmodule ContaWeb.EntryLive.FormComponent do
       <div class="modal-background"></div>
       <div class="modal-card">
         <header class="modal-card-head">
-          <h2><%= @title %></h2>
+          <h2>{@title}</h2>
           <div :if={@breakdown} class="is-right">
-            <%= gettext("imbalance: %{currency_data}", currency_data: @currency_data) %>
+            {gettext("imbalance: %{currency_data}", currency_data: @currency_data)}
           </div>
         </header>
         <section class="modal-card-body">
@@ -35,17 +35,17 @@ defmodule ContaWeb.EntryLive.FormComponent do
             <%= if @breakdown do %>
               <div class="field is-horizontal">
                 <div class="field-label is-normal">
-                  <label class="label"><%= gettext("Entries") %></label>
+                  <label class="label">{gettext("Entries")}</label>
                 </div>
                 <div class="field-body">
                   <.link class="button" phx-target={@myself} phx-click="add_entry">
-                    <%= gettext("Add Entry") %>
+                    {gettext("Add Entry")}
                   </.link>
                 </div>
               </div>
               <div class="notification">
                 <.error :for={{error, _} <- @form[:entries].errors}>
-                  <strong><%= gettext("Entries") %></strong>&nbsp;<%= error %>
+                  <strong><%= gettext("Entries") %></strong>&nbsp;{error}
                 </.error>
               </div>
               <.inputs_for :let={d} field={@form[:entries]}>
@@ -57,7 +57,7 @@ defmodule ContaWeb.EntryLive.FormComponent do
                       phx-click="del_entry"
                       phx-value-index={d.index}
                     >
-                      <%= gettext("Remove") %>
+                      {gettext("Remove")}
                     </.link>
                   </div>
                   <div class="column">
@@ -140,10 +140,10 @@ defmodule ContaWeb.EntryLive.FormComponent do
         </section>
         <footer class="modal-card-foot is-at-right">
           <.button form="account-transaction-form" class="is-primary" phx-disable-with={gettext("Saving...")}>
-            <%= gettext("Save Transaction") %>
+            {gettext("Save Transaction")}
           </.button>
           <.link class="button" patch={~p"/ledger/accounts/#{@account}/entries"}>
-            <%= gettext("Cancel") %>
+            {gettext("Cancel")}
           </.link>
         </footer>
       </div>

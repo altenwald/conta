@@ -55,7 +55,7 @@ defmodule ContaWeb.AccountLive.Index do
         {:noreply,
          socket
          |> put_flash(:info, gettext("Account deleted successfully"))
-         |> stream(:ledger_accounts, Ledger.list_accounts(), reset: true)}
+         |> stream_delete(:ledger_accounts, account)}
 
       {:error, reason} ->
         Logger.warning("cannot remove account #{inspect(reason)}")

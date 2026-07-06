@@ -5,32 +5,33 @@ defmodule ContaWeb.UserLive.Confirmation do
 
   def render(%{live_action: :edit} = assigns) do
     ~H"""
-    <section class="hero is-fullheight">
-      <div :if={assigns[:error_message]} class="notification is-danger">
-        <p><%= @error_message %></p>
-      </div>
-      <div class="hero-body">
-        <div class="container">
-          <div class="columns is-centered">
-            <div class="column is-6-tablet is-5-desktop is-4-widscreen">
-              <h1 class="is-size-3 mb-3"><%= gettext("Confirm Account") %></h1>
-              <div class="box">
-                <.simple_form for={@form} id="confirmation_form" phx-submit="confirm_account">
-                  <input type="hidden" name={@form[:token].name} value={@form[:token].value} />
-                  <:actions>
-                    <div class="has-text-centered is-full-width">
-                      <.button phx-disable-with={gettext("Confirming...")} class="is-primary">
-                        <%= gettext("Confirm my account") %>
-                      </.button>
-                    </div>
-                  </:actions>
-                </.simple_form>
-              </div>
-            </div>
+    <div class="min-h-screen flex items-center justify-center bg-base-200 px-4 py-12">
+      <div class="max-w-md w-full">
+        <div :if={assigns[:error_message]} class="alert alert-error mb-6 shadow-lg">
+          <.icon name="hero-exclamation-triangle" class="w-6 h-6" />
+          <span>{@error_message}</span>
+        </div>
+
+        <div class="card bg-base-100 shadow-xl">
+          <div class="card-body">
+            <h1 class="card-title text-3xl mb-6 justify-center text-base-content font-bold">
+              {gettext("Confirm Account")}
+            </h1>
+
+            <.simple_form for={@form} id="confirmation_form" phx-submit="confirm_account">
+              <input type="hidden" name={@form[:token].name} value={@form[:token].value} />
+              <:actions>
+                <div class="card-actions w-full mt-4">
+                  <.button phx-disable-with={gettext("Confirming...")} class="btn-primary w-full">
+                    {gettext("Confirm my account")}
+                  </.button>
+                </div>
+              </:actions>
+            </.simple_form>
           </div>
         </div>
       </div>
-    </section>
+    </div>
     """
   end
 

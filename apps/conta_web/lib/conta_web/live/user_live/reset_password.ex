@@ -5,45 +5,58 @@ defmodule ContaWeb.UserLive.ResetPassword do
 
   def render(assigns) do
     ~H"""
-    <section class="hero is-fullheight">
-      <div :if={assigns[:error_message]} class="notification is-danger">
-        <p><%= @error_message %></p>
-      </div>
-      <div class="hero-body">
-        <div class="container">
-          <div class="columns is-centered">
-            <div class="column is-6-tablet is-5-desktop is-4-widscreen">
-              <h2><%= gettext("Reset email") %></h2>
-              <div class="box">
-                <.simple_form
-                  for={@form}
-                  id="reset_password_form"
-                  phx-submit="reset_password"
-                  phx-change="validate"
-                >
-                  <.error :if={@form.errors != []}>
-                    <%= gettext("Oops, something went wrong! Please check the errors below.") %>
-                  </.error>
+    <div class="min-h-screen flex items-center justify-center bg-base-200 px-4 py-12">
+      <div class="max-w-md w-full">
+        <div :if={assigns[:error_message]} class="alert alert-error mb-6 shadow-lg">
+          <.icon name="hero-exclamation-triangle" class="w-6 h-6" />
+          <span>{@error_message}</span>
+        </div>
 
-                  <.input field={@form[:password]} type="password" label="New password" required />
-                  <.input
-                    field={@form[:password_confirmation]}
-                    type="password"
-                    label={gettext("Confirm new password")}
-                    required
-                  />
-                  <:actions>
-                    <.button phx-disable-with={gettext("Resetting...")}>
-                      <%= gettext("Reset Password") %>
-                    </.button>
-                  </:actions>
-                </.simple_form>
-              </div>
-            </div>
+        <div class="card bg-base-100 shadow-xl">
+          <div class="card-body">
+            <h1 class="card-title text-3xl mb-6 justify-center text-base-content font-bold">
+              {gettext("Reset Password")}
+            </h1>
+
+            <.simple_form
+              for={@form}
+              id="reset_password_form"
+              phx-submit="reset_password"
+              phx-change="validate"
+            >
+              <.error :if={@form.errors != []}>
+                {gettext("Oops, something went wrong! Please check the errors below.")}
+              </.error>
+
+              <.input field={@form[:password]} type="password" label={gettext("New password")} required />
+              <.input
+                field={@form[:password_confirmation]}
+                type="password"
+                label={gettext("Confirm new password")}
+                required
+              />
+              <:actions>
+                <div class="card-actions w-full mt-4">
+                  <.button phx-disable-with={gettext("Resetting...")} class="btn-primary w-full">
+                    {gettext("Reset Password")}
+                  </.button>
+                </div>
+              </:actions>
+            </.simple_form>
           </div>
         </div>
+
+        <p class="text-center mt-6 text-base-content opacity-70">
+          <.link href={~p"/register"} class="link link-primary font-semibold mx-2">
+            {gettext("Register")}
+          </.link>
+          |
+          <.link href={~p"/signin"} class="link link-primary font-semibold mx-2">
+            {gettext("Sign in")}
+          </.link>
+        </p>
       </div>
-    </section>
+    </div>
     """
   end
 

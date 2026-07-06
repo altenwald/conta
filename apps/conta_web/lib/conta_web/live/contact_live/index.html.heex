@@ -1,55 +1,50 @@
-<section class="section is-main-section">
+<section class="py-6">
   <.breadcrumbs>
     <:breadcrumb label={gettext("Dashboard")} href={~p"/"} />
     <:breadcrumb label={gettext("Contacts")} href={~p"/directories/contacts"} />
   </.breadcrumbs>
 
-  <div class="card tile is-child has-table has-mobile-sort-spaced">
-    <form class="card-filter" phx-change="filters">
-      <div class="field">
-        <.link patch={~p"/directories/contacts/new"} class="button">
-          <div class="icon-text">
-            <span class="icon mr-2"><FontAwesome.circle_plus /></span>
-            <span><%= gettext("New Contact") %></span>
-          </div>
+  <div class="card bg-base-100 shadow-xl border border-base-200 mt-6">
+    <div class="card-body p-0">
+      <div class="p-4 flex justify-between items-center border-b border-base-200">
+        <form phx-change="filters" class="flex-grow max-w-xs">
+          <%!-- Filter inputs can go here if needed in the future --%>
+        </form>
+        <.link patch={~p"/directories/contacts/new"} class="btn btn-primary">
+          <.icon name="hero-plus-circle" class="w-5 h-5 mr-2" />
+          <span>{gettext("New Contact")}</span>
         </.link>
       </div>
-    </form>
-    <div class="card-content">
-      <div class="b-table has-pagination">
-        <div class="table-wrapper has-mobile-cards">
+      <div class="w-full">
+        <div class="overflow-x-auto">
           <.table id="directory_contacts" rows={@streams.directory_contacts}>
             <:action :let={{_id, contact}}>
               <.link
-                class="button is-light"
+                class="btn btn-ghost btn-sm"
                 patch={~p"/directories/contacts/#{contact}/edit"}
                 title={gettext("Edit")}
               >
-                <span class="icon">
-                  <FontAwesome.pencil />
-                </span>
+                <.icon name="hero-pencil" class="w-4 h-4" />
               </.link>
             </:action>
             <:action :let={{id, contact}}>
               <.link
                 phx-click={JS.push("delete", value: %{id: contact.id, dom_id: id})}
-                class="button is-danger is-light"
+                class="btn btn-error btn-outline btn-sm"
                 data-confirm={gettext("Are you sure?")}
                 title={gettext("Delete")}
               >
-                <span class="icon">
-                  <FontAwesome.trash_can />
-                </span>
+                <.icon name="hero-trash" class="w-4 h-4" />
               </.link>
             </:action>
             <:col :let={{_id, contact}} label={gettext("NIF")}>
-              <%= contact.nif %>
+              {contact.nif}
             </:col>
             <:col :let={{_id, contact}} label={gettext("Name")}>
-              <%= contact.name %>
+              {contact.name}
             </:col>
             <:col :let={{_id, contact}} label={gettext("Country")}>
-              <%= Countries.get(contact.country).name %>
+              {Countries.get(contact.country).name}
             </:col>
           </.table>
         </div>

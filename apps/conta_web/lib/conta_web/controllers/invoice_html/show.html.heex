@@ -1,4 +1,4 @@
-<div class="columns is-multiline is-mobile">
+<div class="grid grid-cols-12 gap-x-4 gap-y-6">
   <%= if @invoice.template do %>
     <%= if assigns[:embedded] do %>
       <style type="text/css">
@@ -8,163 +8,167 @@
       <link phx-track-static rel="stylesheet" href={~p"/books/invoices/#{@invoice.id}/css"} />
     <% end %>
   <% end %>
-  <div class="column is-7">
+  <div class="col-span-7">
     <img
       :if={@template.logo}
-      class="invoice-logo"
+      class="invoice-logo max-h-32"
       src={get_logo(assigns[:base_path], @invoice.id, assigns[:embedded], @template)}
       alt={@invoice.company.name}
     />
     <br />
-    <h1 class="invoice-title">
-      <%= gettext("INVOICE") %>
+    <h1 class="invoice-title text-4xl font-bold uppercase">
+      {gettext("INVOICE")}
     </h1>
   </div>
-  <div class="column is-5">
-    <table class="table is-bordered is-fullwidth">
+  <div class="col-span-5">
+    <table class="table table-xs border border-base-200 w-full printable-table">
       <tr>
-        <th class="invoice is-info"><%= gettext("Invoice Number") %></th>
-        <th><%= @invoice.invoice_number %></th>
+        <th class="bg-base-200 font-bold">{gettext("Invoice Number")}</th>
+        <td>{@invoice.invoice_number}</td>
       </tr>
       <tr>
-        <th class="invoice is-info"><%= gettext("Invoice Date") %></th>
-        <th><%= @invoice.invoice_date %></th>
+        <th class="bg-base-200 font-bold">{gettext("Invoice Date")}</th>
+        <td>{@invoice.invoice_date}</td>
       </tr>
       <tr>
-        <th class="invoice is-info"><%= gettext("Due Date") %></th>
-        <th><%= @invoice.due_date %></th>
+        <th class="bg-base-200 font-bold">{gettext("Due Date")}</th>
+        <td>{@invoice.due_date}</td>
       </tr>
       <tr>
-        <th class="invoice is-info"><%= gettext("Status") %></th>
-        <td class="has-nowrap">
+        <th class="bg-base-200 font-bold">{gettext("Status")}</th>
+        <td class="whitespace-nowrap">
           <%= if @invoice.paid_date do %>
-            <%= gettext("Paid") %> <%= @invoice.paid_date %>
+            {gettext("Paid")} {@invoice.paid_date}
           <% else %>
-            <%= gettext("Unpaid") %>
+            {gettext("Unpaid")}
           <% end %>
         </td>
       </tr>
     </table>
   </div>
 
-  <div class="column is-1">
-    <strong><%= gettext("Issue by") %></strong>
+  <div class="col-span-1 pt-2">
+    <strong class="text-xs uppercase opacity-50">{gettext("Issue by")}</strong>
   </div>
-  <div class="column is-5">
-    <table class="table is-bordered is-fullwidth">
+  <div class="col-span-5">
+    <table class="table table-xs w-full">
       <tr>
-        <td>
-          <%= @invoice.company.name %>
+        <td class="font-bold">
+          {@invoice.company.name}
         </td>
       </tr>
       <tr>
-        <td><%= @invoice.company.address %></td>
+        <td>{@invoice.company.address}</td>
       </tr>
       <tr>
         <td>
-          <%= @invoice.company.postcode %> <%= @invoice.company.city %>
+          {@invoice.company.postcode} {@invoice.company.city}
           <%= if state = @invoice.company.state do %>
-            (<%= state %>)
+            ({state})
           <% end %>
         </td>
       </tr>
       <tr>
-        <td><%= @invoice.company.nif %></td>
+        <td>{@invoice.company.nif}</td>
       </tr>
     </table>
   </div>
 
-  <div class="column is-1">
-    <strong><%= gettext("Client") %></strong>
+  <div class="col-span-1 pt-2">
+    <strong class="text-xs uppercase opacity-50">{gettext("Client")}</strong>
   </div>
-  <div class="column is-5">
-    <table class="table is-bordered is-fullwidth">
+  <div class="col-span-5">
+    <table class="table table-xs w-full">
       <%= if @invoice.client do %>
         <tr>
-          <td><%= @invoice.client.name %></td>
+          <td class="font-bold">{@invoice.client.name}</td>
         </tr>
         <tr>
-          <td><%= @invoice.client.address %></td>
+          <td>{@invoice.client.address}</td>
         </tr>
         <tr>
           <td>
-            <%= @invoice.client.postcode %> <%= @invoice.client.city %>
+            {@invoice.client.postcode} {@invoice.client.city}
             <%= if state = @invoice.client.state do %>
-              (<%= state %>)
+              ({state})
             <% end %>
           </td>
         </tr>
         <tr>
-          <td><%= @invoice.client.country %><%= @invoice.client.nif %></td>
+          <td>{@invoice.client.country}{@invoice.client.nif}</td>
         </tr>
       <% else %>
         <tr class="simple-invoice">
           <td>
-            <%= gettext("Customer from %{country} (Simplified invoice)",
+            {gettext("Customer from %{country} (Simplified invoice)",
               country: Countries.get(@invoice.destination_country).name
-            ) %>
+            )}
           </td>
         </tr>
       <% end %>
     </table>
   </div>
 
-  <div class="column is-full">
-    <table class="table is-bordered is-fullwidth">
+  <div class="col-span-12">
+    <table class="table table-sm border border-base-200 mt-6 w-full printable-table">
       <thead>
-        <th class="invoice is-info"><%= gettext("#") %></th>
-        <th class="invoice is-info"><%= gettext("Products") %></th>
-        <th class="invoice is-info has-text-right"><%= gettext("Price") %></th>
-        <th class="invoice is-info has-text-centered"><%= gettext("Tax") %></th>
-        <th class="invoice is-info has-text-right"><%= gettext("Price Total") %></th>
+        <tr class="bg-base-200">
+          <th class="font-bold">{gettext("#")}</th>
+          <th class="font-bold">{gettext("Products")}</th>
+          <th class="font-bold text-right">{gettext("Price")}</th>
+          <th class="font-bold text-center">{gettext("Tax")}</th>
+          <th class="font-bold text-right">{gettext("Price Total")}</th>
+        </tr>
       </thead>
       <tbody>
         <%= for {detail, i} <- Enum.with_index(@invoice.details, 1) do %>
           <tr>
-            <td><%= i %></td>
-            <td><%= detail.description %></td>
-            <td class="has-nowrap has-text-right">
-              <%= Money.new(detail.base_price, @invoice.currency) %>
+            <td>{i}</td>
+            <td>{detail.description}</td>
+            <td class="whitespace-nowrap text-right font-mono">
+              {Money.new(detail.base_price, @invoice.currency)}
             </td>
-            <td class="has-nowrap has-text-right">
-              <%= Money.new(detail.tax_price, @invoice.currency) %> (<%= detail.tax %>%)
+            <td class="whitespace-nowrap text-right font-mono">
+              {Money.new(detail.tax_price, @invoice.currency)} ({detail.tax}%)
             </td>
-            <td class="has-nowrap has-text-right">
-              <%= Money.new(detail.total_price, @invoice.currency) %>
+            <td class="whitespace-nowrap text-right font-mono">
+              {Money.new(detail.total_price, @invoice.currency)}
             </td>
           </tr>
         <% end %>
       </tbody>
       <tfoot>
-        <th class="invoice is-info has-text-right" colspan="3"><%= gettext("Total") %></th>
-        <th class="has-text-right"><%= Money.new(@invoice.tax_price, @invoice.currency) %></th>
-        <th class="invoice is-info has-text-right">
-          <%= Money.new(@invoice.total_price, @invoice.currency) %>
-        </th>
+        <tr class="bg-base-100 font-bold border-t border-base-300">
+          <th class="text-right" colspan="3">{gettext("Total")}</th>
+          <th class="text-right font-mono">{Money.new(@invoice.tax_price, @invoice.currency)}</th>
+          <th class="text-right font-mono bg-base-200">
+            {Money.new(@invoice.total_price, @invoice.currency)}
+          </th>
+        </tr>
       </tfoot>
     </table>
   </div>
 
-  <div class="is-divider"></div>
+  <div class="divider col-span-12"></div>
 
-  <div class="column is-full">
-    <table class="table is-fullwidth">
+  <div class="col-span-12">
+    <table class="table w-full">
       <tr>
-        <td><%= gettext("Comments") %></td>
+        <td class="font-bold text-xs uppercase opacity-50">{gettext("Comments")}</td>
       </tr>
-      <tr class="invoice-comments">
-        <td class="invoice is-info">
+      <tr>
+        <td class="bg-base-100 p-4 rounded-xl border border-base-200 text-sm italic">
           <%= case @invoice.payment_method do %>
             <% %_{method: :gateway, details: details} -> %>
-              <%= gettext("Paid via %{bank_name}", bank_name: details) %><br />
+              {gettext("Paid via %{bank_name}", bank_name: details)}<br />
               <%= if @invoice.comments do %>
                 <br />
               <% end %>
             <% %_{holder: holder, method: :bank, details: details} -> %>
-              <%= gettext("Make a transfer wire to the following account:") %><br />
-              <%= details %><br />
+              {gettext("Make a transfer wire to the following account:")}<br />
+              {details}<br />
               <%= if holder do %>
-                <%= gettext("Bank account holder %{name}", name: holder) %>
+                {gettext("Bank account holder %{name}", name: holder)}
                 <br />
               <% end %>
               <%= if @invoice.comments do %>
@@ -174,20 +178,20 @@
           <% end %>
 
           <%= if @invoice.comments do %>
-            <%= @invoice.comments %><br />
+            {@invoice.comments}<br />
           <% end %>
           <%= if @invoice.client != nil and @invoice.client.intracommunity do %>
             <br />
-            <%= gettext("EU VAT Reverse Charge applies.") %>
+            {gettext("EU VAT Reverse Charge applies.")}
           <% end %>
         </td>
       </tr>
     </table>
   </div>
 
-  <div class="column is-full print-foot">
-    <p class="is-size-7 has-text-centered">
-      <%= gettext(
+  <div class="col-span-12 mt-12 pt-6 border-t border-base-300 text-center opacity-70">
+    <p class="text-xs">
+      {gettext(
         "%{company_name}, with address at %{company_address}, %{company_postcode} %{company_city}, %{company_country}. %{company_details}",
         company_name: @invoice.company.name,
         company_address: @invoice.company.address,
@@ -195,7 +199,7 @@
         company_postcode: @invoice.company.postcode,
         company_country: @invoice.company.country,
         company_details: @invoice.company.details
-      ) %>
+      )}
     </p>
   </div>
 </div>

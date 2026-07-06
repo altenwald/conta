@@ -14,7 +14,7 @@ defmodule ContaWeb.InvoiceLive.FormComponent do
       <div class="modal-background"></div>
       <div class="modal-card">
         <header class="modal-card-head">
-          <h2><%= @title %></h2>
+          <h2>{@title}</h2>
         </header>
         <section class="modal-card-body">
           <.simple_form for={@form} id="invoice-form" phx-target={@myself} phx-change="validate" phx-submit="save">
@@ -77,11 +77,11 @@ defmodule ContaWeb.InvoiceLive.FormComponent do
             />
             <div class="field is-horizontal">
               <div class="field-label is-normal">
-                <label class="label"><%= gettext("Details") %></label>
+                <label class="label">{gettext("Details")}</label>
               </div>
               <div class="field-body">
                 <.link class="button" phx-target={@myself} phx-click="add_detail">
-                  <%= gettext("Add Detail") %>
+                  {gettext("Add Detail")}
                 </.link>
               </div>
             </div>
@@ -94,7 +94,7 @@ defmodule ContaWeb.InvoiceLive.FormComponent do
                     phx-click="del_detail"
                     phx-value-index={d.index}
                   >
-                    <%= gettext("Remove") %>
+                    {gettext("Remove")}
                   </.link>
                 </div>
                 <div class="column">
@@ -113,10 +113,10 @@ defmodule ContaWeb.InvoiceLive.FormComponent do
         </section>
         <footer class="modal-card-foot is-at-right">
           <.button form="invoice-form" class="is-primary" phx-disable-with={gettext("Saving...")}>
-            <%= gettext("Save Invoice") %>
+            {gettext("Save Invoice")}
           </.button>
           <.link class="button" patch={~p"/books/invoices"}>
-            <%= gettext("Cancel") %>
+            {gettext("Cancel")}
           </.link>
         </footer>
       </div>

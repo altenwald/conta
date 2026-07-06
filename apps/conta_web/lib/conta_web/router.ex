@@ -12,13 +12,13 @@ defmodule ContaWeb.Router do
 
     @content_security_policy "default-src 'self';" <>
                                "connect-src wss://#{@host};" <>
-                               "img-src 'self' blob:;" <>
+                               "img-src 'self' blob: data:;" <>
                                "style-src 'self' https://fonts.googleapis.com;" <>
                                "font-src data: https://fonts.gstatic.com;"
   else
     @content_security_policy "default-src 'self' 'unsafe-eval' 'unsafe-inline' https://cdn.tailwindcss.com;" <>
                                "connect-src ws://localhost:*;" <>
-                               "img-src 'self' blob:;" <>
+                               "img-src 'self' blob: data:;" <>
                                "style-src 'self' https://fonts.googleapis.com;" <>
                                "font-src data: https://fonts.gstatic.com;"
   end
@@ -175,9 +175,6 @@ defmodule ContaWeb.Router do
         live "/", ContactLive.Index, :index
         live "/new", ContactLive.Index, :new
         live "/:id/edit", ContactLive.Index, :edit
-
-        live "/:id", ContactLive.Show, :show
-        live "/:id/show/edit", ContactLive.Show, :edit
       end
     end
   end

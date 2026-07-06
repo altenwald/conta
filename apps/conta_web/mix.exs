@@ -30,19 +30,24 @@ defmodule ContaWeb.MixProject do
 
   defp deps do
     [
-      {:phoenix, "~> 1.7.10"},
+      {:phoenix, "~> 1.8"},
       {:phoenix_ecto, "~> 4.4"},
       {:phoenix_html, "~> 4.0"},
       {:phoenix_html_helpers, "~> 1.0"},
       {:phoenix_live_reload, "~> 1.4", only: :dev},
-      {:phoenix_live_view, "~> 0.20"},
+      {:phoenix_live_view, "~> 1.1"},
+      {:lazy_html, ">= 0.1.0", only: :test},
       {:floki, ">= 0.30.0", only: :test},
       {:phoenix_live_dashboard, "~> 0.8"},
       {:esbuild, "~> 0.8", runtime: Mix.env() == :dev},
-      {:tailwind, "~> 0.2", runtime: Mix.env() == :dev},
-      {:dart_sass, "~> 0.1", runtime: Mix.env() == :dev},
-      {:bulma, "~> 0.9"},
-      {:fontawesome, "~> 0.3"},
+      {:tailwind, "~> 0.3", runtime: Mix.env() == :dev},
+      {:heroicons,
+       github: "tailwindlabs/heroicons",
+       tag: "v2.1.1",
+       sparse: "optimized",
+       app: false,
+       compile: false,
+       depth: 1},
       {:telemetry_metrics, "~> 1.0"},
       {:telemetry_poller, "~> 1.0"},
       {:gettext, "~> 1.0"},
@@ -62,17 +67,16 @@ defmodule ContaWeb.MixProject do
       setup: ["deps.get", "assets.setup", "assets.build"],
       test: ["ecto.create --quiet", "ecto.migrate --quiet", "test"],
       "assets.setup": [
-        # "tailwind.install --if-missing",
+        "tailwind.install --if-missing",
         "esbuild.install --if-missing"
       ],
       "assets.build": [
-        # "tailwind default",
+        "tailwind default",
         "esbuild bundle_app",
         "esbuild bundle_print"
       ],
       "assets.deploy": [
-        "sass default --no-source-map --style=compressed",
-        # "tailwind default --minify",
+        "tailwind default --minify",
         "esbuild bundle_app --minify",
         "esbuild bundle_print --minify",
         "phx.digest"

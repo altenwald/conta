@@ -12,7 +12,7 @@ defmodule ContaWeb.ContactLive.FormComponent do
       <div class="modal-background"></div>
       <div class="modal-card">
         <header class="modal-card-head">
-          <h2><%= @title %></h2>
+          <h2>{@title}</h2>
         </header>
         <section class="modal-card-body">
           <.simple_form for={@form} id="contact-form" phx-target={@myself} phx-change="validate" phx-submit="save">
@@ -35,10 +35,10 @@ defmodule ContaWeb.ContactLive.FormComponent do
         </section>
         <footer class="modal-card-foot is-at-right">
           <.button form="contact-form" class="is-primary" phx-disable-with={gettext("Saving...")}>
-            <%= gettext("Save Contact") %>
+            {gettext("Save Contact")}
           </.button>
           <.link class="button" patch={@patch}>
-            <%= gettext("Cancel") %>
+            {gettext("Cancel")}
           </.link>
         </footer>
       </div>

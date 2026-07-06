@@ -1,4 +1,4 @@
-<section class="section is-main-section">
+<section class="py-6">
   <.breadcrumbs>
     <:breadcrumb label={gettext("Dashboard")} href={~p"/"} />
     <:breadcrumb label={gettext("Accounts")} href={~p"/ledger/accounts"} />
@@ -10,109 +10,98 @@
     <:breadcrumb label={gettext("Entries")} href={~p"/ledger/accounts/#{@account}/entries"} />
   </.breadcrumbs>
 
-  <div class="card tile is-child has-table has-mobile-sort-spaced">
-    <div class="card-content">
-      <div class="b-table has-pagination">
-        <div class="table-wrapper has-mobile-cards">
-          <div class="field is-grouped">
-            <div class="control">
-              <.search label={gettext("entry to search")} value={@search} />
-            </div>
-            <div class="control">
-              <.link patch={~p"/ledger/accounts/#{@account}/entries/new"} class="button">
-                <div class="icon-text">
-                  <span class="icon mr-2"><FontAwesome.circle_plus /></span>
-                  <span><%= gettext("New Entry") %></span>
-                </div>
-              </.link>
-            </div>
-            <div :if={assigns[:streams] != nil and @streams.ledger_entries != nil} class="control">
-              <.button phx-click="reload">
-                <div class="icon-text">
-                  <span class="icon mr-2"><FontAwesome.recycle /></span>
-                  <span><%= gettext("Reload") %></span>
-                </div>
-              </.button>
-            </div>
-          </div>
-          <div
-            :if={is_nil(assigns[:streams]) or is_nil(@streams.ledger_entries)}
-            class="notification is-warning has-text-centered"
-          >
-            <%= gettext("There are no entries here!") %>
-          </div>
-          <.table
-            :if={assigns[:streams] != nil and @streams.ledger_entries != nil}
-            id="ledger_entries"
-            rows={@streams.ledger_entries}
-            row_click={
-              fn {_id, entry} ->
-                JS.navigate(~p"/ledger/accounts/#{@account}/entries/#{entry}")
-              end
-            }
-          >
-            <:action :let={{_id, entry}}>
-              <.link
-                class="button is-light"
-                patch={~p"/ledger/accounts/#{@account}/entries/#{entry.transaction_id}/duplicate"}
-                title={gettext("Duplicate")}
-              >
-                <span class="icon">
-                  <FontAwesome.copy />
-                </span>
-              </.link>
-            </:action>
-            <:action :let={{_id, entry}}>
-              <.link
-                class="button is-light"
-                patch={~p"/ledger/accounts/#{@account}/entries/#{entry.transaction_id}/edit"}
-                title={gettext("Edit")}
-              >
-                <span class="icon">
-                  <FontAwesome.pencil />
-                </span>
-              </.link>
-            </:action>
-            <:action :let={{id, entry}}>
-              <.link
-                phx-click={JS.push("delete", value: %{id: entry.transaction_id}) |> hide("##{id}")}
-                class="button is-danger is-light"
-                data-confirm={gettext("Are you sure?")}
-                title={gettext("Delete")}
-              >
-                <span class="icon">
-                  <FontAwesome.trash_can />
-                </span>
-              </.link>
-            </:action>
-            <:col :let={{_id, entry}} label={gettext("description")}>
-              <span title={entry.description}><%= description(entry.description) %></span>
-            </:col>
-            <:col :let={{_id, entry}} label={gettext("account name")}>
-              <% name = account_name(entry.related_account_name) %>
-              <%= if name == "-- Breakdown" do %>
-                <strong><%= name %></strong>
-              <% else %>
-                <.link href={~p"/ledger/accounts/#{name}"}><%= name %></.link>
-              <% end %>
-            </:col>
-            <:col :let={{_id, entry}} class="has-text-right money" label={gettext("debit")}>
-              <%= entry.debit %>
-            </:col>
-            <:col :let={{_id, entry}} class="has-text-right money" label={gettext("credit")}>
-              <%= entry.credit %>
-            </:col>
-            <:col :let={{_id, entry}} class="has-text-right money" label={gettext("balance")}>
-              <%= entry.balance %>
-            </:col>
-          </.table>
-          <div
-            :if={assigns[:streams] != nil and @streams.ledger_entries != nil}
-            class="column is-full-width has-text-centered"
-          >
-            <div class="button is-info" phx-click="next-page"><%= gettext("Load more") %></div>
-          </div>
+  <div class="card bg-base-100 shadow-xl border border-base-200 mt-6">
+    <div class="card-body p-0">
+      <div class="p-4 flex flex-wrap gap-4 items-center border-b border-base-200">
+        <div class="flex-grow max-w-sm">
+          <.search label={gettext("entry to search")} value={@search} />
         </div>
+        <div class="flex gap-2">
+          <.link patch={~p"/ledger/accounts/#{@account}/entries/new"} class="btn btn-primary">
+            <.icon name="hero-plus-circle" class="w-5 h-5 mr-1" />
+            <span>{gettext("New Entry")}</span>
+          </.link>
+          <button
+            :if={assigns[:streams] != nil and @streams.ledger_entries != nil}
+            phx-click="reload"
+            class="btn btn-outline"
+          >
+            <.icon name="hero-arrow-path" class="w-5 h-5 mr-1" />
+            <span>{gettext("Reload")}</span>
+          </button>
+        </div>
+      </div>
+      <div
+        :if={is_nil(assigns[:streams]) or is_nil(@streams.ledger_entries)}
+        class="alert alert-warning m-4"
+      >
+        <.icon name="hero-exclamation-triangle" class="w-6 h-6" />
+        <span>{gettext("There are no entries here!")}</span>
+      </div>
+      <.table
+        :if={assigns[:streams] != nil and @streams.ledger_entries != nil}
+        id="ledger_entries"
+        rows={@streams.ledger_entries}
+        row_click={
+          fn {_id, entry} ->
+            JS.navigate(~p"/ledger/accounts/#{@account}/entries/#{entry}")
+          end
+        }
+      >
+        <:action :let={{_id, entry}}>
+          <.link
+            class="btn btn-ghost btn-sm"
+            patch={~p"/ledger/accounts/#{@account}/entries/#{entry.transaction_id}/duplicate"}
+            title={gettext("Duplicate")}
+          >
+            <.icon name="hero-document-duplicate" class="w-4 h-4" />
+          </.link>
+        </:action>
+        <:action :let={{_id, entry}}>
+          <.link
+            class="btn btn-ghost btn-sm"
+            patch={~p"/ledger/accounts/#{@account}/entries/#{entry.transaction_id}/edit"}
+            title={gettext("Edit")}
+          >
+            <.icon name="hero-pencil" class="w-4 h-4" />
+          </.link>
+        </:action>
+        <:action :let={{id, entry}}>
+          <.link
+            phx-click={JS.push("delete", value: %{id: entry.transaction_id}) |> hide("##{id}")}
+            class="btn btn-error btn-outline btn-sm"
+            data-confirm={gettext("Are you sure?")}
+            title={gettext("Delete")}
+          >
+            <.icon name="hero-trash" class="w-4 h-4" />
+          </.link>
+        </:action>
+        <:col :let={{_id, entry}} label={gettext("description")}>
+          <span title={entry.description}>{description(entry.description)}</span>
+        </:col>
+        <:col :let={{_id, entry}} label={gettext("account name")}>
+          <% name = account_name(entry.related_account_name) %>
+          <%= if name == "-- Breakdown" do %>
+            <span class="font-bold text-base-content">{name}</span>
+          <% else %>
+            <.link href={~p"/ledger/accounts/#{name}"} class="link link-primary">{name}</.link>
+          <% end %>
+        </:col>
+        <:col :let={{_id, entry}} class="text-right font-mono" label={gettext("debit")}>
+          {entry.debit}
+        </:col>
+        <:col :let={{_id, entry}} class="text-right font-mono" label={gettext("credit")}>
+          {entry.credit}
+        </:col>
+        <:col :let={{_id, entry}} class="text-right font-mono" label={gettext("balance")}>
+          {entry.balance}
+        </:col>
+      </.table>
+      <div
+        :if={assigns[:streams] != nil and @streams.ledger_entries != nil}
+        class="p-6 flex justify-center"
+      >
+        <button class="btn btn-info" phx-click="next-page">{gettext("Load more")}</button>
       </div>
     </div>
   </div>

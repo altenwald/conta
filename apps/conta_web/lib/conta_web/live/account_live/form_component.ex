@@ -11,61 +11,59 @@ defmodule ContaWeb.AccountLive.FormComponent do
   @impl true
   def render(assigns) do
     ~H"""
-    <div class="modal is-active">
-      <div class="modal-background"></div>
-      <div class="modal-card">
-        <header class="modal-card-head">
-          <h2><%= @title %></h2>
-        </header>
-        <section class="modal-card-body">
-          <.simple_form for={@form} id="account-form" phx-target={@myself} phx-change="validate" phx-submit="save">
-            <.input field={@form[:ledger]} type="hidden" value="default" />
-            <.input field={@form[:simple_name]} type="text" label={gettext("Name")} />
-            <.input
-              field={@form[:parent_name]}
-              type="select"
-              label={gettext("Parent")}
-              options={for account <- Ledger.list_accounts(), do: Enum.join(account.name, ".")}
-              prompt={gettext("(No parent)")}
-            />
-            <.input
-              field={@form[:type]}
-              type="select"
-              label={gettext("Type")}
-              options={[
-                {gettext("Assets"), :assets},
-                {gettext("Liabilities"), :liabilities},
-                {gettext("Equity"), :equity},
-                {gettext("Revenue"), :revenue},
-                {gettext("Expenses"), :expenses}
-              ]}
-              prompt={gettext("Choose an account type...")}
-            />
-            <.input
-              field={@form[:currency]}
-              type="select"
-              label={gettext("Currency")}
-              options={
-                Ledger.list_currencies()
-                |> Enum.map(fn id ->
-                  {"#{Money.Currency.name(id)} (#{Money.Currency.symbol(id)})", id}
-                end)
-                |> Enum.sort()
-              }
-              prompt={gettext("Choose a currency...")}
-            />
-            <.input field={@form[:notes]} type="textarea" label={gettext("Notes")} />
-          </.simple_form>
-        </section>
-        <footer class="modal-card-foot is-at-right">
-          <.button form="account-form" class="is-primary" phx-disable-with={gettext("Saving...")}>
-            <%= gettext("Save Account") %>
-          </.button>
-          <.link class="button" patch={@patch}>
-            <%= gettext("Cancel") %>
-          </.link>
-        </footer>
+    <div class="modal modal-open">
+      <div class="modal-box max-w-2xl">
+        <h3 class="font-bold text-lg mb-4">{@title}</h3>
+        
+        <.simple_form for={@form} id="account-form" phx-target={@myself} phx-change="validate" phx-submit="save">
+          <.input field={@form[:ledger]} type="hidden" value="default" />
+          <.input field={@form[:simple_name]} type="text" label={gettext("Name")} />
+          <.input
+            field={@form[:parent_name]}
+            type="select"
+            label={gettext("Parent")}
+            options={for account <- Ledger.list_accounts(), do: Enum.join(account.name, ".")}
+            prompt={gettext("(No parent)")}
+          />
+          <.input
+            field={@form[:type]}
+            type="select"
+            label={gettext("Type")}
+            options={[
+              {gettext("Assets"), :assets},
+              {gettext("Liabilities"), :liabilities},
+              {gettext("Equity"), :equity},
+              {gettext("Revenue"), :revenue},
+              {gettext("Expenses"), :expenses}
+            ]}
+            prompt={gettext("Choose an account type...")}
+          />
+          <.input
+            field={@form[:currency]}
+            type="select"
+            label={gettext("Currency")}
+            options={
+              Ledger.list_currencies()
+              |> Enum.map(fn id ->
+                {"#{Money.Currency.name(id)} (#{Money.Currency.symbol(id)})", id}
+              end)
+              |> Enum.sort()
+            }
+            prompt={gettext("Choose a currency...")}
+          />
+          <.input field={@form[:notes]} type="textarea" label={gettext("Notes")} />
+          
+          <:actions>
+            <.button class="btn-primary" phx-disable-with={gettext("Saving...")}>
+              {gettext("Save Account")}
+            </.button>
+            <.link class="btn btn-ghost" patch={@patch}>
+              {gettext("Cancel")}
+            </.link>
+          </:actions>
+        </.simple_form>
       </div>
+      <.link patch={@patch} class="modal-backdrop">Close</.link>
     </div>
     """
   end

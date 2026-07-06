@@ -96,8 +96,8 @@ defmodule ContaWeb.UserLive.SettingsTest do
 
       form =
         form(lv, "#password_form", %{
-          "current_password" => password,
           "user" => %{
+            "current_password" => password,
             "email" => user.email,
             "password" => new_password,
             "password_confirmation" => new_password

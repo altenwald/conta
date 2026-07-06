@@ -1,55 +1,55 @@
-<section class="section is-main-section">
+<section class="py-6">
   <.breadcrumbs>
     <:breadcrumb label={gettext("Dashboard")} href={~p"/"} />
   </.breadcrumbs>
 
-  <div class="columns is-multiline">
-    <div class="column is-half-desktop is-full-touch">
-      <div class="card">
-        <header class="card-header">
-          <p class="card-header-title">
-            <%= gettext("Outcome") %>
-          </p>
-        </header>
-        <div class="card-content">
-          <img src={~p"/dashboard/outcome/#{@currency}"} />
+  <div class="grid grid-cols-12 gap-6 mt-6">
+    <div class="col-span-12 lg:col-span-6">
+      <div class="card bg-base-100 shadow-xl border border-base-200">
+        <div class="bg-base-200 px-4 py-3 border-b border-base-300 rounded-t-2xl">
+          <h2 class="card-title text-base m-0">
+            {gettext("Outcome")}
+          </h2>
+        </div>
+        <div class="card-body p-6">
+          <img src={~p"/dashboard/outcome/#{@currency}"} alt="Outcome chart" />
         </div>
       </div>
     </div>
-    <div class="column is-half-desktop is-full-touch">
-      <div class="card">
-        <header class="card-header">
-          <p class="card-header-title">
-            <%= gettext("Income") %>
-          </p>
-        </header>
-        <div class="card-content">
-          <img src={~p"/dashboard/income/#{@currency}"} />
+    <div class="col-span-12 lg:col-span-6">
+      <div class="card bg-base-100 shadow-xl border border-base-200">
+        <div class="bg-base-200 px-4 py-3 border-b border-base-300 rounded-t-2xl">
+          <h2 class="card-title text-base m-0">
+            {gettext("Income")}
+          </h2>
+        </div>
+        <div class="card-body p-6">
+          <img src={~p"/dashboard/income/#{@currency}"} alt="Income chart" />
         </div>
       </div>
     </div>
-    <div class="column is-half-desktop is-full-touch">
-      <div class="card">
-        <header class="card-header">
-          <p class="card-header-title">
-            <%= gettext("Profits and Loses") %>
-          </p>
-        </header>
-        <div class="card-content">
-          <img src={~p"/dashboard/pnl/#{@currency}"} />
+    <div class="col-span-12 lg:col-span-6">
+      <div class="card bg-base-100 shadow-xl border border-base-200">
+        <div class="bg-base-200 px-4 py-3 border-b border-base-300 rounded-t-2xl">
+          <h2 class="card-title text-base m-0">
+            {gettext("Profits and Loses")}
+          </h2>
+        </div>
+        <div class="card-body p-6">
+          <img src={~p"/dashboard/pnl/#{@currency}"} alt="PnL chart" />
         </div>
       </div>
     </div>
-    <div class="column is-half-desktop is-full-touch">
-      <div class="card">
-        <header class="card-header">
-          <p class="card-header-title">
+    <div class="col-span-12 lg:col-span-6">
+      <div class="card bg-base-100 shadow-xl border border-base-200">
+        <div class="bg-base-200 px-4 py-3 border-b border-base-300 rounded-t-2xl">
+          <h2 class="card-title text-base m-0">
             <% # sobelow_skip ["XSS.Raw"] %>
-            <%= raw(gettext("Patrimony")) %>
-          </p>
-        </header>
-        <div class="card-content">
-          <img src={~p"/dashboard/patrimony/#{@currency}"} />
+            {raw(gettext("Patrimony"))}
+          </h2>
+        </div>
+        <div class="card-body p-6">
+          <img src={~p"/dashboard/patrimony/#{@currency}"} alt="Patrimony chart" />
         </div>
       </div>
     </div>

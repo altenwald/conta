@@ -6,53 +6,59 @@ defmodule ContaWeb.UserLive.Registration do
 
   def render(assigns) do
     ~H"""
-    <section class="hero is-fullheight">
-      <div :if={assigns[:error_message]} class="notification is-danger">
-        <p><%= @error_message %></p>
-      </div>
-      <div class="hero-body">
-        <div class="container">
-          <div class="columns is-centered">
-            <div class="column is-6-tablet is-5-desktop is-4-widscreen">
-              <h1 class="is-size-3 mb-3"><%= gettext("Registration") %></h1>
-              <div class="box">
-                <.simple_form
-                  for={@form}
-                  id="registration_form"
-                  phx-submit="save"
-                  phx-change="validate"
-                  phx-trigger-action={@trigger_submit}
-                  action={~p"/signin?_action=registered"}
-                  method="post"
-                >
-                  <.error :if={@check_errors}>
-                    <%= gettext("Oops, something went wrong! Please check the errors below.") %>
-                  </.error>
+    <div class="min-h-screen flex items-center justify-center bg-base-200 px-4 py-12">
+      <div class="max-w-md w-full">
+        <div :if={assigns[:error_message]} class="alert alert-error mb-6 shadow-lg">
+          <.icon name="hero-exclamation-triangle" class="w-6 h-6" />
+          <span>{@error_message}</span>
+        </div>
 
-                  <.input field={@form[:email]} type="email" label={gettext("Email")} required />
-                  <.input field={@form[:password]} type="password" label={gettext("Password")} required />
+        <div class="card bg-base-100 shadow-xl">
+          <div class="card-body">
+            <h1 class="card-title text-3xl mb-6 justify-center text-base-content font-bold">
+              {gettext("Registration")}
+            </h1>
 
-                  <:actions>
-                    <div class="has-text-right full-width">
-                      <.link href={~p"/users/confirm"} class="button is-ghost">
-                        <%= gettext("Didn't you receive the confirmation email?") %>
-                      </.link>
-                    </div>
-                  </:actions>
-                  <:actions>
-                    <div class="has-text-right is-full-width">
-                      <.button phx-disable-with={gettext("Creating account...")} class="is-primary">
-                        <%= gettext("Create an account") %>
-                      </.button>
-                    </div>
-                  </:actions>
-                </.simple_form>
-              </div>
-            </div>
+            <.simple_form
+              for={@form}
+              id="registration_form"
+              phx-submit="save"
+              phx-change="validate"
+              phx-trigger-action={@trigger_submit}
+              action={~p"/signin?_action=registered"}
+              method="post"
+            >
+              <.error :if={@check_errors}>
+                {gettext("Oops, something went wrong! Please check the errors below.")}
+              </.error>
+
+              <.input field={@form[:email]} type="email" label={gettext("Email")} required />
+              <.input field={@form[:password]} type="password" label={gettext("Password")} required />
+
+              <:actions>
+                <div class="flex flex-col gap-4 w-full mt-2">
+                  <.link href={~p"/users/confirm"} class="link link-primary text-sm text-center">
+                    {gettext("Didn't you receive the confirmation email?")}
+                  </.link>
+                  <div class="card-actions">
+                    <.button phx-disable-with={gettext("Creating account...")} class="btn-primary w-full">
+                      {gettext("Create an account")}
+                    </.button>
+                  </div>
+                </div>
+              </:actions>
+            </.simple_form>
           </div>
         </div>
+
+        <p class="text-center mt-6 text-base-content opacity-70">
+          {gettext("Already have an account?")}
+          <.link href={~p"/signin"} class="link link-primary font-semibold">
+            {gettext("Sign in")}
+          </.link>
+        </p>
       </div>
-    </section>
+    </div>
     """
   end
 

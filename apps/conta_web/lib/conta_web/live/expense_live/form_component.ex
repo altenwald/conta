@@ -14,7 +14,7 @@ defmodule ContaWeb.ExpenseLive.FormComponent do
       <div class="modal-background"></div>
       <div class="modal-card">
         <header class="modal-card-head">
-          <h2><%= @title %></h2>
+          <h2>{@title}</h2>
         </header>
         <section class="modal-card-body">
           <.simple_form for={@form} id="expense-form" phx-target={@myself} phx-change="validate" phx-submit="save">
@@ -66,10 +66,10 @@ defmodule ContaWeb.ExpenseLive.FormComponent do
         </section>
         <footer class="modal-card-foot is-at-right">
           <.button form="expense-form" class="is-primary" phx-disable-with={gettext("Saving...")}>
-            <%= gettext("Save Expense") %>
+            {gettext("Save Expense")}
           </.button>
           <.link class="button" patch={~p"/books/expenses"}>
-            <%= gettext("Cancel") %>
+            {gettext("Cancel")}
           </.link>
         </footer>
       </div>
