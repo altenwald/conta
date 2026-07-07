@@ -204,4 +204,60 @@ defmodule Conta.AutomatorContextTest do
       assert [{"rows", [[1, 2], [3, 4]]}] = result
     end
   end
+
+  describe "new_set_filter/0 and new_set_shortcut/0" do
+    test "new_set_filter/0 defaults automator and language" do
+      set_filter = Automator.new_set_filter()
+      assert set_filter.automator == "automator"
+      assert set_filter.language == :lua
+      assert set_filter.params == []
+    end
+
+    test "new_set_shortcut/0 defaults automator and language" do
+      set_shortcut = Automator.new_set_shortcut()
+      assert set_shortcut.automator == "automator"
+      assert set_shortcut.language == :lua
+      assert set_shortcut.params == []
+    end
+  end
+
+  describe "test_run_filter/3" do
+    test "runs Lua code against test params and returns the decoded result" do
+      params_defs = [
+        %Param{name: "a", type: :integer},
+        %Param{name: "b", type: :integer}
+      ]
+
+      assert {:ok, 30} =
+               Automator.test_run_filter(params_defs, "return a + b", %{"a" => "10", "b" => "20"})
+    end
+
+    test "returns a validation error when a required param is missing" do
+      params_defs = [%Param{name: "a", type: :integer}]
+
+      assert {:error, %{"a" => ["can't be blank"]}} =
+               Automator.test_run_filter(params_defs, "return a", %{})
+    end
+
+    test "returns a Lua error for invalid code" do
+      assert {:error, _reason} = Automator.test_run_filter([], "this is not lua", %{})
+    end
+  end
+
+  describe "test_run_shortcut/3" do
+    test "returns the commands the Lua code would generate, without dispatching them" do
+      params_defs = [%Param{name: "amount", type: :money}]
+
+      code = ~S"""
+      return {status = "ok", commands = {{type = "transaction", data = {foo = "bar"}}}}
+      """
+
+      assert {:ok, [%{"type" => "transaction", "data" => %{"foo" => "bar"}}]} =
+               Automator.test_run_shortcut(params_defs, code, %{"amount" => "100"})
+    end
+
+    test "returns an error when the Lua code doesn't return the expected shape" do
+      assert {:error, {:invalid_code_return, 42}} = Automator.test_run_shortcut([], "return 42", %{})
+    end
+  end
 end

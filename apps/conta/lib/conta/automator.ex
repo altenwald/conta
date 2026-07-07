@@ -139,6 +139,39 @@ defmodule Conta.Automator do
     Repo.get_by!(Filter, id: id, automator: automator)
   end
 
+  def new_set_filter(automator \\ @default_automator) do
+    %SetFilter{automator: automator, language: :lua, output: :json, code: "-- Lua code\n", params: []}
+  end
+
+  def new_set_shortcut(automator \\ @default_automator) do
+    %SetShortcut{automator: automator, language: :lua, code: "-- Lua code\n", params: []}
+  end
+
+  def test_run_filter(params_defs, code, test_params) do
+    filter = %Filter{params: to_projector_params(params_defs), code: code, language: :lua}
+
+    with :ok <- validate_params(filter.params, test_params) do
+      Lua.run(code, cast(filter, test_params))
+    end
+  end
+
+  def test_run_shortcut(params_defs, code, test_params) do
+    shortcut = %Shortcut{params: to_projector_params(params_defs), code: code, language: :lua}
+
+    with :ok <- validate_params(shortcut.params, test_params),
+         {:ok, %{"status" => "ok", "commands" => commands}} when is_list(commands) <-
+           Lua.run(code, cast(shortcut, test_params)) do
+      {:ok, commands}
+    else
+      {:error, _} = error -> error
+      {:ok, return} -> {:error, {:invalid_code_return, return}}
+    end
+  end
+
+  defp to_projector_params(params) do
+    Enum.map(params, fn param -> %Param{name: param.name, type: param.type, options: param.options} end)
+  end
+
   def run_shortcut(automator \\ @default_automator, name, params)
 
   def run_shortcut(automator, name, params) when is_binary(name) do
