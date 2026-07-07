@@ -20,26 +20,29 @@
     </.navbar_dropdown>
   <% end %>
   <:actions>
-    <%= if @current_user do %>
-      <div class="flex items-center gap-4 px-2">
-        <span class="text-xs opacity-60 hidden md:block">{@current_user.email}</span>
-        <.link href={~p"/users/settings"} class="btn btn-ghost btn-sm">
-          {gettext("Settings")}
-        </.link>
-        <.link href={~p"/logout"} class="btn btn-ghost btn-sm">
-          {gettext("Logout")}
-        </.link>
-      </div>
-    <% else %>
-      <div class="flex items-center gap-2">
-        <.link class="btn btn-primary btn-sm" href={~p"/register"}>
-          {gettext("Register")}
-        </.link>
-        <.link class="btn btn-ghost btn-sm" href={~p"/signin"}>
-          {gettext("Sign in")}
-        </.link>
-      </div>
-    <% end %>
+    <div class="flex items-center gap-2">
+      <.theme_toggle />
+      <%= if @current_user do %>
+        <div class="flex items-center gap-4 px-2">
+          <span class="text-xs opacity-60 hidden md:block">{@current_user.email}</span>
+          <.link href={~p"/users/settings"} class="btn btn-ghost btn-sm">
+            {gettext("Settings")}
+          </.link>
+          <.link href={~p"/logout"} class="btn btn-ghost btn-sm">
+            {gettext("Logout")}
+          </.link>
+        </div>
+      <% else %>
+        <div class="flex items-center gap-2">
+          <.link class="btn btn-primary btn-sm" href={~p"/register"}>
+            {gettext("Register")}
+          </.link>
+          <.link class="btn btn-ghost btn-sm" href={~p"/signin"}>
+            {gettext("Sign in")}
+          </.link>
+        </div>
+      <% end %>
+    </div>
   </:actions>
 </.nav>
 <main class="container mx-auto py-8 px-4">
