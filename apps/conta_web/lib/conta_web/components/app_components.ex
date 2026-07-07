@@ -329,11 +329,10 @@ defmodule ContaWeb.AppComponents do
 
   def input(%{field: %Phoenix.HTML.FormField{} = field} = assigns) do
     assigns
-    |> Map.put(:field, nil)
-    |> Map.put(:id, assigns[:id] || field.id)
-    |> Map.put(:name, if(assigns[:multiple], do: field.name <> "[]", else: field.name))
-    |> Map.put(:value, field.value)
-    |> Map.put(:errors, Enum.map(field.errors, &translate_error(&1)))
+    |> assign(field: nil, id: assigns[:id] || field.id)
+    |> assign(:errors, Enum.map(field.errors, &translate_error(&1)))
+    |> assign_new(:name, fn -> if assigns[:multiple], do: field.name <> "[]", else: field.name end)
+    |> assign_new(:value, fn -> field.value end)
     |> input()
   end
 
