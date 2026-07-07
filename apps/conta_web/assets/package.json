@@ -1,0 +1,7 @@
+{
+  "name": "conta_web_assets",
+  "private": true,
+  "dependencies": {
+    "monaco-editor": "^0.52.0"
+  }
+}
