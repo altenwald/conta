@@ -6,9 +6,9 @@ Someone always asked us (to the Erlang community) to say in a small phrase, a sm
 
 And now, maybe the information you could find here, what I used to create it:
 
-- Elixir (1.16)
-- Erlang/OTP, BEAM (26)
-- Phoenix Framework (1.7)
+- Elixir (1.17)
+- Erlang/OTP, BEAM (27)
+- Phoenix Framework (1.8)
 - Commanded (1.4)
 
 We could say we built the system based on CQRS/ES.
