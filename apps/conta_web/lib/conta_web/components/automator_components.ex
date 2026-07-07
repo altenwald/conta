@@ -6,6 +6,8 @@ defmodule ContaWeb.AutomatorComponents do
   use Phoenix.Component
   use Gettext, backend: ContaWeb.Gettext
 
+  @currencies Money.Currency.all() |> Map.keys() |> Enum.map(&to_string/1) |> Enum.sort()
+
   @doc """
   Renders the Monaco-backed Lua code editor bound to a form field.
 
@@ -54,31 +56,34 @@ defmodule ContaWeb.AutomatorComponents do
   `ShortcutLive.Form` — one of these per parameter defined on the
   filter/shortcut being edited.
   """
-  attr :param, :map, required: true
+  attr :param, Conta.Projector.Automator.Param, required: true
 
   def test_param_input(assigns) do
+    assigns = assign(assigns, :id, "test_params_#{assigns.param.name}")
+
     ~H"""
     <div class="fieldset mb-2">
-      <span class="label mb-1">{@param.name}</span>
-      {render_control(assigns)}
+      <label for={@id}>
+        <span class="label mb-1">{@param.name}</span>
+        {render_control(assigns)}
+      </label>
     </div>
     """
   end
 
   defp render_control(%{param: %{type: :options}} = assigns) do
     ~H"""
-    <select name={"test_params[#{@param.name}]"} class="w-full select select-bordered">
+    <select id={@id} name={"test_params[#{@param.name}]"} class="w-full select select-bordered">
       <option :for={opt <- @param.options || []} value={opt}>{opt}</option>
     </select>
     """
   end
 
   defp render_control(%{param: %{type: :currency}} = assigns) do
-    assigns =
-      assign(assigns, :currencies, Money.Currency.all() |> Map.keys() |> Enum.map(&to_string/1) |> Enum.sort())
+    assigns = assign(assigns, :currencies, @currencies)
 
     ~H"""
-    <select name={"test_params[#{@param.name}]"} class="w-full select select-bordered">
+    <select id={@id} name={"test_params[#{@param.name}]"} class="w-full select select-bordered">
       <option :for={currency <- @currencies} value={currency}>{currency}</option>
     </select>
     """
@@ -86,25 +91,45 @@ defmodule ContaWeb.AutomatorComponents do
 
   defp render_control(%{param: %{type: :date}} = assigns) do
     ~H"""
-    <input type="date" name={"test_params[#{@param.name}]"} class="w-full input input-bordered" />
+    <input
+      type="date"
+      id={@id}
+      name={"test_params[#{@param.name}]"}
+      class="w-full input input-bordered"
+    />
     """
   end
 
   defp render_control(%{param: %{type: type}} = assigns) when type in [:integer, :money] do
     ~H"""
-    <input type="number" name={"test_params[#{@param.name}]"} class="w-full input input-bordered" />
+    <input
+      type="number"
+      id={@id}
+      name={"test_params[#{@param.name}]"}
+      class="w-full input input-bordered"
+    />
     """
   end
 
   defp render_control(%{param: %{type: :table}} = assigns) do
     ~H"""
-    <textarea name={"test_params[#{@param.name}]"} class="w-full textarea textarea-bordered" rows="3"></textarea>
+    <textarea
+      id={@id}
+      name={"test_params[#{@param.name}]"}
+      class="w-full textarea textarea-bordered"
+      rows="3"
+    ></textarea>
     """
   end
 
   defp render_control(assigns) do
     ~H"""
-    <input type="text" name={"test_params[#{@param.name}]"} class="w-full input input-bordered" />
+    <input
+      type="text"
+      id={@id}
+      name={"test_params[#{@param.name}]"}
+      class="w-full input input-bordered"
+    />
     """
   end
 end
