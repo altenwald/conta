@@ -149,23 +149,18 @@ defmodule Conta.Automator do
 
   def test_run_filter(params_defs, code, test_params) do
     filter = %Filter{params: to_projector_params(params_defs), code: code, language: :lua}
+    cast_params = Map.new(cast(filter, test_params))
 
-    with :ok <- validate_params(filter.params, test_params) do
-      Lua.run(code, cast(filter, test_params))
+    with :ok <- validate_params(filter.params, cast_params) do
+      Lua.run(code, cast_params)
     end
   end
 
   def test_run_shortcut(params_defs, code, test_params) do
     shortcut = %Shortcut{params: to_projector_params(params_defs), code: code, language: :lua}
+    cast_params = Map.new(cast(shortcut, test_params))
 
-    with :ok <- validate_params(shortcut.params, test_params),
-         {:ok, %{"status" => "ok", "commands" => commands}} when is_list(commands) <-
-           Lua.run(code, cast(shortcut, test_params)) do
-      {:ok, commands}
-    else
-      {:error, _} = error -> error
-      {:ok, return} -> {:error, {:invalid_code_return, return}}
-    end
+    run_shortcut_code(shortcut, cast_params)
   end
 
   defp to_projector_params(params) do
@@ -183,10 +178,16 @@ defmodule Conta.Automator do
   end
 
   def run_shortcut(_automator, %Shortcut{} = shortcut, params) do
-    with :ok <- validate_params(shortcut.params, params),
-         {:ok, %{"status" => "ok", "commands" => commands}} when is_list(commands) <- run(shortcut, params) do
+    with {:ok, commands} <- run_shortcut_code(shortcut, params) do
       Logger.debug("received data from #{shortcut.language} shortcut script: #{inspect(commands)}")
       Enum.reduce_while(commands, :ok, &process_result/2)
+    end
+  end
+
+  defp run_shortcut_code(shortcut, params) do
+    with :ok <- validate_params(shortcut.params, params),
+         {:ok, %{"status" => "ok", "commands" => commands}} when is_list(commands) <- run(shortcut, params) do
+      {:ok, commands}
     else
       {:error, _} = error -> error
       {:ok, return} -> {:error, {:invalid_code_return, return}}

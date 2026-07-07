@@ -235,12 +235,19 @@ defmodule Conta.AutomatorContextTest do
     test "returns a validation error when a required param is missing" do
       params_defs = [%Param{name: "a", type: :integer}]
 
-      assert {:error, %{"a" => ["can't be blank"]}} =
+      assert {:error, %{"a" => ["is invalid"]}} =
                Automator.test_run_filter(params_defs, "return a", %{})
     end
 
     test "returns a Lua error for invalid code" do
       assert {:error, _reason} = Automator.test_run_filter([], "this is not lua", %{})
+    end
+
+    test "casts account_name params before validating them" do
+      params_defs = [%Param{name: "account", type: :account_name}]
+
+      assert {:ok, ["Assets", "Bank"]} =
+               Automator.test_run_filter(params_defs, "return account", %{"account" => "Assets.Bank"})
     end
   end
 
