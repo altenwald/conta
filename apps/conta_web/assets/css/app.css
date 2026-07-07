@@ -68,6 +68,9 @@
 
 /* Print specific styles (migrated from print.scss) */
 @media print {
+  html, body {
+    background-color: #fff !important;
+  }
   body { -webkit-print-color-adjust: exact; }
   div.print-foot {
     page-break-after: always;
@@ -76,50 +79,21 @@
   .no-print {
     display: none !important;
   }
-  
-  tr.tr-bottom {
-    border-bottom: 2px solid darkgray;
+  .printable-table {
+    break-inside: avoid;
   }
+}
 
-  table > thead > tr.first > th {
-    position: sticky;
-    top: 0;
-    background-color: white;
-    z-index: 1;
-  }
+/* Invoice document layout (used both on screen and when printed/exported to PDF) */
+tr.simple-invoice {
+  height: 10.5rem;
+}
 
-  table > thead > tr.second > th {
-    background-color: white;
-  }
+tr.simple-invoice td {
+  vertical-align: middle;
+  text-align: center;
+}
 
-  aside.menu {
-    position: fixed;
-    width: 20%;
-  }
-
-  #document_base64_container {
-    padding-top: 15px;
-  }
-
-  tr.simple-invoice {
-    height: 10.5rem;
-  }
-
-  tr.simple-invoice td {
-    vertical-align: middle;
-    text-align: center;
-  }
-
-  .invoice-logo {
-    width: 300px;
-  }
-
-  .invoice-comments {
-    height: 150px;
-  }
-
-  .invoice-title {
-    font-size: 30px;
-    font-weight: bolder;
-  }
+.invoice-comments {
+  min-height: 150px;
 }

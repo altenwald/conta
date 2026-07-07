@@ -11,7 +11,7 @@
   <div class="col-span-7">
     <img
       :if={@template.logo}
-      class="invoice-logo max-h-32"
+      class="invoice-logo max-h-32 max-w-[33vw] w-auto"
       src={get_logo(assigns[:base_path], @invoice.id, assigns[:embedded], @template)}
       alt={@invoice.company.name}
     />
@@ -21,21 +21,21 @@
     </h1>
   </div>
   <div class="col-span-5">
-    <table class="table table-xs border border-base-200 w-full printable-table">
+    <table class="table table-xs [&_tr]:text-[13px] border border-base-200 w-full printable-table">
       <tr>
-        <th class="bg-base-200 font-bold">{gettext("Invoice Number")}</th>
+        <th class="invoice-accent bg-base-200 font-bold">{gettext("Invoice Number")}</th>
         <td>{@invoice.invoice_number}</td>
       </tr>
       <tr>
-        <th class="bg-base-200 font-bold">{gettext("Invoice Date")}</th>
+        <th class="invoice-accent bg-base-200 font-bold">{gettext("Invoice Date")}</th>
         <td>{@invoice.invoice_date}</td>
       </tr>
       <tr>
-        <th class="bg-base-200 font-bold">{gettext("Due Date")}</th>
+        <th class="invoice-accent bg-base-200 font-bold">{gettext("Due Date")}</th>
         <td>{@invoice.due_date}</td>
       </tr>
       <tr>
-        <th class="bg-base-200 font-bold">{gettext("Status")}</th>
+        <th class="invoice-accent bg-base-200 font-bold">{gettext("Status")}</th>
         <td class="whitespace-nowrap">
           <%= if @invoice.paid_date do %>
             {gettext("Paid")} {@invoice.paid_date}
@@ -51,7 +51,7 @@
     <strong class="text-xs uppercase opacity-50">{gettext("Issue by")}</strong>
   </div>
   <div class="col-span-5">
-    <table class="table table-xs w-full">
+    <table class="table table-xs [&_tr]:text-[13px] border border-base-200 w-full">
       <tr>
         <td class="font-bold">
           {@invoice.company.name}
@@ -78,7 +78,7 @@
     <strong class="text-xs uppercase opacity-50">{gettext("Client")}</strong>
   </div>
   <div class="col-span-5">
-    <table class="table table-xs w-full">
+    <table class="table table-xs [&_tr]:text-[13px] border border-base-200 w-full">
       <%= if @invoice.client do %>
         <tr>
           <td class="font-bold">{@invoice.client.name}</td>
@@ -110,9 +110,9 @@
   </div>
 
   <div class="col-span-12">
-    <table class="table table-sm border border-base-200 mt-6 w-full printable-table">
+    <table class="table table-sm [&_tr]:text-[13px] border border-base-200 mt-6 w-full printable-table">
       <thead>
-        <tr class="bg-base-200">
+        <tr class="invoice-accent bg-base-200">
           <th class="font-bold">{gettext("#")}</th>
           <th class="font-bold">{gettext("Products")}</th>
           <th class="font-bold text-right">{gettext("Price")}</th>
@@ -139,9 +139,9 @@
       </tbody>
       <tfoot>
         <tr class="bg-base-100 font-bold border-t border-base-300">
-          <th class="text-right" colspan="3">{gettext("Total")}</th>
+          <th class="invoice-accent bg-base-200 text-right" colspan="3">{gettext("Total")}</th>
           <th class="text-right font-mono">{Money.new(@invoice.tax_price, @invoice.currency)}</th>
-          <th class="text-right font-mono bg-base-200">
+          <th class="invoice-accent text-right font-mono bg-base-200">
             {Money.new(@invoice.total_price, @invoice.currency)}
           </th>
         </tr>
@@ -156,8 +156,8 @@
       <tr>
         <td class="font-bold text-xs uppercase opacity-50">{gettext("Comments")}</td>
       </tr>
-      <tr>
-        <td class="bg-base-100 p-4 rounded-xl border border-base-200 text-sm italic">
+      <tr class="invoice-comments">
+        <td class="invoice-accent bg-base-200 p-4 text-sm">
           <%= case @invoice.payment_method do %>
             <% %_{method: :gateway, details: details} -> %>
               {gettext("Paid via %{bank_name}", bank_name: details)}<br />
