@@ -21,4 +21,23 @@ defmodule Conta.AutomatorFixtures do
       type: :money
     }
   end
+
+  def filter_factory do
+    %Conta.Projector.Automator.Filter{
+      name: "unpaid invoices",
+      automator: "automator",
+      description: "list unpaid invoices",
+      type: :all,
+      output: :json,
+      code: "-- Lua code\n",
+      language: :lua
+    }
+  end
+
+  def filter_param_factory do
+    %Conta.Projector.Automator.Param{
+      name: "from_date",
+      type: :date
+    }
+  end
 end
