@@ -7,6 +7,8 @@
     <.live_title>
       {assigns[:page_title] || "Conta"}
     </.live_title>
+    <%!-- Must load (and execute, via defer) before app.js: the MonacoEditor hook reads
+    window.MonacoEditorLib, which this bundle sets. Keep it ahead of the app.js tag below. --%>
     <link phx-track-static rel="stylesheet" href={~p"/assets/monaco_bundle.css"} />
     <script defer phx-track-static type="text/javascript" src={~p"/assets/monaco_bundle.js"}>
     </script>
