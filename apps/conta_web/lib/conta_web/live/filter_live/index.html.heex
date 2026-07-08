@@ -1,0 +1,41 @@
+<section class="py-6">
+  <.breadcrumbs>
+    <:breadcrumb label={gettext("Dashboard")} href={~p"/"} />
+    <:breadcrumb label={gettext("Filters")} href={~p"/automation/filters"} />
+  </.breadcrumbs>
+
+  <div class="card bg-base-100 shadow-xl border border-base-200 mt-6">
+    <div class="card-body p-0">
+      <div class="p-4 flex justify-between items-center border-b border-base-200">
+        <h1 class="text-lg font-semibold">{gettext("Filters")}</h1>
+        <.link patch={~p"/automation/filters/new"} class="btn btn-primary">
+          <.icon name="hero-plus-circle" class="w-5 h-5 mr-2" />
+          <span>{gettext("New Filter")}</span>
+        </.link>
+      </div>
+      <div class="overflow-x-auto">
+        <.table id="automator_filters" rows={@streams.automator_filters}>
+          <:action :let={{_id, filter}}>
+            <.link class="btn btn-ghost btn-sm" patch={~p"/automation/filters/#{filter}/edit"} title={gettext("Edit")}>
+              <.icon name="hero-pencil" class="w-4 h-4" />
+            </.link>
+          </:action>
+          <:action :let={{id, filter}}>
+            <.link
+              phx-click={JS.push("delete", value: %{id: filter.id, dom_id: id})}
+              class="btn btn-error btn-outline btn-sm"
+              data-confirm={gettext("Are you sure?")}
+              title={gettext("Delete")}
+            >
+              {gettext("Delete")}
+            </.link>
+          </:action>
+          <:col :let={{_id, filter}} label={gettext("Name")}>{filter.name}</:col>
+          <:col :let={{_id, filter}} label={gettext("Description")}>{filter.description}</:col>
+          <:col :let={{_id, filter}} label={gettext("Type")}>{filter.type}</:col>
+          <:col :let={{_id, filter}} label={gettext("Output")}>{filter.output}</:col>
+        </.table>
+      </div>
+    </div>
+  </div>
+</section>
