@@ -16,7 +16,11 @@
       <div class="overflow-x-auto">
         <.table id="automator_filters" rows={@streams.automator_filters}>
           <:action :let={{_id, filter}}>
-            <.link class="btn btn-ghost btn-sm" patch={~p"/automation/filters/#{filter}/edit"} title={gettext("Edit")}>
+            <.link
+              class="btn btn-ghost btn-sm"
+              patch={~p"/automation/filters/#{filter}/edit"}
+              title={gettext("Edit")}
+            >
               <.icon name="hero-pencil" class="w-4 h-4" />
             </.link>
           </:action>
