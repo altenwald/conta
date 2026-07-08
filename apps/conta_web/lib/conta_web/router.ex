@@ -176,6 +176,18 @@ defmodule ContaWeb.Router do
         live "/new", ContactLive.Index, :new
         live "/:id/edit", ContactLive.Index, :edit
       end
+
+      scope "/automation/filters/" do
+        live "/", FilterLive.Index, :index
+        live "/new", FilterLive.Form, :new
+        live "/:id/edit", FilterLive.Form, :edit
+      end
+
+      scope "/automation/shortcuts/" do
+        live "/", ShortcutLive.Index, :index
+        live "/new", ShortcutLive.Form, :new
+        live "/:id/edit", ShortcutLive.Form, :edit
+      end
     end
   end
 
