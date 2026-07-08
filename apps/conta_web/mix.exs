@@ -74,12 +74,14 @@ defmodule ContaWeb.MixProject do
       "assets.build": [
         "tailwind default",
         "esbuild bundle_app",
-        "esbuild bundle_print"
+        "esbuild bundle_print",
+        "esbuild bundle_monaco"
       ],
       "assets.deploy": [
         "tailwind default --minify",
         "esbuild bundle_app --minify",
         "esbuild bundle_print --minify",
+        "esbuild bundle_monaco --minify",
         "phx.digest"
       ]
     ]

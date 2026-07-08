@@ -1,7 +1,12 @@
-import * as monaco from "monaco-editor";
-
 const MonacoEditor = {
   mounted() {
+    const monaco = window.MonacoEditorLib;
+
+    if (!monaco) {
+      console.error("MonacoEditor hook: window.MonacoEditorLib is not available (monaco_bundle.js failed to load or hasn't loaded yet)");
+      return;
+    }
+
     const targetId = this.el.dataset.target;
     this.hiddenInput = document.getElementById(targetId);
 
