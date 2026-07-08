@@ -31,7 +31,7 @@ defmodule ContaWeb.AutomatorComponents do
         style={"height: #{@height}; border: 1px solid oklch(var(--bc)/0.2);"}
       >
       </div>
-      <input type="hidden" id={@field.id} name={@field.name} value={@field.value} />
+      <input type="text" class="hidden" id={@field.id} name={@field.name} value={@field.value} />
     </div>
     """
   end
