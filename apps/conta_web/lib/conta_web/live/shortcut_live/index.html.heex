@@ -35,7 +35,9 @@
             </.link>
           </:action>
           <:col :let={{_id, shortcut}} label={gettext("Name")}>{shortcut.name}</:col>
-          <:col :let={{_id, shortcut}} label={gettext("Description")}>{shortcut.description}</:col>
+          <:col :let={{_id, shortcut}} label={gettext("Description")}>
+            {shortcut.description}
+          </:col>
         </.table>
       </div>
     </div>
