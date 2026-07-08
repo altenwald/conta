@@ -2,7 +2,7 @@ defmodule ContaWeb.FilterLive.Form do
   use ContaWeb, :live_view
 
   import Ecto.Changeset, only: [get_field: 2]
-  import Conta.Commanded.Application, only: [dispatch: 2]
+  import Conta.Commanded.Application, only: [dispatch: 1]
   import ContaWeb.AutomatorComponents
 
   require Logger
@@ -78,8 +78,7 @@ defmodule ContaWeb.FilterLive.Form do
   def handle_event("save", %{"set_filter" => params}, socket) do
     changeset = SetFilter.changeset(socket.assigns.set_filter, force_constants(params))
 
-    if changeset.valid? and
-         dispatch(SetFilter.to_command(changeset), consistency: :strong) == :ok do
+    if changeset.valid? and dispatch(SetFilter.to_command(changeset)) == :ok do
       {:noreply,
        socket
        |> put_flash(:info, gettext("Filter saved successfully"))

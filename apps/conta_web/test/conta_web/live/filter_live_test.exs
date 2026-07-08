@@ -1,6 +1,7 @@
 defmodule ContaWeb.FilterLiveTest do
   use ContaWeb.ConnCase
 
+  import Commanded.Assertions.EventAssertions
   import Phoenix.LiveViewTest
   import Conta.AutomatorFixtures
   import Conta.Commanded.Application, only: [dispatch: 1]
@@ -51,11 +52,14 @@ defmodule ContaWeb.FilterLiveTest do
              |> form("#filter-form", set_filter: %{name: "", output: "json"})
              |> render_change() =~ "can&#39;t be blank"
 
-      {:ok, _index_live, html} =
+      result =
         form_live
         |> form("#filter-form", set_filter: %{name: "brand new filter", output: "json"})
         |> render_submit()
-        |> follow_redirect(conn, ~p"/automation/filters")
+
+      wait_for_event(Conta.Commanded.Application, Conta.Event.FilterSet)
+
+      {:ok, _index_live, html} = follow_redirect(result, conn, ~p"/automation/filters")
 
       assert html =~ "Filter saved successfully"
       assert html =~ "brand new filter"
@@ -67,11 +71,14 @@ defmodule ContaWeb.FilterLiveTest do
 
       {:ok, form_live, _html} = live(conn, ~p"/automation/filters/#{filter}/edit")
 
-      {:ok, _index_live, html} =
+      result =
         form_live
         |> form("#filter-form", set_filter: %{name: "new name"})
         |> render_submit()
-        |> follow_redirect(conn, ~p"/automation/filters")
+
+      wait_for_event(Conta.Commanded.Application, Conta.Event.FilterSet)
+
+      {:ok, _index_live, html} = follow_redirect(result, conn, ~p"/automation/filters")
 
       assert html =~ "Filter saved successfully"
       assert html =~ "new name"
