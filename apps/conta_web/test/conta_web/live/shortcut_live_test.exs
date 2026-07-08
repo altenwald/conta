@@ -1,6 +1,7 @@
 defmodule ContaWeb.ShortcutLiveTest do
   use ContaWeb.ConnCase
 
+  import Commanded.Assertions.EventAssertions
   import Phoenix.LiveViewTest
   import Conta.AutomatorFixtures
   import Conta.Commanded.Application, only: [dispatch: 1]
@@ -39,6 +40,64 @@ defmodule ContaWeb.ShortcutLiveTest do
              |> render_click()
 
       refute has_element?(index_live, "#automator_shortcuts-#{shortcut.id}")
+    end
+  end
+
+  describe "Form" do
+    test "creates a new shortcut", %{conn: conn, user: user} do
+      conn = log_in_user(conn, user)
+      {:ok, form_live, _html} = live(conn, ~p"/automation/shortcuts/new")
+
+      assert form_live
+             |> form("#shortcut-form", set_shortcut: %{name: ""})
+             |> render_change() =~ "can&#39;t be blank"
+
+      result =
+        form_live
+        |> form("#shortcut-form", set_shortcut: %{name: "brand new shortcut"})
+        |> render_submit()
+
+      wait_for_event(Conta.Commanded.Application, Conta.Event.ShortcutSet)
+
+      {:ok, _index_live, html} = follow_redirect(result, conn, ~p"/automation/shortcuts")
+
+      assert html =~ "Shortcut saved successfully"
+      assert html =~ "brand new shortcut"
+    end
+
+    test "edits an existing shortcut", %{conn: conn, user: user} do
+      shortcut = insert(:shortcut, %{name: "old name"})
+      conn = log_in_user(conn, user)
+
+      {:ok, form_live, _html} = live(conn, ~p"/automation/shortcuts/#{shortcut}/edit")
+
+      result =
+        form_live
+        |> form("#shortcut-form", set_shortcut: %{name: "new name"})
+        |> render_submit()
+
+      wait_for_event(Conta.Commanded.Application, Conta.Event.ShortcutSet)
+
+      {:ok, _index_live, html} = follow_redirect(result, conn, ~p"/automation/shortcuts")
+
+      assert html =~ "Shortcut saved successfully"
+      assert html =~ "new name"
+    end
+
+    test "test-runs the Lua code and shows the commands without dispatching them", %{conn: conn, user: user} do
+      conn = log_in_user(conn, user)
+      {:ok, form_live, _html} = live(conn, ~p"/automation/shortcuts/new")
+
+      code = ~S[return {status = "ok", commands = {{type = "transaction", data = {foo = "bar"}}}}]
+
+      form_live
+      |> form("#shortcut-form", set_shortcut: %{name: "gen commands", code: code})
+      |> render_change()
+
+      html = form_live |> element("form[phx-submit=test_run]") |> render_submit()
+
+      assert html =~ "transaction"
+      assert html =~ "foo"
     end
   end
 end

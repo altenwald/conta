@@ -1,0 +1,62 @@
+<section class="py-6">
+  <.breadcrumbs>
+    <:breadcrumb label={gettext("Dashboard")} href={~p"/"} />
+    <:breadcrumb label={gettext("Shortcuts")} href={~p"/automation/shortcuts"} />
+    <:breadcrumb label={@page_title} href="#" />
+  </.breadcrumbs>
+
+  <.simple_form for={@form} id="shortcut-form" phx-change="validate" phx-submit="save">
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
+      <div class="card bg-base-100 shadow-xl border border-base-200 p-4">
+        <h2 class="font-semibold mb-2">{gettext("General data")}</h2>
+        <.input field={@form[:name]} type="text" label={gettext("Name")} />
+        <.input field={@form[:description]} type="text" label={gettext("Description")} />
+
+        <div class="flex items-center justify-between mt-4 mb-2">
+          <h3 class="font-semibold">{gettext("Parameters")}</h3>
+          <.button type="button" phx-click="add_param" class="btn-sm">
+            {gettext("Add parameter")}
+          </.button>
+        </div>
+
+        <.inputs_for :let={p} field={@form[:params]}>
+          <div class="grid grid-cols-[1fr_1fr_1fr_auto] gap-2 items-end mb-2">
+            <.input field={p[:name]} label={gettext("Name")} />
+            <.input field={p[:type]} type="select" label={gettext("Type")} options={param_type_options()} />
+            <.input field={p[:options]} label={gettext("Options (comma separated)")} />
+            <.button type="button" phx-click="del_param" phx-value-index={p.index} class="btn-sm btn-error">
+              {gettext("Remove")}
+            </.button>
+          </div>
+        </.inputs_for>
+      </div>
+
+      <div class="card bg-base-100 shadow-xl border border-base-200 p-4">
+        <.monaco_editor field={@form[:code]} />
+      </div>
+    </div>
+
+    <:actions>
+      <.button class="btn-primary" phx-disable-with={gettext("Saving...")}>
+        {gettext("Save")}
+      </.button>
+      <.link navigate={~p"/automation/shortcuts"} class="btn">{gettext("Cancel")}</.link>
+    </:actions>
+  </.simple_form>
+
+  <div class="card bg-base-100 shadow-xl border border-base-200 p-4 mt-6">
+    <h2 class="font-semibold mb-2">{gettext("Test data")}</h2>
+    <p class="text-sm opacity-70 mb-2">
+      {gettext("Running here never dispatches real commands — it only shows what would be generated.")}
+    </p>
+    <form phx-submit="test_run">
+      <.test_param_input :for={param <- @params_defs} param={param} />
+      <button type="submit" class="btn btn-secondary mt-2">{gettext("Run")}</button>
+    </form>
+
+    <div :if={@test_result} class="mt-4">
+      <p :if={elem(@test_result, 0) == :error} class="text-error font-semibold">{gettext("Error")}</p>
+      <pre class="bg-base-200 p-4 rounded overflow-x-auto text-sm">{elem(@test_result, 1)}</pre>
+    </div>
+  </div>
+</section>
