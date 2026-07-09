@@ -83,7 +83,8 @@ defmodule Conta.Automator do
           %SetShortcut.Param{
             name: shortcut_param.name,
             type: shortcut_param.type,
-            options: shortcut_param.options
+            options: shortcut_param.options,
+            sample_limit: shortcut_param.sample_limit
           }
         end,
       code: shortcut.code,
@@ -107,7 +108,8 @@ defmodule Conta.Automator do
           %SetFilter.Param{
             name: filter_param.name,
             type: filter_param.type,
-            options: filter_param.options
+            options: filter_param.options,
+            sample_limit: filter_param.sample_limit
           }
         end,
       code: filter.code,

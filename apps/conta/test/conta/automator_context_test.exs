@@ -42,6 +42,18 @@ defmodule Conta.AutomatorContextTest do
       assert nil == Automator.get_set_shortcut(Ecto.UUID.generate())
     end
 
+    test "get_set_shortcut/1 carries sample_limit for a table param" do
+      shortcut =
+        insert(:shortcut, %{
+          params: [%Param{name: "expenses", type: :table, sample_limit: 7}]
+        })
+
+      set_shortcut = Automator.get_set_shortcut(shortcut.id)
+
+      assert [%Conta.Command.SetShortcut.Param{name: "expenses", type: :table, sample_limit: 7}] =
+               set_shortcut.params
+    end
+
     test "get_remove_shortcut/1 returns RemoveShortcut command from id" do
       shortcut = insert(:shortcut)
       remove = Automator.get_remove_shortcut(shortcut.id)
@@ -103,6 +115,22 @@ defmodule Conta.AutomatorContextTest do
 
     test "get_set_filter/1 returns nil for unknown id" do
       assert nil == Automator.get_set_filter(Ecto.UUID.generate())
+    end
+
+    test "get_set_filter/1 carries sample_limit for a table param", %{filter: filter} do
+      filter =
+        filter
+        |> Ecto.Changeset.change(
+          params: [
+            %Conta.Projector.Automator.Param{name: "expenses", type: :table, sample_limit: 7}
+          ]
+        )
+        |> Repo.update!()
+
+      set_filter = Automator.get_set_filter(filter.id)
+
+      assert [%Conta.Command.SetFilter.Param{name: "expenses", type: :table, sample_limit: 7}] =
+               set_filter.params
     end
   end
 
