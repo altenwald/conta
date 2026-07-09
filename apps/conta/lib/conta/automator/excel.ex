@@ -12,15 +12,46 @@ defmodule Conta.Automator.Excel do
     col(div(i - 1, base)) <> <<unit + ?A>>
   end
 
-  def export([], filename), do: export(%{}, filename)
+  def export(data, filename) do
+    data
+    |> shape_sheets()
+    |> build_workbook()
+    |> Elixlsx.write_to_memory(filename)
+  end
 
-  def export([%{"name" => _, "rows" => _, "headers" => _} | _] = workbook, filename) do
+  @doc """
+  Normalizes any of the shapes accepted by `export/2` into a plain list of
+  `%{"name" => _, "headers" => _, "rows" => _}` sheets, without writing an
+  actual workbook. Returns `:error` (instead of raising) for any other shape,
+  since the input comes from an arbitrary Lua script's return value.
+  """
+  @spec to_sheets(term()) :: {:ok, [map()]} | :error
+  def to_sheets(data) do
+    {:ok, shape_sheets(data)}
+  rescue
+    _ -> :error
+  end
+
+  defp shape_sheets([]), do: []
+
+  defp shape_sheets([%{"name" => _, "rows" => _, "headers" => _} | _] = workbook), do: workbook
+
+  defp shape_sheets(sheet_data) when is_list(sheet_data), do: shape_sheets(%{@unnamed => sheet_data})
+
+  defp shape_sheets(workbook) when is_map(workbook) do
+    Enum.map(workbook, fn {sheet_name, [first_row | _] = sheet_data} ->
+      headers = Map.keys(first_row)
+      rows = Enum.map(sheet_data, &get_headers(headers, &1))
+      %{"name" => sheet_name, "headers" => headers, "rows" => rows}
+    end)
+  end
+
+  defp build_workbook(sheets) do
     set_cell = fn {content, idx}, sheet, jdx ->
       Sheet.set_cell(sheet, "#{col(idx)}#{jdx}", to_cell(content))
     end
 
-    workbook
-    |> Enum.reduce(%Workbook{}, fn %{"name" => name, "rows" => rows, "headers" => headers}, workbook ->
+    Enum.reduce(sheets, %Workbook{}, fn %{"name" => name, "rows" => rows, "headers" => headers}, workbook ->
       sheet =
         headers
         |> Enum.with_index(1)
@@ -38,19 +69,6 @@ defmodule Conta.Automator.Excel do
 
       Workbook.append_sheet(workbook, sheet)
     end)
-    |> Elixlsx.write_to_memory(filename)
-  end
-
-  def export(sheet_data, filename) when is_list(sheet_data), do: export(%{@unnamed => sheet_data}, filename)
-
-  def export(workbook, filename) when is_map(workbook) do
-    workbook
-    |> Enum.map(fn {sheet_name, [first_row | _] = sheet_data} ->
-      headers = Map.keys(first_row)
-      rows = Enum.map(sheet_data, &get_headers(headers, &1))
-      %{"name" => sheet_name, "headers" => headers, "rows" => rows}
-    end)
-    |> export(filename)
   end
 
   defp get_headers(headers, row) when is_struct(row), do: get_headers(headers, Map.from_struct(row))
