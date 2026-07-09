@@ -117,7 +117,10 @@ defmodule ContaWeb.FilterLiveTest do
       assert html =~ "amount"
     end
 
-    test "falls back to raw JSON when output is xlsx but the result has no table shape", %{conn: conn, user: user} do
+    test "falls back to raw JSON when output is xlsx but the result has no table shape", %{
+      conn: conn,
+      user: user
+    } do
       conn = log_in_user(conn, user)
       {:ok, form_live, _html} = live(conn, ~p"/automation/filters/new")
 
@@ -130,6 +133,25 @@ defmodule ContaWeb.FilterLiveTest do
       refute html =~ "<table"
       assert html =~ "42"
       assert html =~ "table shape"
+    end
+
+    test "renders a placeholder instead of crashing when a cell is a nested table", %{conn: conn, user: user} do
+      conn = log_in_user(conn, user)
+      {:ok, form_live, _html} = live(conn, ~p"/automation/filters/new")
+
+      code = ~S"""
+      return {{name = "Alice", meta = {a = 1}}}
+      """
+
+      form_live
+      |> form("#filter-form", set_filter: %{name: "nested cell filter", code: code, output: "xlsx"})
+      |> render_change()
+
+      html = form_live |> element("form[phx-submit=test_run]") |> render_submit()
+
+      assert html =~ "<table"
+      assert html =~ "Alice"
+      assert html =~ "cannot convert"
     end
   end
 end

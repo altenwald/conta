@@ -51,4 +51,11 @@ defmodule Conta.Automator.ExcelTest do
       assert {:ok, {_filename, _content}} = Task.await(task, 10_000)
     end
   end
+
+  describe "to_cell/1" do
+    test "passes scalar values through and falls back for anything else" do
+      assert Excel.to_cell("plain string") == "plain string"
+      assert Excel.to_cell(%{"a" => 1}) == "(cannot convert)"
+    end
+  end
 end

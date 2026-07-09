@@ -74,14 +74,19 @@ defmodule Conta.Automator.Excel do
   defp get_headers(headers, row) when is_struct(row), do: get_headers(headers, Map.from_struct(row))
   defp get_headers(headers, row), do: Enum.map(headers, &row[&1])
 
-  defp to_cell(atom) when is_atom(atom), do: to_string(atom)
-  defp to_cell(integer) when is_integer(integer), do: integer
-  defp to_cell(float) when is_float(float), do: float
-  defp to_cell(string) when is_binary(string), do: string
-  defp to_cell(date) when is_struct(date, Date), do: to_string(date)
-  defp to_cell(datetime) when is_struct(datetime, DateTime), do: to_string(datetime)
-  defp to_cell(datetime) when is_struct(datetime, NaiveDateTime), do: to_string(datetime)
-  defp to_cell(_otherwise), do: "(cannot convert)"
+  @doc """
+  Converts an arbitrary value into a renderable cell value (atom, integer,
+  float, binary, or a date/time struct converted to a string), falling back
+  to `"(cannot convert)"` instead of raising for anything else.
+  """
+  def to_cell(atom) when is_atom(atom), do: to_string(atom)
+  def to_cell(integer) when is_integer(integer), do: integer
+  def to_cell(float) when is_float(float), do: float
+  def to_cell(string) when is_binary(string), do: string
+  def to_cell(date) when is_struct(date, Date), do: to_string(date)
+  def to_cell(datetime) when is_struct(datetime, DateTime), do: to_string(datetime)
+  def to_cell(datetime) when is_struct(datetime, NaiveDateTime), do: to_string(datetime)
+  def to_cell(_otherwise), do: "(cannot convert)"
 
   defp to_list(struct) when is_struct(struct), do: to_list(Map.from_struct(struct))
   defp to_list(map) when is_map(map), do: Map.values(map)

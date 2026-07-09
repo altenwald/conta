@@ -92,7 +92,7 @@
                 </thead>
                 <tbody>
                   <tr :for={row <- sheet["rows"]}>
-                    <td :for={cell <- row}>{cell}</td>
+                    <td :for={cell <- row}>{Excel.to_cell(cell)}</td>
                   </tr>
                 </tbody>
               </table>

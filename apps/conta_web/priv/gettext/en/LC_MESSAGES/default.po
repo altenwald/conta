@@ -1237,6 +1237,11 @@ msgstr ""
 msgid "Template"
 msgstr ""
 
+#: lib/conta_web/live/filter_live/form.html.heex:80
+#, elixir-autogen, elixir-format
+msgid "The result doesn't have a table shape, showing raw JSON instead."
+msgstr ""
+
 #: lib/conta_web/controllers/user_session_controller.ex:36
 #, elixir-autogen, elixir-format
 msgid "The user must be confirmed. Review your email."
