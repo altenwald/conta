@@ -13,7 +13,7 @@ defmodule ContaWeb.ShortcutLive.Form do
 
   @impl true
   def mount(_params, _session, socket) do
-    {:ok, assign(socket, :test_result, nil)}
+    {:ok, socket |> assign(:test_result, nil) |> assign(:loaded_samples, %{})}
   end
 
   @impl true
@@ -116,11 +116,7 @@ defmodule ContaWeb.ShortcutLive.Form do
 
       sample ->
         json = Jason.encode!(sample, pretty: true)
-
-        form_params =
-          Map.update(socket.assigns.form_params, "test_params", %{name => json}, &Map.put(&1, name, json))
-
-        {:noreply, assign(socket, :form_params, form_params)}
+        {:noreply, assign(socket, :loaded_samples, Map.put(socket.assigns.loaded_samples, name, json))}
     end
   end
 

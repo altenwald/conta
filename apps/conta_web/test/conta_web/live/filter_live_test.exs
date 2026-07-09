@@ -174,5 +174,31 @@ defmodule ContaWeb.FilterLiveTest do
 
       assert html =~ "2023-00001"
     end
+
+    test "keeps a loaded real data sample after an unrelated form change", %{conn: conn, user: user} do
+      BookFixtures.insert(:invoice, %{invoice_number: "2023-00001"})
+      conn = log_in_user(conn, user)
+      {:ok, form_live, _html} = live(conn, ~p"/automation/filters/new")
+
+      form_live
+      |> form("#filter-form", set_filter: %{name: "invoice filter", output: "json"})
+      |> render_change()
+
+      form_live |> element("button", "Add parameter") |> render_click()
+
+      form_live
+      |> form("#filter-form", set_filter: %{params: %{"0" => %{"name" => "invoices", "type" => "table"}}})
+      |> render_change()
+
+      html = form_live |> element(~s(button[phx-click="load_table_sample"])) |> render_click()
+      assert html =~ "2023-00001"
+
+      html =
+        form_live
+        |> form("#filter-form", set_filter: %{description: "updated"})
+        |> render_change()
+
+      assert html =~ "2023-00001"
+    end
   end
 end

@@ -67,7 +67,7 @@
       <.test_param_input
         :for={param <- @params_defs}
         param={param}
-        value={get_in(@form_params, ["test_params", param.name])}
+        value={@loaded_samples[param.name]}
       />
       <button type="submit" class="btn btn-secondary mt-2">{gettext("Run")}</button>
     </form>
