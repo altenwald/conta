@@ -60,4 +60,13 @@ defmodule Conta.Automator.TableSourcesTest do
       assert TableSources.sample("gastos", 5) == {:error, :unknown_source}
     end
   end
+
+  describe "registry consistency" do
+    test "every known name has a matching sample/2 clause" do
+      for name <- TableSources.names() do
+        refute match?({:error, :unknown_source}, TableSources.sample(name, 1)),
+               "#{name} is in names/0 but sample/2 doesn't know how to fetch it"
+      end
+    end
+  end
 end

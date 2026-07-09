@@ -1,9 +1,11 @@
 defmodule Conta.Automator.TableSources do
   @moduledoc """
   Registry of the real data sources available for a `:table` parameter of
-  a Filter/Shortcut — used by the "Load real data" button of the test-run
-  panel and by the export controllers (`ContaWeb.ExpenseController`,
-  `ContaWeb.InvoiceController`).
+  a Filter/Shortcut. Intended to back the "Load real data" button of the
+  test-run panel and the restricted name select of the parameter-definition
+  form; the ad-hoc lookups in the export controllers
+  (`ContaWeb.ExpenseController`, `ContaWeb.InvoiceController`) could be
+  replaced with this registry later on.
   """
 
   alias Conta.Book
