@@ -69,8 +69,36 @@
     </form>
 
     <div :if={@test_result} class="mt-4">
-      <p :if={elem(@test_result, 0) == :error} class="text-error font-semibold">{gettext("Error")}</p>
-      <pre class="bg-base-200 p-4 rounded overflow-x-auto text-sm">{elem(@test_result, 1)}</pre>
+      <%= case @test_result do %>
+        <% {:error, message} -> %>
+          <p class="text-error font-semibold">{gettext("Error")}</p>
+          <pre class="bg-base-200 p-4 rounded overflow-x-auto text-sm">{message}</pre>
+        <% {:json, json} -> %>
+          <pre class="bg-base-200 p-4 rounded overflow-x-auto text-sm">{json}</pre>
+        <% {:json_fallback, json} -> %>
+          <p class="text-warning text-sm mb-2">
+            {gettext("The result doesn't have a table shape, showing raw JSON instead.")}
+          </p>
+          <pre class="bg-base-200 p-4 rounded overflow-x-auto text-sm">{json}</pre>
+        <% {:table, sheets} -> %>
+          <div :for={sheet <- sheets} class="mb-6 last:mb-0">
+            <h4 :if={length(sheets) > 1} class="font-semibold mb-1">{sheet["name"]}</h4>
+            <div class="overflow-x-auto">
+              <table class="table table-zebra">
+                <thead>
+                  <tr>
+                    <th :for={header <- sheet["headers"]}>{header}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr :for={row <- sheet["rows"]}>
+                    <td :for={cell <- row}>{Excel.to_cell(cell)}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+      <% end %>
     </div>
   </div>
 </section>
