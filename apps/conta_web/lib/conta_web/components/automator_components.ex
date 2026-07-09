@@ -6,7 +6,7 @@ defmodule ContaWeb.AutomatorComponents do
   use Phoenix.Component
   use Gettext, backend: ContaWeb.Gettext
 
-  import ContaWeb.CoreComponents, only: [button: 1]
+  import ContaWeb.AppComponents, only: [button: 1]
 
   @currencies Money.Currency.all() |> Map.keys() |> Enum.map(&to_string/1) |> Enum.sort()
 

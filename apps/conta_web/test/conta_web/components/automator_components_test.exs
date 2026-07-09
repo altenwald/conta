@@ -41,6 +41,19 @@ defmodule ContaWeb.AutomatorComponentsTest do
       assert html =~ "Load real data"
       assert html =~ ~s(phx-click="load_table_sample")
       assert html =~ ~s(phx-value-param="expenses")
+
+      # Regression: this button must render via `ContaWeb.AppComponents.button/1`
+      # (which merges the caller's class with the base "btn" class), not the
+      # scaffold's `ContaWeb.CoreComponents.button/1` (which replaces it entirely
+      # and would silently drop "btn", leaving daisyUI's "btn-sm" with nothing
+      # to modify).
+      [class] =
+        html
+        |> Floki.parse_fragment!()
+        |> Floki.find("button")
+        |> Floki.attribute("class")
+
+      assert String.split(class) |> Enum.sort() == ["btn", "btn-sm"]
     end
   end
 end
