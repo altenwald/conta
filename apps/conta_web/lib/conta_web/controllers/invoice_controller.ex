@@ -4,6 +4,7 @@ defmodule ContaWeb.InvoiceController do
   require Logger
 
   alias Conta.Automator
+  alias Conta.Automator.TableSources
   alias Conta.Book
   alias Phoenix.HTML.Safe, as: HtmlSafe
 
@@ -76,7 +77,7 @@ defmodule ContaWeb.InvoiceController do
     ]
 
     invoices = Book.list_invoices_filtered(filters)
-    params = %{"invoices" => invoices}
+    params = %{TableSources.invoices_key() => invoices}
 
     with filter when filter != nil <- Automator.get_filter(id),
          params =

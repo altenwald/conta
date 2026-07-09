@@ -4,6 +4,7 @@ defmodule ContaWeb.ExpenseController do
   require Logger
 
   alias Conta.Automator
+  alias Conta.Automator.TableSources
   alias Conta.Book
 
   # sobelow_skip ["XSS.ContentType", "XSS.SendResp"]
@@ -34,7 +35,7 @@ defmodule ContaWeb.ExpenseController do
     ]
 
     expenses = Book.list_simple_expenses_filtered(filters)
-    params = %{"expenses" => expenses}
+    params = %{TableSources.expenses_key() => expenses}
 
     with filter when filter != nil <- Automator.get_filter(id),
          params =
