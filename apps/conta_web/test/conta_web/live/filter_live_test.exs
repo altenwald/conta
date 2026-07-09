@@ -8,6 +8,7 @@ defmodule ContaWeb.FilterLiveTest do
 
   alias Conta.Automator
   alias Conta.AccountsFixtures
+  alias Conta.BookFixtures
 
   setup do
     user = AccountsFixtures.insert(:user) |> AccountsFixtures.confirm_user()
@@ -152,6 +153,26 @@ defmodule ContaWeb.FilterLiveTest do
       assert html =~ "<table"
       assert html =~ "Alice"
       assert html =~ "cannot convert"
+    end
+
+    test "loads a real data sample for a table param", %{conn: conn, user: user} do
+      BookFixtures.insert(:invoice, %{invoice_number: "2023-00001"})
+      conn = log_in_user(conn, user)
+      {:ok, form_live, _html} = live(conn, ~p"/automation/filters/new")
+
+      form_live
+      |> form("#filter-form", set_filter: %{name: "invoice filter", output: "json"})
+      |> render_change()
+
+      form_live |> element("button", "Add parameter") |> render_click()
+
+      form_live
+      |> form("#filter-form", set_filter: %{params: %{"0" => %{"name" => "invoices", "type" => "table"}}})
+      |> render_change()
+
+      html = form_live |> element(~s(button[phx-click="load_table_sample"])) |> render_click()
+
+      assert html =~ "2023-00001"
     end
   end
 end

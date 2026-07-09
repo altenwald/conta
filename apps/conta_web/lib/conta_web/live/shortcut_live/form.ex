@@ -8,6 +8,7 @@ defmodule ContaWeb.ShortcutLive.Form do
   require Logger
 
   alias Conta.Automator
+  alias Conta.Automator.TableSources
   alias Conta.Command.SetShortcut
 
   @impl true
@@ -103,6 +104,24 @@ defmodule ContaWeb.ShortcutLive.Form do
     result = Automator.test_run_shortcut(params_defs, code, test_params)
 
     {:noreply, assign(socket, :test_result, format_test_result(result))}
+  end
+
+  def handle_event("load_table_sample", %{"param" => name}, socket) do
+    param = Enum.find(socket.assigns.params_defs, &(&1.name == name))
+    limit = (param && param.sample_limit) || TableSources.default_sample_limit()
+
+    case TableSources.sample(name, limit) do
+      {:error, :unknown_source} ->
+        {:noreply, put_flash(socket, :error, gettext("Unknown data source"))}
+
+      sample ->
+        json = Jason.encode!(sample, pretty: true)
+
+        form_params =
+          Map.update(socket.assigns.form_params, "test_params", %{name => json}, &Map.put(&1, name, json))
+
+        {:noreply, assign(socket, :form_params, form_params)}
+    end
   end
 
   defp force_constants(params) do

@@ -64,7 +64,11 @@
   <div class="card bg-base-100 shadow-xl border border-base-200 p-4 mt-6">
     <h2 class="font-semibold mb-2">{gettext("Test data")}</h2>
     <form phx-submit="test_run">
-      <.test_param_input :for={param <- @params_defs} param={param} />
+      <.test_param_input
+        :for={param <- @params_defs}
+        param={param}
+        value={get_in(@form_params, ["test_params", param.name])}
+      />
       <button type="submit" class="btn btn-secondary mt-2">{gettext("Run")}</button>
     </form>
 

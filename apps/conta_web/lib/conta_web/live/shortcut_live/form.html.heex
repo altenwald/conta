@@ -50,7 +50,11 @@
       {gettext("Running here never dispatches real commands — it only shows what would be generated.")}
     </p>
     <form phx-submit="test_run">
-      <.test_param_input :for={param <- @params_defs} param={param} />
+      <.test_param_input
+        :for={param <- @params_defs}
+        param={param}
+        value={get_in(@form_params, ["test_params", param.name])}
+      />
       <button type="submit" class="btn btn-secondary mt-2">{gettext("Run")}</button>
     </form>
 
