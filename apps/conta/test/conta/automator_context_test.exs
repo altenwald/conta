@@ -141,6 +141,20 @@ defmodule Conta.AutomatorContextTest do
       assert [{"amount", 150}] = result
     end
 
+    test "cast money param as decimal string (e.g. from a test-data form field)" do
+      params = [%Param{name: "amount", type: :money}]
+      shortcut = %Shortcut{params: params, code: "", language: :lua}
+      result = Automator.cast(shortcut, %{"amount" => "12.50"})
+      assert [{"amount", 1250}] = result
+    end
+
+    test "cast money param as invalid decimal string returns nil" do
+      params = [%Param{name: "amount", type: :money}]
+      shortcut = %Shortcut{params: params, code: "", language: :lua}
+      result = Automator.cast(shortcut, %{"amount" => "12.50.30"})
+      assert [{"amount", nil}] = result
+    end
+
     test "cast returns nil for missing money param" do
       params = [%Param{name: "amount", type: :money}]
       shortcut = %Shortcut{params: params, code: "", language: :lua}
@@ -203,6 +217,20 @@ defmodule Conta.AutomatorContextTest do
       result = Automator.cast(shortcut, %{"rows" => [[1, 2], [3, 4]]})
       assert [{"rows", [[1, 2], [3, 4]]}] = result
     end
+
+    test "cast table param defaults blank string to an empty table" do
+      params = [%Param{name: "rows", type: :table}]
+      shortcut = %Shortcut{params: params, code: "", language: :lua}
+      result = Automator.cast(shortcut, %{"rows" => ""})
+      assert [{"rows", []}] = result
+    end
+
+    test "cast table param defaults missing value to an empty table" do
+      params = [%Param{name: "rows", type: :table}]
+      shortcut = %Shortcut{params: params, code: "", language: :lua}
+      result = Automator.cast(shortcut, %{})
+      assert [{"rows", []}] = result
+    end
   end
 
   describe "new_set_filter/0 and new_set_shortcut/0" do
@@ -218,6 +246,20 @@ defmodule Conta.AutomatorContextTest do
       assert set_shortcut.automator == "automator"
       assert set_shortcut.language == :lua
       assert set_shortcut.params == []
+    end
+  end
+
+  describe "run_filter/3 — validate_params date check (params are not pre-cast here)" do
+    test "rejects a non-ISO8601 date instead of always accepting it" do
+      filter = %Conta.Projector.Automator.Filter{
+        params: [%Param{name: "date", type: :date}],
+        code: "return date",
+        language: :lua,
+        output: :json
+      }
+
+      assert {:error, %{"date" => ["is invalid"]}} =
+               Automator.run_filter("automator", filter, %{"date" => "not-a-date"})
     end
   end
 

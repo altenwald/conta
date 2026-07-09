@@ -334,7 +334,7 @@ defmodule Conta.Automator do
       is_struct(value, Date) ->
         validate_params(automator_params, params)
 
-      is_binary(value) and Date.from_iso8601(value) ->
+      is_binary(value) and match?({:ok, _date}, Date.from_iso8601(value)) ->
         validate_params(automator_params, params)
 
       :else ->
@@ -360,7 +360,13 @@ defmodule Conta.Automator do
   defp cast([], _params, acc), do: Enum.reverse(acc)
 
   defp cast([%Param{type: :table, name: name} | automator_params], params, acc) do
-    cast(automator_params, params, [{name, to_list(params[name])} | acc])
+    value =
+      case params[name] do
+        blank when blank in [nil, ""] -> []
+        other -> to_list(other)
+      end
+
+    cast(automator_params, params, [{name, value} | acc])
   end
 
   defp cast([%Param{type: :account_name, name: name} | automator_params], params, acc)
@@ -376,23 +382,12 @@ defmodule Conta.Automator do
     cast(automator_params, params, [{name, params[name]} | acc])
   end
 
-  defp cast([%Param{type: type, name: name} | automator_params], params, acc)
-       when type in [:money, :integer] do
-    value = params[name]
+  defp cast([%Param{type: :integer, name: name} | automator_params], params, acc) do
+    cast(automator_params, params, [{name, cast_integer(params[name])} | acc])
+  end
 
-    cond do
-      is_integer(value) ->
-        cast(automator_params, params, [{name, value} | acc])
-
-      is_float(value) ->
-        cast(automator_params, params, [{name, ceil(value * 100)} | acc])
-
-      is_binary(value) and match?({_, ""}, Integer.parse(value)) ->
-        cast(automator_params, params, [{name, String.to_integer(value)} | acc])
-
-      :else ->
-        cast(automator_params, params, [{name, nil} | acc])
-    end
+  defp cast([%Param{type: :money, name: name} | automator_params], params, acc) do
+    cast(automator_params, params, [{name, cast_money(params[name])} | acc])
   end
 
   defp cast([%Param{type: :currency, name: name} | automator_params], params, acc) do
@@ -422,6 +417,35 @@ defmodule Conta.Automator do
     case Date.from_iso8601(value) do
       {:ok, _date} -> cast(automator_params, params, [{name, value} | acc])
       {:error, _} -> cast(automator_params, params, [{name, nil} | acc])
+    end
+  end
+
+  defp cast_integer(value) do
+    cond do
+      is_integer(value) -> value
+      is_float(value) -> ceil(value * 100)
+      is_binary(value) and match?({_, ""}, Integer.parse(value)) -> String.to_integer(value)
+      :else -> nil
+    end
+  end
+
+  defp cast_money(value) do
+    cond do
+      is_integer(value) ->
+        value
+
+      is_float(value) ->
+        ceil(value * 100)
+
+      is_binary(value) and match?({_, ""}, Integer.parse(value)) ->
+        String.to_integer(value)
+
+      is_binary(value) and match?({_, ""}, Float.parse(value)) ->
+        {amount, ""} = Float.parse(value)
+        ceil(amount * 100)
+
+      :else ->
+        nil
     end
   end
 end

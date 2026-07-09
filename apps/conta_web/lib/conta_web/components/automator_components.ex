@@ -56,7 +56,7 @@ defmodule ContaWeb.AutomatorComponents do
   `ShortcutLive.Form` — one of these per parameter defined on the
   filter/shortcut being edited.
   """
-  attr :param, Conta.Projector.Automator.Param, required: true
+  attr :param, :any, required: true
 
   def test_param_input(assigns) do
     assigns = assign(assigns, :id, "test_params_#{assigns.param.name}")
