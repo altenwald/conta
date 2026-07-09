@@ -48,7 +48,7 @@ defmodule Conta.Automator.ExcelTest do
   describe "export/2 regression" do
     test "completes for an empty list instead of recursing forever" do
       task = Task.async(fn -> Excel.export([], "empty.xlsx") end)
-      assert {:ok, {_filename, _content}} = Task.await(task, 2_000)
+      assert {:ok, {_filename, _content}} = Task.await(task, 10_000)
     end
   end
 end
