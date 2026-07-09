@@ -96,5 +96,40 @@ defmodule ContaWeb.FilterLiveTest do
 
       assert html =~ "2"
     end
+
+    test "shows an HTML table when output is xlsx and the script returns row data", %{conn: conn, user: user} do
+      conn = log_in_user(conn, user)
+      {:ok, form_live, _html} = live(conn, ~p"/automation/filters/new")
+
+      code = ~S"""
+      return {{name = "Alice", amount = 100}, {name = "Bob", amount = 200}}
+      """
+
+      form_live
+      |> form("#filter-form", set_filter: %{name: "table filter", code: code, output: "xlsx"})
+      |> render_change()
+
+      html = form_live |> element("form[phx-submit=test_run]") |> render_submit()
+
+      assert html =~ "<table"
+      assert html =~ "Alice"
+      assert html =~ "Bob"
+      assert html =~ "amount"
+    end
+
+    test "falls back to raw JSON when output is xlsx but the result has no table shape", %{conn: conn, user: user} do
+      conn = log_in_user(conn, user)
+      {:ok, form_live, _html} = live(conn, ~p"/automation/filters/new")
+
+      form_live
+      |> form("#filter-form", set_filter: %{name: "scalar filter", code: "return 42", output: "xlsx"})
+      |> render_change()
+
+      html = form_live |> element("form[phx-submit=test_run]") |> render_submit()
+
+      refute html =~ "<table"
+      assert html =~ "42"
+      assert html =~ "table shape"
+    end
   end
 end

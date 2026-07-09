@@ -8,6 +8,7 @@ defmodule ContaWeb.FilterLive.Form do
   require Logger
 
   alias Conta.Automator
+  alias Conta.Automator.Excel
   alias Conta.Command.SetFilter
 
   @impl true
@@ -98,11 +99,12 @@ defmodule ContaWeb.FilterLive.Form do
     changeset = socket.assigns.form.source
     code = get_field(changeset, :code) || ""
     params_defs = get_field(changeset, :params) || []
+    output = get_field(changeset, :output)
     test_params = cast_test_params(params_defs, raw_test_params)
 
     result = Automator.test_run_filter(params_defs, code, test_params)
 
-    {:noreply, assign(socket, :test_result, format_test_result(result))}
+    {:noreply, assign(socket, :test_result, build_test_result(output, result))}
   end
 
   defp force_constants(params) do
@@ -151,8 +153,16 @@ defmodule ContaWeb.FilterLive.Form do
     end)
   end
 
-  defp format_test_result({:ok, result}), do: {:ok, Jason.encode!(result, pretty: true)}
-  defp format_test_result({:error, reason}), do: {:error, inspect(reason)}
+  defp build_test_result(_output, {:error, reason}), do: {:error, inspect(reason)}
+
+  defp build_test_result(:xlsx, {:ok, result}) do
+    case Excel.to_sheets(result) do
+      {:ok, sheets} -> {:table, sheets}
+      :error -> {:json_fallback, Jason.encode!(result, pretty: true)}
+    end
+  end
+
+  defp build_test_result(_output, {:ok, result}), do: {:json, Jason.encode!(result, pretty: true)}
 
   defp assign_form(socket, %Ecto.Changeset{} = changeset) do
     socket
