@@ -267,6 +267,80 @@ defmodule Conta.AutomatorContextTest do
     end
   end
 
+  describe "SetFilter.changeset/2 — sample_limit validation" do
+    test "rejects a negative sample_limit instead of letting it crash later" do
+      changeset =
+        Conta.Command.SetFilter.changeset(%Conta.Command.SetFilter{}, %{
+          name: "my filter",
+          automator: "automator",
+          output: "json",
+          code: "-- lua",
+          params: [%{name: "expenses", type: "table", sample_limit: -1}]
+        })
+
+      assert [param_changeset] = changeset.changes.params
+      assert %{sample_limit: ["must be greater than 0"]} = errors_on(param_changeset)
+    end
+
+    test "rejects a zero sample_limit" do
+      changeset =
+        Conta.Command.SetFilter.changeset(%Conta.Command.SetFilter{}, %{
+          name: "my filter",
+          automator: "automator",
+          output: "json",
+          code: "-- lua",
+          params: [%{name: "expenses", type: "table", sample_limit: 0}]
+        })
+
+      assert [param_changeset] = changeset.changes.params
+      assert %{sample_limit: ["must be greater than 0"]} = errors_on(param_changeset)
+    end
+
+    test "accepts a nil/absent sample_limit (no regression for existing table params)" do
+      changeset =
+        Conta.Command.SetFilter.changeset(%Conta.Command.SetFilter{}, %{
+          name: "my filter",
+          automator: "automator",
+          output: "json",
+          code: "-- lua",
+          params: [%{name: "expenses", type: "table"}]
+        })
+
+      assert changeset.valid?
+      assert [%Ecto.Changeset{valid?: true} = param_changeset] = changeset.changes.params
+      assert param_changeset.errors == []
+    end
+  end
+
+  describe "SetShortcut.changeset/2 — sample_limit validation" do
+    test "rejects a negative sample_limit instead of letting it crash later" do
+      changeset =
+        Conta.Command.SetShortcut.changeset(%Conta.Command.SetShortcut{}, %{
+          name: "my shortcut",
+          automator: "automator",
+          code: "-- lua",
+          params: [%{name: "expenses", type: "table", sample_limit: -1}]
+        })
+
+      assert [param_changeset] = changeset.changes.params
+      assert %{sample_limit: ["must be greater than 0"]} = errors_on(param_changeset)
+    end
+
+    test "accepts a nil/absent sample_limit (no regression for existing table params)" do
+      changeset =
+        Conta.Command.SetShortcut.changeset(%Conta.Command.SetShortcut{}, %{
+          name: "my shortcut",
+          automator: "automator",
+          code: "-- lua",
+          params: [%{name: "expenses", type: "table"}]
+        })
+
+      assert changeset.valid?
+      assert [%Ecto.Changeset{valid?: true} = param_changeset] = changeset.changes.params
+      assert param_changeset.errors == []
+    end
+  end
+
   describe "new_set_filter/0 and new_set_shortcut/0" do
     test "new_set_filter/0 defaults automator and language" do
       set_filter = Automator.new_set_filter()

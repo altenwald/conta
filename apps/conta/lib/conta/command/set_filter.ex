@@ -40,6 +40,7 @@ defmodule Conta.Command.SetFilter do
     model
     |> cast(params, @required_fields ++ @optional_fields)
     |> validate_required(@required_fields)
+    |> validate_number(:sample_limit, greater_than: 0)
   end
 
   def to_command(changeset) do

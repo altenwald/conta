@@ -33,6 +33,7 @@
                 type="number"
                 label={gettext("Sample size")}
                 value={p[:sample_limit].value || TableSources.default_sample_limit()}
+                min="1"
               />
             <% else %>
               <.input field={p[:options]} label={gettext("Options (comma separated)")} />
