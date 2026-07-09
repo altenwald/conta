@@ -146,5 +146,48 @@ defmodule ContaWeb.ShortcutLiveTest do
 
       assert html =~ "2023-00001"
     end
+
+    test "restricts the parameter name to known table sources when type is table", %{conn: conn, user: user} do
+      conn = log_in_user(conn, user)
+      {:ok, form_live, _html} = live(conn, ~p"/automation/shortcuts/new")
+
+      form_live |> element("button", "Add parameter") |> render_click()
+
+      html =
+        form_live
+        |> form("#shortcut-form", set_shortcut: %{params: %{"0" => %{"type" => "table"}}})
+        |> render_change()
+
+      assert html =~ ~s(<option value="expenses">Expenses</option>)
+      assert html =~ ~s(<option value="invoices">Invoices</option>)
+      assert html =~ "Sample size"
+    end
+
+    test "keeps the table select+sample-size UI when editing a sibling field on an already-saved table param",
+         %{conn: conn, user: user} do
+      shortcut =
+        insert(:shortcut, %{
+          params: [build(:shortcut_param, %{name: "expenses", type: :table, sample_limit: 5})]
+        })
+
+      conn = log_in_user(conn, user)
+      {:ok, form_live, _html} = live(conn, ~p"/automation/shortcuts/#{shortcut}/edit")
+
+      # Regression for an atom-vs-string bug: editing a *sibling* field
+      # (sample_limit here) without touching the `type` select itself must not
+      # flip `p[:type].value` back to a raw string that fails an atom comparison
+      # and silently reverts the row to the free-text Name/Options layout.
+      html =
+        form_live
+        |> form("#shortcut-form", set_shortcut: %{params: %{"0" => %{"sample_limit" => "8"}}})
+        |> render_change()
+
+      # "expenses" is already the persisted value here, so Phoenix.HTML's
+      # options_for_select/2 marks it with a `selected` attribute inserted
+      # before `value=`; match the stable tail instead of the full literal tag.
+      assert html =~ ~s(value="expenses">Expenses</option>)
+      assert html =~ ~s(<option value="invoices">Invoices</option>)
+      assert html =~ "Sample size"
+    end
   end
 end
