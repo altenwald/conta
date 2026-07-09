@@ -231,6 +231,12 @@ defmodule Conta.AutomatorContextTest do
       result = Automator.cast(shortcut, %{})
       assert [{"rows", []}] = result
     end
+
+    test "sample_limit survives Jason encoding of a Param (API detail response allowlist)" do
+      param = %Param{name: "expenses", type: :table, sample_limit: 7}
+
+      assert %{"sample_limit" => 7} = Jason.decode!(Jason.encode!(param))
+    end
   end
 
   describe "new_set_filter/0 and new_set_shortcut/0" do

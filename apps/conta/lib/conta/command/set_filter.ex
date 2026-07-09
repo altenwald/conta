@@ -15,6 +15,7 @@ defmodule Conta.Command.SetFilter do
       field :name, :string
       field :type, Ecto.Enum, values: ~w[string date integer money currency options account_name table]a
       field :options, {:array, :string}
+      field :sample_limit, :integer
     end
 
     field :code, :string
@@ -33,7 +34,7 @@ defmodule Conta.Command.SetFilter do
   end
 
   @required_fields ~w[name type]a
-  @optional_fields ~w[options]a
+  @optional_fields ~w[options sample_limit]a
 
   def changeset_params(model, params) do
     model

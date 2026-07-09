@@ -4,15 +4,16 @@ defmodule Conta.Projector.Automator.Param do
 
   @primary_key false
 
-  @derive {Jason.Encoder, only: ~w[name type options]a}
+  @derive {Jason.Encoder, only: ~w[name type options sample_limit]a}
   typed_embedded_schema do
     field :name, :string, primary_key: true
     field :type, Ecto.Enum, values: ~w[string date integer money currency options account_name table]a
     field :options, {:array, :string}
+    field :sample_limit, :integer
   end
 
   @required_fields ~w[name type]a
-  @optional_fields ~w[options]a
+  @optional_fields ~w[options sample_limit]a
 
   @doc false
   def changeset(model \\ %__MODULE__{}, params) do
