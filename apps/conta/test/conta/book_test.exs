@@ -53,6 +53,15 @@ defmodule Conta.BookTest do
       assert hd(result).invoice_number == "2023-00002"
     end
 
+    test "list_invoices_filtered/2 respects the limit" do
+      insert(:invoice, %{invoice_number: "2023-00001"})
+      insert(:invoice, %{invoice_number: "2023-00002"})
+      insert(:invoice, %{invoice_number: "2023-00003"})
+
+      assert length(Book.list_invoices_filtered([], 2)) == 2
+      assert length(Book.list_invoices_filtered([])) == 3
+    end
+
     test "get_invoice!/1 returns the invoice" do
       invoice = insert(:invoice)
       assert %Invoice{id: id} = Book.get_invoice!(invoice.id)

@@ -68,17 +68,21 @@ defmodule Conta.Book do
 
   defp by_status(query, ""), do: query
 
-  def list_invoices_filtered(filters) do
+  def list_invoices_filtered(filters, limit \\ :infinity) do
     from(i in Invoice, order_by: [desc: :invoice_number])
     |> filter(filters[:term], &by_term/2)
     |> filter(filters[:year], &by_year/2)
     |> filter(filters[:status], &by_status/2)
+    |> apply_limit(limit)
     |> Repo.all()
   end
 
   defp filter(query, nil, _f), do: query
 
   defp filter(query, value, f), do: f.(query, value)
+
+  defp apply_limit(query, :infinity), do: query
+  defp apply_limit(query, limit) when is_integer(limit), do: from(q in query, limit: ^limit)
 
   def list_simple_expenses_filtered(filters, limit \\ :infinity, offset \\ 0) do
     list_simple_expenses_query(limit, offset)
