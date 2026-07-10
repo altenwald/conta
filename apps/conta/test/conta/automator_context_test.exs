@@ -36,6 +36,7 @@ defmodule Conta.AutomatorContextTest do
       set_shortcut = Automator.get_set_shortcut(shortcut.id)
       assert set_shortcut.name == shortcut.name
       assert set_shortcut.code == shortcut.code
+      assert set_shortcut.description == shortcut.description
     end
 
     test "get_set_shortcut/1 returns nil for unknown id" do
@@ -115,6 +116,24 @@ defmodule Conta.AutomatorContextTest do
 
     test "get_set_filter/1 returns nil for unknown id" do
       assert nil == Automator.get_set_filter(Ecto.UUID.generate())
+    end
+
+    test "get_set_filter/1 carries description and type for editing" do
+      filter =
+        Repo.insert!(%Conta.Projector.Automator.Filter{
+          name: "invoice_filter",
+          automator: "automator",
+          code: "-- lua",
+          language: :lua,
+          output: :json,
+          type: :invoice,
+          description: "lists paid invoices"
+        })
+
+      set_filter = Automator.get_set_filter(filter.id)
+
+      assert set_filter.type == :invoice
+      assert set_filter.description == "lists paid invoices"
     end
 
     test "get_set_filter/1 carries sample_limit for a table param", %{filter: filter} do
@@ -257,6 +276,27 @@ defmodule Conta.AutomatorContextTest do
       params = [%Param{name: "rows", type: :table}]
       shortcut = %Shortcut{params: params, code: "", language: :lua}
       result = Automator.cast(shortcut, %{})
+      assert [{"rows", []}] = result
+    end
+
+    test "cast table param decodes a JSON-encoded string (e.g. a form-encoded API call)" do
+      params = [%Param{name: "rows", type: :table}]
+      shortcut = %Shortcut{params: params, code: "", language: :lua}
+      result = Automator.cast(shortcut, %{"rows" => ~S([{"a": 1}, {"a": 2}])})
+      assert [{"rows", [[{"a", 1}], [{"a", 2}]]}] = result
+    end
+
+    test "cast table param decodes an empty JSON array string to an empty table" do
+      params = [%Param{name: "rows", type: :table}]
+      shortcut = %Shortcut{params: params, code: "", language: :lua}
+      result = Automator.cast(shortcut, %{"rows" => "[]"})
+      assert [{"rows", []}] = result
+    end
+
+    test "cast table param defaults invalid JSON string to an empty table" do
+      params = [%Param{name: "rows", type: :table}]
+      shortcut = %Shortcut{params: params, code: "", language: :lua}
+      result = Automator.cast(shortcut, %{"rows" => "not json"})
       assert [{"rows", []}] = result
     end
 

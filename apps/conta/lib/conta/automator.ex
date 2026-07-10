@@ -77,6 +77,7 @@ defmodule Conta.Automator do
   def get_set_shortcut(%Shortcut{} = shortcut) do
     %SetShortcut{
       name: shortcut.name,
+      description: shortcut.description,
       automator: shortcut.automator,
       params:
         for %Param{} = shortcut_param <- shortcut.params do
@@ -101,6 +102,8 @@ defmodule Conta.Automator do
   def get_set_filter(%Filter{} = filter) do
     %SetFilter{
       name: filter.name,
+      type: filter.type,
+      description: filter.description,
       automator: filter.automator,
       output: filter.output,
       params:
@@ -365,7 +368,21 @@ defmodule Conta.Automator do
     value =
       case params[name] do
         blank when blank in [nil, ""] -> []
-        other -> to_list(other)
+        # A :table param carries arbitrary tabular data to transform, not a
+        # reference to one of the app's own data sources. Callers that can't
+        # send a native JSON array/object for it (e.g. a form-encoded POST)
+        # send it JSON-encoded as a single string field instead, same as the
+        # test-run panel's textarea, so it needs decoding here too - without
+        # this, the raw text (e.g. "[]") reached the Lua script as a plain
+        # string instead of an actual table.
+        json when is_binary(json) ->
+          case Jason.decode(json) do
+            {:ok, decoded} -> to_list(decoded)
+            {:error, _} -> []
+          end
+
+        other ->
+          to_list(other)
       end
 
     cast(automator_params, params, [{name, value} | acc])
