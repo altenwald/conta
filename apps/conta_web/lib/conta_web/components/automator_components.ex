@@ -6,8 +6,6 @@ defmodule ContaWeb.AutomatorComponents do
   use Phoenix.Component
   use Gettext, backend: ContaWeb.Gettext
 
-  import ContaWeb.AppComponents, only: [button: 1]
-
   @currencies Money.Currency.all() |> Map.keys() |> Enum.map(&to_string/1) |> Enum.sort()
 
   @doc """
@@ -116,17 +114,12 @@ defmodule ContaWeb.AutomatorComponents do
 
   defp render_control(%{param: %{type: :table}} = assigns) do
     ~H"""
-    <div class="flex gap-2 items-start">
-      <textarea
-        id={@id}
-        name={"test_params[#{@param.name}]"}
-        class="w-full textarea textarea-bordered"
-        rows="3"
-      ><%= @value %></textarea>
-      <.button type="button" phx-click="load_table_sample" phx-value-param={@param.name} class="btn-sm">
-        {gettext("Load real data")}
-      </.button>
-    </div>
+    <textarea
+      id={@id}
+      name={"test_params[#{@param.name}]"}
+      class="w-full textarea textarea-bordered"
+      rows="3"
+    ><%= @value %></textarea>
     """
   end
 

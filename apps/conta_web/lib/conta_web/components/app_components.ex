@@ -162,6 +162,35 @@ defmodule ContaWeb.AppComponents do
   end
 
   @doc """
+  Renders a button meant to sit next to `.input`/`.field` in the same form
+  row (e.g. a grid with `items-end`). Mirrors `.field`'s label + spacing
+  markup with a hidden label so the button's bottom edge lines up with the
+  fields around it instead of sitting lower.
+
+  ## Examples
+
+      <.button_inline phx-click="del_param" class="btn-error">
+        Remove
+      </.button_inline>
+  """
+  attr :class, :string, default: ""
+  attr :rest, :global, include: ~w(disabled form name value type)
+  slot :inner_block, required: true
+
+  def button_inline(assigns) do
+    ~H"""
+    <div class="form-control w-full mb-4">
+      <div class="label invisible" aria-hidden="true">
+        <span class="label-text font-semibold">&nbsp;</span>
+      </div>
+      <div class="mt-1 relative">
+        <.button class={"w-full " <> @class} {@rest}>{render_slot(@inner_block)}</.button>
+      </div>
+    </div>
+    """
+  end
+
+  @doc """
   Renders a modal.
 
   ## Examples

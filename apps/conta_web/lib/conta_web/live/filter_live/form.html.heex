@@ -60,9 +60,9 @@
             <% else %>
               <.input field={p[:options]} label={gettext("Options (comma separated)")} />
             <% end %>
-            <.button type="button" phx-click="del_param" phx-value-index={p.index} class="btn-sm btn-error">
+            <.button_inline type="button" phx-click="del_param" phx-value-index={p.index} class="btn-error">
               {gettext("Remove")}
-            </.button>
+            </.button_inline>
           </div>
         </.inputs_for>
       </div>
@@ -88,7 +88,20 @@
         param={param}
         value={@loaded_samples[param.name]}
       />
-      <button type="submit" class="btn btn-secondary mt-2">{gettext("Run")}</button>
+      <div class="flex flex-wrap items-center gap-2 mt-2">
+        <button type="submit" class="btn btn-primary">{gettext("Run")}</button>
+        <.button
+          :for={param <- @params_defs}
+          :if={param.type == :table}
+          type="button"
+          phx-click="load_table_sample"
+          phx-value-param={param.name}
+          phx-disable-with={gettext("Loading...")}
+          class="btn-info"
+        >
+          {gettext("Load real data")} ({param.name})
+        </.button>
+      </div>
     </form>
 
     <div :if={@test_result} class="mt-4">
