@@ -110,7 +110,7 @@ defmodule ContaWeb.FilterLive.Form do
 
   def handle_event("load_table_sample", %{"param" => name}, socket) do
     param = Enum.find(socket.assigns.params_defs, &(&1.name == name))
-    limit = (param && param.sample_limit) || TableSources.default_sample_limit()
+    limit = max((param && param.sample_limit) || TableSources.default_sample_limit(), 1)
 
     case TableSources.sample(name, limit) do
       {:error, :unknown_source} ->
@@ -119,6 +119,17 @@ defmodule ContaWeb.FilterLive.Form do
       sample ->
         json = Jason.encode!(sample, pretty: true)
         {:noreply, assign(socket, :loaded_samples, Map.put(socket.assigns.loaded_samples, name, json))}
+    end
+  end
+
+  defp table_name_options(current_name) do
+    known = TableSources.options()
+    current = to_string(current_name)
+
+    if current == "" or Enum.any?(known, fn {_label, value} -> value == current end) do
+      known
+    else
+      known ++ [{current, current}]
     end
   end
 

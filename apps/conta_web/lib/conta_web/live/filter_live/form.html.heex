@@ -39,7 +39,12 @@
         <.inputs_for :let={p} field={@form[:params]}>
           <div class="grid grid-cols-[1fr_1fr_1fr_auto] gap-2 items-end mb-2">
             <%= if to_string(p[:type].value) == "table" do %>
-              <.input field={p[:name]} type="select" label={gettext("Name")} options={TableSources.options()} />
+              <.input
+                field={p[:name]}
+                type="select"
+                label={gettext("Name")}
+                options={table_name_options(p[:name].value)}
+              />
             <% else %>
               <.input field={p[:name]} label={gettext("Name")} />
             <% end %>

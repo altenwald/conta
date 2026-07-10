@@ -243,5 +243,61 @@ defmodule ContaWeb.FilterLiveTest do
       assert html =~ ~s(<option value="invoices">Invoices</option>)
       assert html =~ "Sample size"
     end
+
+    test "does not crash Load real data when sample_limit is set to a non-positive value",
+         %{conn: conn, user: user} do
+      BookFixtures.insert(:invoice, %{invoice_number: "2023-00001"})
+      conn = log_in_user(conn, user)
+      {:ok, form_live, _html} = live(conn, ~p"/automation/filters/new")
+
+      form_live
+      |> form("#filter-form", set_filter: %{name: "invoice filter", output: "json"})
+      |> render_change()
+
+      form_live |> element("button", "Add parameter") |> render_click()
+
+      form_live
+      |> form("#filter-form", set_filter: %{params: %{"0" => %{"name" => "invoices", "type" => "table"}}})
+      |> render_change()
+
+      form_live
+      |> form("#filter-form", set_filter: %{params: %{"0" => %{"sample_limit" => "-1"}}})
+      |> render_change()
+
+      html = form_live |> element(~s(button[phx-click="load_table_sample"])) |> render_click()
+
+      assert Process.alive?(form_live.pid)
+      assert html =~ "2023-00001"
+    end
+
+    test "keeps the persisted name of a table param that is not in the known table sources",
+         %{conn: conn, user: user} do
+      filter =
+        insert(:filter, %{
+          params: [build(:filter_param, %{name: "custom_data", type: :table, sample_limit: 5})]
+        })
+
+      conn = log_in_user(conn, user)
+      {:ok, form_live, html} = live(conn, ~p"/automation/filters/#{filter}/edit")
+
+      # "custom_data" is already the persisted value here, so Phoenix.HTML's
+      # options_for_select/2 marks it with a `selected` attribute inserted
+      # before `value=`; match the stable tail instead of the full literal tag.
+      assert html =~ ~s(value="custom_data">custom_data</option>)
+      assert html =~ ~s(<option value="expenses">Expenses</option>)
+      assert html =~ ~s(<option value="invoices">Invoices</option>)
+
+      result =
+        form_live
+        |> form("#filter-form", set_filter: %{description: "updated description"})
+        |> render_submit()
+
+      wait_for_event(Conta.Commanded.Application, Conta.Event.FilterSet)
+
+      {:ok, _index_live, _html} = follow_redirect(result, conn, ~p"/automation/filters")
+
+      updated_filter = Automator.get_filter(filter.id)
+      assert Enum.any?(updated_filter.params, &(&1.name == "custom_data"))
+    end
   end
 end
