@@ -4,16 +4,19 @@ defmodule Conta.Automator.Lua do
   Record.defrecordp(:luerl, Record.extract(:luerl, from_lib: "luerl/include/luerl.hrl"))
 
   defp process_data({:ok, [data], _state}), do: process_data(data, "")
-  defp process_data({:ok, [], _state}), do: nil
+  defp process_data({:ok, [], _state}), do: :no_return
 
-  defp process_data({:error, [{_, _, {reason, _}}], _}), do: {:error, nil, reason}
-  defp process_data({:error, [{_, _, reason}], _}), do: {:error, nil, reason}
+  defp process_data({:error, errors, _warnings}) when is_list(errors) do
+    message = errors |> Enum.map(&format_compile_error/1) |> Enum.join("; ")
+    {:error, message}
+  end
 
   defp process_data({:lua_error, reason, state}) do
     {:current_line, line, _file} =
       List.keyfind(luerl(state, :cs), :current_line, 0) || {:current_line, nil, nil}
 
-    {:error, line, reason}
+    message = format_runtime_error(reason)
+    {:error, if(line, do: "line #{line}: #{message}", else: message)}
   end
 
   defp process_data(data, key) do
@@ -32,6 +35,20 @@ defmodule Conta.Automator.Lua do
     end
   end
 
+  defp format_compile_error({line, module, reason}) do
+    "line #{line}: #{iodata_to_string(module.format_error(reason))}"
+  rescue
+    _ -> "line #{line}: #{inspect(reason)}"
+  end
+
+  defp format_runtime_error(reason) do
+    iodata_to_string(:luerl_lib.format_error(reason))
+  rescue
+    _ -> inspect(reason)
+  end
+
+  defp iodata_to_string(iodata), do: IO.iodata_to_binary(iodata)
+
   def run(code, params) do
     # `set_table_keys_dec` handles translation of Erlang to Lua types automatically
     params
@@ -42,9 +59,11 @@ defmodule Conta.Automator.Lua do
     |> then(&:luerl.do_dec(code, &1))
     |> process_data()
     |> case do
-      {:error, line, reason} ->
-        line_info = if line, do: "line #{line} ", else: ""
-        {:error, "#{line_info}error #{inspect(reason)}"}
+      {:error, message} ->
+        {:error, message}
+
+      :no_return ->
+        {:error, "the script finished without returning a value (missing a `return` statement?)"}
 
       result ->
         {:ok, result}

@@ -179,6 +179,7 @@ defmodule ContaWeb.FilterLive.Form do
     end)
   end
 
+  defp build_test_result(_output, {:error, reason}) when is_binary(reason), do: {:error, reason}
   defp build_test_result(_output, {:error, reason}), do: {:error, inspect(reason)}
 
   defp build_test_result(:xlsx, {:ok, result}) do

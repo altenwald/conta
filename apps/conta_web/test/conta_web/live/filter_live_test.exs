@@ -98,6 +98,42 @@ defmodule ContaWeb.FilterLiveTest do
       assert html =~ "2"
     end
 
+    test "shows a readable error instead of silently falling back to JSON when the Lua code is invalid", %{
+      conn: conn,
+      user: user
+    } do
+      conn = log_in_user(conn, user)
+      {:ok, form_live, _html} = live(conn, ~p"/automation/filters/new")
+
+      form_live
+      |> form("#filter-form", set_filter: %{name: "broken filter", code: "return 1 +", output: "json"})
+      |> render_change()
+
+      html = form_live |> element("form[phx-submit=test_run]") |> render_submit()
+
+      assert html =~ "Error"
+      assert html =~ "syntax error"
+      refute html =~ "null"
+    end
+
+    test "shows an error instead of silently returning null when the script has no return statement", %{
+      conn: conn,
+      user: user
+    } do
+      conn = log_in_user(conn, user)
+      {:ok, form_live, _html} = live(conn, ~p"/automation/filters/new")
+
+      form_live
+      |> form("#filter-form", set_filter: %{name: "no return filter", code: "local x = 1", output: "json"})
+      |> render_change()
+
+      html = form_live |> element("form[phx-submit=test_run]") |> render_submit()
+
+      assert html =~ "Error"
+      assert html =~ "return"
+      refute html =~ "null"
+    end
+
     test "shows an HTML table when output is xlsx and the script returns row data", %{conn: conn, user: user} do
       conn = log_in_user(conn, user)
       {:ok, form_live, _html} = live(conn, ~p"/automation/filters/new")

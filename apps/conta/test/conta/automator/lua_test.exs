@@ -15,8 +15,13 @@ defmodule Conta.Automator.LuaTest do
       assert {:ok, "Hello, world"} = Lua.run(script, %{"name" => "world"})
     end
 
-    test "returns nil correctly when nothing is returned" do
-      assert {:ok, nil} = Lua.run("a = 1", %{})
+    test "returns ok with nil when nil is explicitly returned" do
+      assert {:ok, nil} = Lua.run("return nil", %{})
+    end
+
+    test "reports an error when nothing is returned" do
+      assert {:error, msg} = Lua.run("a = 1", %{})
+      assert msg =~ "return"
     end
 
     test "handles syntax errors" do
@@ -26,8 +31,7 @@ defmodule Conta.Automator.LuaTest do
 
     test "handles runtime errors gracefully" do
       {:error, msg} = Lua.run("return a + b", %{})
-      assert msg =~ "error"
-      assert msg =~ "badarith"
+      assert msg =~ "bad arithmetic"
     end
 
     test "processes nested structures" do

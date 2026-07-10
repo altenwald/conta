@@ -178,6 +178,7 @@ defmodule ContaWeb.ShortcutLive.Form do
   end
 
   defp format_test_result({:ok, result}), do: {:ok, Jason.encode!(result, pretty: true)}
+  defp format_test_result({:error, reason}) when is_binary(reason), do: {:error, reason}
   defp format_test_result({:error, reason}), do: {:error, inspect(reason)}
 
   defp assign_form(socket, %Ecto.Changeset{} = changeset) do
