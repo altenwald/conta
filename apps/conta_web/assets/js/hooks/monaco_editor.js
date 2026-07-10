@@ -33,31 +33,23 @@ const MonacoEditor = {
       minimap: { enabled: false },
     });
 
-    this.debounceTimer = null;
-
-    // Debounce sync to the hidden input so we don't flood the DOM/LiveView on
-    // every keystroke; dispatching a native "input" event (rather than
-    // pushEvent) keeps the value in sync with the surrounding <form>'s normal
-    // submit/validate flow without adding a LiveView round-trip.
-    this.editor.onDidChangeModelContent(() => {
-      clearTimeout(this.debounceTimer);
-      this.debounceTimer = setTimeout(() => {
-        this.hiddenInput.value = this.editor.getValue();
-        this.hiddenInput.dispatchEvent(new Event("input", { bubbles: true }));
-      }, 300);
-    });
-
-    // Flush immediately on blur so a fast click on Save/Run (which blurs the
-    // editor before the click handler runs) never submits a stale value.
+    // Sync to the hidden input only on blur, not on every keystroke. A
+    // native "input" event bubbles into the surrounding <form>'s
+    // phx-change="validate", which re-renders the page while the editor
+    // still has focus. Even though the editor's own container is
+    // phx-update="ignore", that re-render of its siblings was enough to
+    // corrupt Monaco's internal selection/keyboard state on macOS Chrome:
+    // selecting text and pressing Delete/Backspace would silently stop
+    // working (sometimes for the rest of the page's lifetime). Clicking
+    // Save/Run always blurs the editor first, so the hidden input is
+    // never stale at submit time.
     this.editor.onDidBlurEditorWidget(() => {
-      clearTimeout(this.debounceTimer);
       this.hiddenInput.value = this.editor.getValue();
       this.hiddenInput.dispatchEvent(new Event("input", { bubbles: true }));
     });
   },
 
   destroyed() {
-    clearTimeout(this.debounceTimer);
     this.editor?.dispose();
   },
 };
