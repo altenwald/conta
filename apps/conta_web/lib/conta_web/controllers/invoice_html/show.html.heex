@@ -2,7 +2,7 @@
   <%= if @invoice.template do %>
     <%= if assigns[:embedded] do %>
       <style type="text/css">
-        <%= @template.css %>
+        <%= raw(@template.css) %>
       </style>
     <% else %>
       <link phx-track-static rel="stylesheet" href={~p"/books/invoices/#{@invoice.id}/css"} />

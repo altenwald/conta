@@ -7,7 +7,7 @@
     <title>{@invoice.invoice_number}</title>
     <%= if assigns[:embedded] do %>
       <style type="text/css">
-        <%= File.read!(Application.app_dir(:conta_web) <> "/priv/static/assets/app.css") %>
+        <%= raw(File.read!(Application.app_dir(:conta_web) <> "/priv/static/assets/app.css")) %>
       </style>
     <% else %>
       <link rel="stylesheet" type="text/css" href={url(~p"/assets/app.css")} />
