@@ -21,31 +21,16 @@
 
         <.inputs_for :let={p} field={@form[:params]}>
           <div class="grid grid-cols-[1fr_1fr_1fr_auto] gap-2 items-end mb-2">
-            <%= if to_string(p[:type].value) == "table" do %>
-              <.input
-                field={p[:name]}
-                type="select"
-                label={gettext("Name")}
-                options={table_name_options(p[:name].value)}
-              />
-            <% else %>
-              <.input field={p[:name]} label={gettext("Name")} />
-            <% end %>
+            <.input field={p[:name]} label={gettext("Name")} />
             <.input field={p[:type]} type="select" label={gettext("Type")} options={param_type_options()} />
             <%= if to_string(p[:type].value) == "table" do %>
-              <.input
-                field={p[:sample_limit]}
-                type="number"
-                label={gettext("Sample size")}
-                value={p[:sample_limit].value || TableSources.default_sample_limit()}
-                min="1"
-              />
+              <div></div>
             <% else %>
               <.input field={p[:options]} label={gettext("Options (comma separated)")} />
             <% end %>
-            <.button type="button" phx-click="del_param" phx-value-index={p.index} class="btn-sm btn-error">
+            <.button_inline type="button" phx-click="del_param" phx-value-index={p.index} class="btn-error">
               {gettext("Remove")}
-            </.button>
+            </.button_inline>
           </div>
         </.inputs_for>
       </div>
@@ -76,17 +61,6 @@
       />
       <div class="flex flex-wrap items-center gap-2 mt-2">
         <button type="submit" class="btn btn-primary">{gettext("Run")}</button>
-        <.button
-          :for={param <- @params_defs}
-          :if={param.type == :table}
-          type="button"
-          phx-click="load_table_sample"
-          phx-value-param={param.name}
-          phx-disable-with={gettext("Loading...")}
-          class="btn-info"
-        >
-          {gettext("Load real data")} ({param.name})
-        </.button>
       </div>
     </form>
 
