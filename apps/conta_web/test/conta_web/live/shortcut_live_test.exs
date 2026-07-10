@@ -8,7 +8,6 @@ defmodule ContaWeb.ShortcutLiveTest do
 
   alias Conta.Automator
   alias Conta.AccountsFixtures
-  alias Conta.BookFixtures
 
   setup do
     user = AccountsFixtures.insert(:user) |> AccountsFixtures.confirm_user()
@@ -85,6 +84,27 @@ defmodule ContaWeb.ShortcutLiveTest do
       assert html =~ "new name"
     end
 
+    test "keeps existing params when clicking Add parameter as the first action on an edit page",
+         %{conn: conn, user: user} do
+      shortcut =
+        insert(:shortcut, %{
+          params: [
+            build(:shortcut_param, %{name: "first", type: :string}),
+            build(:shortcut_param, %{name: "second", type: :integer})
+          ]
+        })
+
+      conn = log_in_user(conn, user)
+      {:ok, form_live, _html} = live(conn, ~p"/automation/shortcuts/#{shortcut}/edit")
+
+      html = form_live |> element("button", "Add parameter") |> render_click()
+
+      assert html =~ ~s(value="first")
+      assert html =~ ~s(value="second")
+      # the newly added third, empty param
+      assert html =~ ~s(name="set_shortcut[params][2][name]")
+    end
+
     test "test-runs the Lua code and shows the commands without dispatching them", %{conn: conn, user: user} do
       conn = log_in_user(conn, user)
       {:ok, form_live, _html} = live(conn, ~p"/automation/shortcuts/new")
@@ -101,53 +121,12 @@ defmodule ContaWeb.ShortcutLiveTest do
       assert html =~ "foo"
     end
 
-    test "loads a real data sample for a table param", %{conn: conn, user: user} do
-      BookFixtures.insert(:invoice, %{invoice_number: "2023-00001"})
-      conn = log_in_user(conn, user)
-      {:ok, form_live, _html} = live(conn, ~p"/automation/shortcuts/new")
-
-      form_live
-      |> form("#shortcut-form", set_shortcut: %{name: "invoice shortcut"})
-      |> render_change()
-
-      form_live |> element("button", "Add parameter") |> render_click()
-
-      form_live
-      |> form("#shortcut-form", set_shortcut: %{params: %{"0" => %{"name" => "invoices", "type" => "table"}}})
-      |> render_change()
-
-      html = form_live |> element(~s(button[phx-click="load_table_sample"])) |> render_click()
-
-      assert html =~ "2023-00001"
-    end
-
-    test "keeps a loaded real data sample after an unrelated form change", %{conn: conn, user: user} do
-      BookFixtures.insert(:invoice, %{invoice_number: "2023-00001"})
-      conn = log_in_user(conn, user)
-      {:ok, form_live, _html} = live(conn, ~p"/automation/shortcuts/new")
-
-      form_live
-      |> form("#shortcut-form", set_shortcut: %{name: "invoice shortcut"})
-      |> render_change()
-
-      form_live |> element("button", "Add parameter") |> render_click()
-
-      form_live
-      |> form("#shortcut-form", set_shortcut: %{params: %{"0" => %{"name" => "invoices", "type" => "table"}}})
-      |> render_change()
-
-      html = form_live |> element(~s(button[phx-click="load_table_sample"])) |> render_click()
-      assert html =~ "2023-00001"
-
-      html =
-        form_live
-        |> form("#shortcut-form", set_shortcut: %{description: "updated"})
-        |> render_change()
-
-      assert html =~ "2023-00001"
-    end
-
-    test "restricts the parameter name to known table sources when type is table", %{conn: conn, user: user} do
+    test "table params use a plain free-text Name field, not a table-sources dropdown", %{conn: conn, user: user} do
+      # Unlike Filters, a Shortcut's :table param isn't a reference to one of
+      # the app's registered TableSources - it's arbitrary JSON tabular data
+      # the caller provides for the script to transform. The param editor
+      # must not restrict/rewrite its name, offer a table-sources dropdown, a
+      # sample-size field, or a "Load real data" button.
       conn = log_in_user(conn, user)
       {:ok, form_live, _html} = live(conn, ~p"/automation/shortcuts/new")
 
@@ -155,95 +134,79 @@ defmodule ContaWeb.ShortcutLiveTest do
 
       html =
         form_live
-        |> form("#shortcut-form", set_shortcut: %{params: %{"0" => %{"type" => "table"}}})
+        |> form("#shortcut-form", set_shortcut: %{params: %{"0" => %{"name" => "any_name", "type" => "table"}}})
         |> render_change()
 
-      assert html =~ ~s(<option value="expenses">Expenses</option>)
-      assert html =~ ~s(<option value="invoices">Invoices</option>)
-      assert html =~ "Sample size"
+      refute html =~ ~s(<option value="expenses">Expenses</option>)
+      refute html =~ ~s(<option value="invoices">Invoices</option>)
+      refute html =~ "Sample size"
+      refute html =~ "Load real data"
+      assert html =~ ~s(value="any_name")
     end
 
-    test "keeps the table select+sample-size UI when editing a sibling field on an already-saved table param",
-         %{conn: conn, user: user} do
+    test "test-runs a table param's raw JSON test data through the script", %{conn: conn, user: user} do
+      conn = log_in_user(conn, user)
+      {:ok, form_live, _html} = live(conn, ~p"/automation/shortcuts/new")
+
+      form_live |> element("button", "Add parameter") |> render_click()
+
+      code = ~S"""
+      local total = 0
+      for _, row in ipairs(rows) do
+        total = total + row.amount
+      end
+      return {status = "ok", commands = {{type = "total", data = {total = total}}}}
+      """
+
+      form_live
+      |> form("#shortcut-form",
+        set_shortcut: %{name: "sum rows", code: code, params: %{"0" => %{"name" => "rows", "type" => "table"}}}
+      )
+      |> render_change()
+
+      html =
+        form_live
+        |> element("form[phx-submit=test_run]")
+        |> render_submit(%{"test_params" => %{"rows" => ~S([{"amount": 10}, {"amount": 5}])}})
+
+      assert html =~ "total"
+      assert html =~ "15"
+    end
+
+    test "shows Options only for type options, joined with commas", %{conn: conn, user: user} do
       shortcut =
         insert(:shortcut, %{
-          params: [build(:shortcut_param, %{name: "expenses", type: :table, sample_limit: 5})]
-        })
-
-      conn = log_in_user(conn, user)
-      {:ok, form_live, _html} = live(conn, ~p"/automation/shortcuts/#{shortcut}/edit")
-
-      # Regression for an atom-vs-string bug: editing a *sibling* field
-      # (sample_limit here) without touching the `type` select itself must not
-      # flip `p[:type].value` back to a raw string that fails an atom comparison
-      # and silently reverts the row to the free-text Name/Options layout.
-      html =
-        form_live
-        |> form("#shortcut-form", set_shortcut: %{params: %{"0" => %{"sample_limit" => "8"}}})
-        |> render_change()
-
-      # "expenses" is already the persisted value here, so Phoenix.HTML's
-      # options_for_select/2 marks it with a `selected` attribute inserted
-      # before `value=`; match the stable tail instead of the full literal tag.
-      assert html =~ ~s(value="expenses">Expenses</option>)
-      assert html =~ ~s(<option value="invoices">Invoices</option>)
-      assert html =~ "Sample size"
-    end
-
-    test "does not crash Load real data when sample_limit is set to a non-positive value",
-         %{conn: conn, user: user} do
-      BookFixtures.insert(:invoice, %{invoice_number: "2023-00001"})
-      conn = log_in_user(conn, user)
-      {:ok, form_live, _html} = live(conn, ~p"/automation/shortcuts/new")
-
-      form_live
-      |> form("#shortcut-form", set_shortcut: %{name: "invoice shortcut"})
-      |> render_change()
-
-      form_live |> element("button", "Add parameter") |> render_click()
-
-      form_live
-      |> form("#shortcut-form", set_shortcut: %{params: %{"0" => %{"name" => "invoices", "type" => "table"}}})
-      |> render_change()
-
-      form_live
-      |> form("#shortcut-form", set_shortcut: %{params: %{"0" => %{"sample_limit" => "-1"}}})
-      |> render_change()
-
-      html = form_live |> element(~s(button[phx-click="load_table_sample"])) |> render_click()
-
-      assert Process.alive?(form_live.pid)
-      assert html =~ "2023-00001"
-    end
-
-    test "keeps the persisted name of a table param that is not in the known table sources",
-         %{conn: conn, user: user} do
-      shortcut =
-        insert(:shortcut, %{
-          params: [build(:shortcut_param, %{name: "custom_data", type: :table, sample_limit: 5})]
+          params: [build(:shortcut_param, %{name: "choice", type: :options, options: ["a", "b", "c"]})]
         })
 
       conn = log_in_user(conn, user)
       {:ok, form_live, html} = live(conn, ~p"/automation/shortcuts/#{shortcut}/edit")
 
-      # "custom_data" is already the persisted value here, so Phoenix.HTML's
-      # options_for_select/2 marks it with a `selected` attribute inserted
-      # before `value=`; match the stable tail instead of the full literal tag.
-      assert html =~ ~s(value="custom_data">custom_data</option>)
-      assert html =~ ~s(<option value="expenses">Expenses</option>)
-      assert html =~ ~s(<option value="invoices">Invoices</option>)
+      assert html =~ "Options (comma separated)"
+      assert html =~ ~s(value="a, b, c")
 
-      result =
+      # The changeset normalizes this field back into a list on every
+      # phx-change; a sibling field changing must not corrupt the joined text.
+      html =
         form_live
-        |> form("#shortcut-form", set_shortcut: %{description: "updated description"})
-        |> render_submit()
+        |> form("#shortcut-form", set_shortcut: %{description: "updated"})
+        |> render_change()
 
-      wait_for_event(Conta.Commanded.Application, Conta.Event.ShortcutSet)
+      assert html =~ ~s(value="a, b, c")
+    end
 
-      {:ok, _index_live, _html} = follow_redirect(result, conn, ~p"/automation/shortcuts")
+    test "hides Options for non-options param types", %{conn: conn, user: user} do
+      conn = log_in_user(conn, user)
+      {:ok, form_live, _html} = live(conn, ~p"/automation/shortcuts/new")
 
-      updated_shortcut = Automator.get_shortcut(shortcut.id)
-      assert Enum.any?(updated_shortcut.params, &(&1.name == "custom_data"))
+      form_live |> element("button", "Add parameter") |> render_click()
+
+      html =
+        form_live
+        |> form("#shortcut-form", set_shortcut: %{params: %{"0" => %{"type" => "string"}}})
+        |> render_change()
+
+      refute html =~ "Options (comma separated)"
     end
   end
 end

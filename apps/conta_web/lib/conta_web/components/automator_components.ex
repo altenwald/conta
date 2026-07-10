@@ -16,11 +16,11 @@ defmodule ContaWeb.AutomatorComponents do
   through the hidden input via the `MonacoEditor` JS hook.
   """
   attr :field, Phoenix.HTML.FormField, required: true
-  attr :height, :string, default: "420px"
+  attr :height, :string, default: "420px", doc: "minimum height; grows to fill a flex parent"
 
   def monaco_editor(assigns) do
     ~H"""
-    <div class="fieldset mb-2">
+    <div class="fieldset mb-2 flex flex-col flex-1 min-h-0">
       <span class="label mb-1">{gettext("Code (Lua)")}</span>
       <div
         id={"#{@field.id}-editor"}
@@ -28,13 +28,24 @@ defmodule ContaWeb.AutomatorComponents do
         phx-update="ignore"
         data-target={@field.id}
         data-value={@field.value}
-        style={"height: #{@height}; border: 1px solid oklch(var(--bc)/0.2);"}
+        style={"flex: 1; min-height: #{@height}; border: 1px solid oklch(var(--bc)/0.2);"}
       >
       </div>
       <input type="text" class="hidden" id={@field.id} name={@field.name} value={@field.value} />
     </div>
     """
   end
+
+  @doc """
+  Renders the value of a param's `:options` field as comma-separated text.
+
+  The changeset normalizes this field back into a list on every
+  `phx-change`, so the raw list would otherwise reach the text input as-is
+  and, since a list of binaries is valid iodata, render with no separator
+  at all between entries.
+  """
+  def options_value(value) when is_list(value), do: Enum.join(value, ", ")
+  def options_value(value), do: value
 
   @doc "The `Param.type` choices shared by the params-definition editor."
   def param_type_options do

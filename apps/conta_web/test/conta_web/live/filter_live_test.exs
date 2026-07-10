@@ -85,6 +85,27 @@ defmodule ContaWeb.FilterLiveTest do
       assert html =~ "new name"
     end
 
+    test "keeps existing params when clicking Add parameter as the first action on an edit page",
+         %{conn: conn, user: user} do
+      filter =
+        insert(:filter, %{
+          params: [
+            build(:filter_param, %{name: "first", type: :string}),
+            build(:filter_param, %{name: "second", type: :integer})
+          ]
+        })
+
+      conn = log_in_user(conn, user)
+      {:ok, form_live, _html} = live(conn, ~p"/automation/filters/#{filter}/edit")
+
+      html = form_live |> element("button", "Add parameter") |> render_click()
+
+      assert html =~ ~s(value="first")
+      assert html =~ ~s(value="second")
+      # the newly added third, empty param
+      assert html =~ ~s(name="set_filter[params][2][name]")
+    end
+
     test "test-runs the Lua code without dispatching anything", %{conn: conn, user: user} do
       conn = log_in_user(conn, user)
       {:ok, form_live, _html} = live(conn, ~p"/automation/filters/new")
@@ -334,6 +355,42 @@ defmodule ContaWeb.FilterLiveTest do
 
       updated_filter = Automator.get_filter(filter.id)
       assert Enum.any?(updated_filter.params, &(&1.name == "custom_data"))
+    end
+
+    test "shows Options only for type options, joined with commas", %{conn: conn, user: user} do
+      filter =
+        insert(:filter, %{
+          params: [build(:filter_param, %{name: "choice", type: :options, options: ["a", "b", "c"]})]
+        })
+
+      conn = log_in_user(conn, user)
+      {:ok, form_live, html} = live(conn, ~p"/automation/filters/#{filter}/edit")
+
+      assert html =~ "Options (comma separated)"
+      assert html =~ ~s(value="a, b, c")
+
+      # The changeset normalizes this field back into a list on every
+      # phx-change; a sibling field changing must not corrupt the joined text.
+      html =
+        form_live
+        |> form("#filter-form", set_filter: %{description: "updated"})
+        |> render_change()
+
+      assert html =~ ~s(value="a, b, c")
+    end
+
+    test "hides Options for non-options, non-table param types", %{conn: conn, user: user} do
+      conn = log_in_user(conn, user)
+      {:ok, form_live, _html} = live(conn, ~p"/automation/filters/new")
+
+      form_live |> element("button", "Add parameter") |> render_click()
+
+      html =
+        form_live
+        |> form("#filter-form", set_filter: %{params: %{"0" => %{"type" => "string"}}})
+        |> render_change()
+
+      refute html =~ "Options (comma separated)"
     end
   end
 end

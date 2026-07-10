@@ -8,7 +8,6 @@ defmodule ContaWeb.ShortcutLive.Form do
   require Logger
 
   alias Conta.Automator
-  alias Conta.Automator.TableSources
   alias Conta.Command.SetShortcut
 
   @impl true
@@ -33,12 +32,13 @@ defmodule ContaWeb.ShortcutLive.Form do
 
   defp apply_action(socket, :edit, %{"id" => id}) do
     set_shortcut = Automator.get_set_shortcut(id)
+    changeset = SetShortcut.changeset(set_shortcut, %{})
 
     socket
     |> assign(:page_title, gettext("Edit Shortcut"))
     |> assign(:set_shortcut, set_shortcut)
-    |> assign(:form_params, %{})
-    |> assign_form(SetShortcut.changeset(set_shortcut, %{}))
+    |> assign(:form_params, %{"params" => params_to_form_params(get_field(changeset, :params) || [])})
+    |> assign_form(changeset)
   end
 
   @impl true
@@ -106,29 +106,24 @@ defmodule ContaWeb.ShortcutLive.Form do
     {:noreply, assign(socket, :test_result, format_test_result(result))}
   end
 
-  def handle_event("load_table_sample", %{"param" => name}, socket) do
-    param = Enum.find(socket.assigns.params_defs, &(&1.name == name))
-    limit = max((param && param.sample_limit) || TableSources.default_sample_limit(), 1)
-
-    case TableSources.sample(name, limit) do
-      {:error, :unknown_source} ->
-        {:noreply, put_flash(socket, :error, gettext("Unknown data source"))}
-
-      sample ->
-        json = Jason.encode!(sample, pretty: true)
-        {:noreply, assign(socket, :loaded_samples, Map.put(socket.assigns.loaded_samples, name, json))}
-    end
-  end
-
-  defp table_name_options(current_name) do
-    known = TableSources.options()
-    current = to_string(current_name)
-
-    if current == "" or Enum.any?(known, fn {_label, value} -> value == current end) do
-      known
-    else
-      known ++ [{current, current}]
-    end
+  # Seeds :form_params with the shortcut's existing params on first load, in
+  # the same shape a form submission would produce. Without this, add_param
+  # and del_param - which only ever see phx-click, never the form's own
+  # fields - build their next state from an empty map on the first click of
+  # an edit session, wiping out every existing param but the fresh one they
+  # add.
+  defp params_to_form_params(params) do
+    params
+    |> Enum.with_index()
+    |> Map.new(fn {param, idx} ->
+      {to_string(idx),
+       %{
+         "name" => param.name,
+         "type" => to_string(param.type),
+         "options" => param.options,
+         "sample_limit" => param.sample_limit
+       }}
+    end)
   end
 
   defp force_constants(params) do

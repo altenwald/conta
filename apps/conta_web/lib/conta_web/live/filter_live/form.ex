@@ -34,12 +34,13 @@ defmodule ContaWeb.FilterLive.Form do
 
   defp apply_action(socket, :edit, %{"id" => id}) do
     set_filter = Automator.get_set_filter(id)
+    changeset = SetFilter.changeset(set_filter, %{})
 
     socket
     |> assign(:page_title, gettext("Edit Filter"))
     |> assign(:set_filter, set_filter)
-    |> assign(:form_params, %{})
-    |> assign_form(SetFilter.changeset(set_filter, %{}))
+    |> assign(:form_params, %{"params" => params_to_form_params(get_field(changeset, :params) || [])})
+    |> assign_form(changeset)
   end
 
   @impl true
@@ -131,6 +132,26 @@ defmodule ContaWeb.FilterLive.Form do
     else
       known ++ [{current, current}]
     end
+  end
+
+  # Seeds :form_params with the filter's existing params on first load, in
+  # the same shape a form submission would produce. Without this, add_param
+  # and del_param - which only ever see phx-click, never the form's own
+  # fields - build their next state from an empty map on the first click of
+  # an edit session, wiping out every existing param but the fresh one they
+  # add.
+  defp params_to_form_params(params) do
+    params
+    |> Enum.with_index()
+    |> Map.new(fn {param, idx} ->
+      {to_string(idx),
+       %{
+         "name" => param.name,
+         "type" => to_string(param.type),
+         "options" => param.options,
+         "sample_limit" => param.sample_limit
+       }}
+    end)
   end
 
   defp force_constants(params) do

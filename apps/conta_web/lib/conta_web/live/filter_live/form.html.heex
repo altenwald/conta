@@ -49,16 +49,23 @@
               <.input field={p[:name]} label={gettext("Name")} />
             <% end %>
             <.input field={p[:type]} type="select" label={gettext("Type")} options={param_type_options()} />
-            <%= if to_string(p[:type].value) == "table" do %>
-              <.input
-                field={p[:sample_limit]}
-                type="number"
-                label={gettext("Sample size")}
-                value={p[:sample_limit].value || TableSources.default_sample_limit()}
-                min="1"
-              />
-            <% else %>
-              <.input field={p[:options]} label={gettext("Options (comma separated)")} />
+            <%= cond do %>
+              <% to_string(p[:type].value) == "table" -> %>
+                <.input
+                  field={p[:sample_limit]}
+                  type="number"
+                  label={gettext("Sample size")}
+                  value={p[:sample_limit].value || TableSources.default_sample_limit()}
+                  min="1"
+                />
+              <% to_string(p[:type].value) == "options" -> %>
+                <.input
+                  field={p[:options]}
+                  label={gettext("Options (comma separated)")}
+                  value={options_value(p[:options].value)}
+                />
+              <% true -> %>
+                <div></div>
             <% end %>
             <.button_inline type="button" phx-click="del_param" phx-value-index={p.index} class="btn-error">
               {gettext("Remove")}
@@ -67,7 +74,7 @@
         </.inputs_for>
       </div>
 
-      <div class="card bg-base-100 shadow-xl border border-base-200 p-4">
+      <div class="card bg-base-100 shadow-xl border border-base-200 p-4 flex flex-col">
         <.monaco_editor field={@form[:code]} />
       </div>
     </div>

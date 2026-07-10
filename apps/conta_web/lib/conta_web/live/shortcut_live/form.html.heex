@@ -23,10 +23,14 @@
           <div class="grid grid-cols-[1fr_1fr_1fr_auto] gap-2 items-end mb-2">
             <.input field={p[:name]} label={gettext("Name")} />
             <.input field={p[:type]} type="select" label={gettext("Type")} options={param_type_options()} />
-            <%= if to_string(p[:type].value) == "table" do %>
-              <div></div>
+            <%= if to_string(p[:type].value) == "options" do %>
+              <.input
+                field={p[:options]}
+                label={gettext("Options (comma separated)")}
+                value={options_value(p[:options].value)}
+              />
             <% else %>
-              <.input field={p[:options]} label={gettext("Options (comma separated)")} />
+              <div></div>
             <% end %>
             <.button_inline type="button" phx-click="del_param" phx-value-index={p.index} class="btn-error">
               {gettext("Remove")}
@@ -35,7 +39,7 @@
         </.inputs_for>
       </div>
 
-      <div class="card bg-base-100 shadow-xl border border-base-200 p-4">
+      <div class="card bg-base-100 shadow-xl border border-base-200 p-4 flex flex-col">
         <.monaco_editor field={@form[:code]} />
       </div>
     </div>
