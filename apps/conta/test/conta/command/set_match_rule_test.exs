@@ -40,6 +40,56 @@ defmodule Conta.Command.SetMatchRuleTest do
       changeset = SetMatchRule.changeset(params)
       refute changeset.valid?
     end
+
+    test "casts id and reconciliation through to_command/1" do
+      params = %{
+        "id" => "abc-123",
+        "reconciliation" => "recon-1",
+        "name" => "Netflix",
+        "conditions" => [%{"field" => "description", "comparator" => "contains", "value" => "NETFLIX"}],
+        "match_type" => "all",
+        "account_name" => ["Expenses", "Subscriptions"]
+      }
+
+      command =
+        params
+        |> SetMatchRule.changeset()
+        |> SetMatchRule.to_command()
+
+      assert command.id == "abc-123"
+      assert command.reconciliation == "recon-1"
+    end
+
+    test "invalid between comparator without value_to" do
+      params = %{
+        "name" => "x",
+        "conditions" => [%{"field" => "on_date", "comparator" => "between", "value" => "2024-01-01"}],
+        "match_type" => "all",
+        "account_name" => ["Expenses"]
+      }
+
+      changeset = SetMatchRule.changeset(params)
+      refute changeset.valid?
+    end
+
+    test "valid between comparator with value_to" do
+      params = %{
+        "name" => "x",
+        "conditions" => [
+          %{
+            "field" => "on_date",
+            "comparator" => "between",
+            "value" => "2024-01-01",
+            "value_to" => "2024-01-31"
+          }
+        ],
+        "match_type" => "all",
+        "account_name" => ["Expenses"]
+      }
+
+      changeset = SetMatchRule.changeset(params)
+      assert changeset.valid?
+    end
   end
 
   defp errors_on(changeset) do

@@ -25,11 +25,12 @@ defmodule Conta.Command.SetMatchRule do
   end
 
   @required_fields ~w[name match_type account_name]a
+  @optional_fields ~w[id reconciliation]a
 
   @doc false
   def changeset(model \\ %__MODULE__{}, params) do
     model
-    |> cast(params, @required_fields)
+    |> cast(params, @required_fields ++ @optional_fields)
     |> cast_embed(:conditions, with: &changeset_condition/2, required: true)
     |> validate_required(@required_fields)
     |> validate_length(:conditions, min: 1)
@@ -44,6 +45,7 @@ defmodule Conta.Command.SetMatchRule do
     |> cast(params, @required_fields ++ @optional_fields)
     |> validate_required(@required_fields)
     |> validate_comparator()
+    |> validate_value_to()
   end
 
   defp validate_comparator(changeset) do
@@ -62,6 +64,14 @@ defmodule Conta.Command.SetMatchRule do
       changeset
     else
       add_error(changeset, :comparator, "is not valid for field #{field}")
+    end
+  end
+
+  defp validate_value_to(changeset) do
+    if get_field(changeset, :comparator) == :between do
+      validate_required(changeset, [:value_to])
+    else
+      changeset
     end
   end
 
