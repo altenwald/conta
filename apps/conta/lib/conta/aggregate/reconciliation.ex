@@ -97,48 +97,73 @@ defmodule Conta.Aggregate.Reconciliation do
         {:error, %{id: ["not found"]}}
 
       movement ->
-        updated = apply_changes_to_movement(movement, changes)
+        case apply_changes_to_movement(movement, changes) do
+          {:error, errors} ->
+            {:error, errors}
 
-        # `nil` here means "no change to account_name" (see `apply/2` below), not
-        # "unassign" — when the movement already has an account_name and the edit
-        # doesn't touch it directly, we leave it untouched rather than re-stamping
-        # the current value into the event.
-        account_name =
-          cond do
-            Map.has_key?(changes, "account_name") -> updated.account_name
-            is_nil(movement.account_name) -> evaluate_rules(match_rules, updated)
-            :else -> nil
-          end
+          {:ok, updated} ->
+            # `nil` here means "no change to account_name" (see `apply/2` below), not
+            # "unassign" — when the movement already has an account_name and the edit
+            # doesn't touch it directly, we leave it untouched rather than re-stamping
+            # the current value into the event. Note this also means an explicit
+            # `changes: %{"account_name" => nil}` ("unassign") is indistinguishable
+            # from "didn't touch it" and is a no-op today — there's no sentinel yet
+            # for a deliberate clear; that's a known gap, not a bug, until an
+            # "unassign" UI action needs it.
+            account_name =
+              cond do
+                Map.has_key?(changes, "account_name") -> updated.account_name
+                is_nil(movement.account_name) -> evaluate_rules(match_rules, updated)
+                :else -> nil
+              end
 
-        %{
-          id: id,
-          on_date: updated.on_date,
-          description: updated.description,
-          amount: updated.amount,
-          currency: updated.currency,
-          account_name: account_name
-        }
-        |> MovementUpdated.changeset()
+            %{
+              id: id,
+              on_date: updated.on_date,
+              description: updated.description,
+              amount: updated.amount,
+              currency: updated.currency,
+              account_name: account_name
+            }
+            |> MovementUpdated.changeset()
+        end
     end
   end
 
+  # Returns `{:ok, movement}` with the parsed changes merged in, or
+  # `{:error, %{field => [reason]}}` the moment a *provided, non-nil* value fails
+  # to cast. We deliberately reject the whole update rather than falling back to
+  # the old value on a bad cast: on_date/amount/currency are financial fields
+  # with no downstream fallback (unlike account_name, which has an explicit `nil`
+  # sentinel), so silently keeping a stale value the caller didn't ask to keep
+  # would be worse than failing loudly.
   defp apply_changes_to_movement(movement, changes) do
-    movement
-    |> maybe_put(:on_date, changes["on_date"], &parse_date/1)
-    |> maybe_put(:description, changes["description"], & &1)
-    |> maybe_put(:amount, changes["amount"], &parse_integer/1)
-    |> maybe_put(:currency, changes["currency"], &parse_currency/1)
-    |> maybe_put(:account_name, changes["account_name"], & &1)
+    with {:ok, movement} <- put_cast(movement, :on_date, changes["on_date"], &parse_date/1),
+         {:ok, movement} <- put_raw(movement, :description, changes["description"]),
+         {:ok, movement} <- put_cast(movement, :amount, changes["amount"], &parse_integer/1),
+         {:ok, movement} <- put_cast(movement, :currency, changes["currency"], &parse_currency/1),
+         {:ok, movement} <- put_raw(movement, :account_name, changes["account_name"]) do
+      {:ok, movement}
+    end
   end
 
-  defp maybe_put(map, _key, nil, _cast_fun), do: map
-  defp maybe_put(map, key, value, cast_fun), do: Map.put(map, key, cast_fun.(value))
+  defp put_raw(map, _key, nil), do: {:ok, map}
+  defp put_raw(map, key, value), do: {:ok, Map.put(map, key, value)}
 
-  defp parse_currency(value) when is_atom(value), do: value
+  defp put_cast(map, _key, nil, _cast_fun), do: {:ok, map}
 
-  defp parse_currency(value) when is_binary(value) do
-    currencies = Money.Currency.all() |> Map.keys() |> Enum.map(&to_string/1)
-    if value in currencies, do: String.to_atom(value)
+  defp put_cast(map, key, value, cast_fun) do
+    case cast_fun.(value) do
+      nil -> {:error, %{key => ["is invalid"]}}
+      parsed -> {:ok, Map.put(map, key, parsed)}
+    end
+  end
+
+  defp parse_currency(value) do
+    case Money.Ecto.Currency.Type.cast(value) do
+      {:ok, currency} -> currency
+      :error -> nil
+    end
   end
 
   defp evaluate_rules(match_rules, movement) do

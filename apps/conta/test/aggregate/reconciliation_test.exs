@@ -567,5 +567,45 @@ defmodule Conta.Aggregate.ReconciliationTest do
       assert {:error, %{id: ["not found"]}} =
                Reconciliation.execute(reconciliation, %UpdateMovement{id: Ecto.UUID.generate(), changes: %{}})
     end
+
+    test "editing description with no rule match keeps account_name nil", %{
+      reconciliation: reconciliation,
+      movement: movement
+    } do
+      command = %UpdateMovement{id: movement.id, changes: %{"description" => "totally unrelated charge"}}
+
+      event = Reconciliation.execute(reconciliation, command)
+      assert %MovementUpdated{account_name: nil} = event
+
+      reconciliation = Reconciliation.apply(reconciliation, event)
+      assert reconciliation.movements[movement.id].account_name == nil
+    end
+
+    test "an unparseable on_date is rejected instead of nulling the field", %{
+      reconciliation: reconciliation,
+      movement: movement
+    } do
+      command = %UpdateMovement{id: movement.id, changes: %{"on_date" => "not-a-date"}}
+
+      assert {:error, %{on_date: ["is invalid"]}} = Reconciliation.execute(reconciliation, command)
+    end
+
+    test "an unparseable amount is rejected instead of nulling the field", %{
+      reconciliation: reconciliation,
+      movement: movement
+    } do
+      command = %UpdateMovement{id: movement.id, changes: %{"amount" => "12.5x"}}
+
+      assert {:error, %{amount: ["is invalid"]}} = Reconciliation.execute(reconciliation, command)
+    end
+
+    test "an unparseable currency is rejected instead of nulling the field", %{
+      reconciliation: reconciliation,
+      movement: movement
+    } do
+      command = %UpdateMovement{id: movement.id, changes: %{"currency" => "not-a-real-currency"}}
+
+      assert {:error, %{currency: ["is invalid"]}} = Reconciliation.execute(reconciliation, command)
+    end
   end
 end
