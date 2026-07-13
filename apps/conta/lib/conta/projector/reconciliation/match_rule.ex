@@ -9,7 +9,7 @@ defmodule Conta.Projector.Reconciliation.MatchRule do
   typed_schema "reconciliation_match_rules" do
     field :name, :string
 
-    embeds_many :conditions, Condition, on_replace: :delete do
+    embeds_many :conditions, Condition, primary_key: false, on_replace: :delete do
       field :field, Ecto.Enum, values: ~w[description amount on_date]a
       field :comparator, Ecto.Enum, values: ~w[contains equals regex greater_than less_than between]a
       field :value, :string
@@ -21,14 +21,19 @@ defmodule Conta.Projector.Reconciliation.MatchRule do
     field :position, :integer
   end
 
-  @required_fields ~w[name match_type account_name position]a
+  @required_fields ~w[id name match_type account_name position]a
 
   @doc false
   def changeset(model \\ %__MODULE__{}, params) do
     model
     |> cast(params, @required_fields)
-    |> cast_embed(:conditions)
+    |> cast_embed(:conditions, with: &changeset_condition/2)
     |> validate_required(@required_fields)
+  end
+
+  @doc false
+  def changeset_condition(model, params) do
+    cast(model, params, ~w[field comparator value value_to]a)
   end
 end
 

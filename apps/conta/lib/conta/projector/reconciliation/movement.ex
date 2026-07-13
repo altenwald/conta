@@ -18,7 +18,7 @@ defmodule Conta.Projector.Reconciliation.Movement do
     field :transacted, :boolean, default: false
   end
 
-  @required_fields ~w[on_date description amount currency asset_account_name transacted]a
+  @required_fields ~w[id on_date description amount currency asset_account_name transacted]a
   @optional_fields ~w[account_name source]a
 
   @doc false
