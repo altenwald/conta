@@ -102,7 +102,7 @@ defmodule Conta.Aggregate.Reconciliation do
   end
 
   defp condition_matches?(%{field: :description, comparator: :equals, value: value}, movement) do
-    movement.description == value
+    (movement.description || "") == value
   end
 
   defp condition_matches?(%{field: :description, comparator: :regex, value: value}, movement) do
@@ -113,19 +113,31 @@ defmodule Conta.Aggregate.Reconciliation do
   end
 
   defp condition_matches?(%{field: :amount, comparator: :equals, value: value}, movement) do
-    movement.amount == parse_integer(value)
+    case parse_integer(value) do
+      nil -> false
+      parsed -> movement.amount == parsed
+    end
   end
 
   defp condition_matches?(%{field: :amount, comparator: :greater_than, value: value}, movement) do
-    movement.amount > parse_integer(value)
+    case parse_integer(value) do
+      nil -> false
+      parsed -> movement.amount > parsed
+    end
   end
 
   defp condition_matches?(%{field: :amount, comparator: :less_than, value: value}, movement) do
-    movement.amount < parse_integer(value)
+    case parse_integer(value) do
+      nil -> false
+      parsed -> movement.amount < parsed
+    end
   end
 
   defp condition_matches?(%{field: :on_date, comparator: :equals, value: value}, movement) do
-    movement.on_date == parse_date(value)
+    case parse_date(value) do
+      nil -> false
+      parsed -> movement.on_date == parsed
+    end
   end
 
   defp condition_matches?(%{field: :on_date, comparator: :between, value: from, value_to: to}, movement) do

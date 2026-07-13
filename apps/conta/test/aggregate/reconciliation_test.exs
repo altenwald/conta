@@ -260,5 +260,228 @@ defmodule Conta.Aggregate.ReconciliationTest do
       assert matched.account_name == ["Expenses", "Misc"]
       assert is_nil(unmatched.account_name)
     end
+
+    test "description equals condition" do
+      rule = %{
+        id: Ecto.UUID.generate(),
+        name: "Exact description",
+        conditions: [%{field: :description, comparator: :equals, value: "RENT", value_to: nil}],
+        match_type: :all,
+        account_name: ["Expenses", "Rent"]
+      }
+
+      reconciliation = %Reconciliation{match_rules: [rule]}
+
+      matching = %ImportMovements.Movement{
+        on_date: ~D[2026-07-01],
+        description: "RENT",
+        amount: -50_000,
+        currency: :EUR,
+        asset_account_name: ["Assets", "Bank"]
+      }
+
+      non_matching = %ImportMovements.Movement{
+        on_date: ~D[2026-07-01],
+        description: "RENT PAYMENT",
+        amount: -50_000,
+        currency: :EUR,
+        asset_account_name: ["Assets", "Bank"]
+      }
+
+      command = %ImportMovements{movements: [matching, non_matching]}
+
+      assert %MovementsImported{movements: [matched, unmatched]} =
+               Reconciliation.execute(reconciliation, command)
+
+      assert matched.account_name == ["Expenses", "Rent"]
+      assert is_nil(unmatched.account_name)
+    end
+
+    test "description regex condition" do
+      rule = %{
+        id: Ecto.UUID.generate(),
+        name: "Regex description",
+        conditions: [%{field: :description, comparator: :regex, value: "^AMZN.*", value_to: nil}],
+        match_type: :all,
+        account_name: ["Expenses", "Shopping"]
+      }
+
+      reconciliation = %Reconciliation{match_rules: [rule]}
+
+      matching = %ImportMovements.Movement{
+        on_date: ~D[2026-07-01],
+        description: "AMZN MKTP US",
+        amount: -2000,
+        currency: :EUR,
+        asset_account_name: ["Assets", "Bank"]
+      }
+
+      non_matching = %ImportMovements.Movement{
+        on_date: ~D[2026-07-01],
+        description: "SOME AMZN REFUND",
+        amount: -2000,
+        currency: :EUR,
+        asset_account_name: ["Assets", "Bank"]
+      }
+
+      command = %ImportMovements{movements: [matching, non_matching]}
+
+      assert %MovementsImported{movements: [matched, unmatched]} =
+               Reconciliation.execute(reconciliation, command)
+
+      assert matched.account_name == ["Expenses", "Shopping"]
+      assert is_nil(unmatched.account_name)
+    end
+
+    test "amount equals condition" do
+      rule = %{
+        id: Ecto.UUID.generate(),
+        name: "Exact amount",
+        conditions: [%{field: :amount, comparator: :equals, value: "-1399", value_to: nil}],
+        match_type: :all,
+        account_name: ["Expenses", "Subscriptions"]
+      }
+
+      reconciliation = %Reconciliation{match_rules: [rule]}
+
+      matching = %ImportMovements.Movement{
+        on_date: ~D[2026-07-01],
+        description: "x",
+        amount: -1399,
+        currency: :EUR,
+        asset_account_name: ["Assets", "Bank"]
+      }
+
+      non_matching = %ImportMovements.Movement{
+        on_date: ~D[2026-07-01],
+        description: "x",
+        amount: -1400,
+        currency: :EUR,
+        asset_account_name: ["Assets", "Bank"]
+      }
+
+      command = %ImportMovements{movements: [matching, non_matching]}
+
+      assert %MovementsImported{movements: [matched, unmatched]} =
+               Reconciliation.execute(reconciliation, command)
+
+      assert matched.account_name == ["Expenses", "Subscriptions"]
+      assert is_nil(unmatched.account_name)
+    end
+
+    test "amount less_than condition" do
+      rule = %{
+        id: Ecto.UUID.generate(),
+        name: "Small charges",
+        conditions: [%{field: :amount, comparator: :less_than, value: "0", value_to: nil}],
+        match_type: :all,
+        account_name: ["Expenses", "Misc"]
+      }
+
+      reconciliation = %Reconciliation{match_rules: [rule]}
+
+      matching = %ImportMovements.Movement{
+        on_date: ~D[2026-07-01],
+        description: "x",
+        amount: -100,
+        currency: :EUR,
+        asset_account_name: ["Assets", "Bank"]
+      }
+
+      non_matching = %ImportMovements.Movement{
+        on_date: ~D[2026-07-01],
+        description: "x",
+        amount: 100,
+        currency: :EUR,
+        asset_account_name: ["Assets", "Bank"]
+      }
+
+      command = %ImportMovements{movements: [matching, non_matching]}
+
+      assert %MovementsImported{movements: [matched, unmatched]} =
+               Reconciliation.execute(reconciliation, command)
+
+      assert matched.account_name == ["Expenses", "Misc"]
+      assert is_nil(unmatched.account_name)
+    end
+
+    test "on_date equals condition" do
+      rule = %{
+        id: Ecto.UUID.generate(),
+        name: "Specific date",
+        conditions: [%{field: :on_date, comparator: :equals, value: "2026-07-01", value_to: nil}],
+        match_type: :all,
+        account_name: ["Expenses", "Misc"]
+      }
+
+      reconciliation = %Reconciliation{match_rules: [rule]}
+
+      matching = %ImportMovements.Movement{
+        on_date: ~D[2026-07-01],
+        description: "x",
+        amount: -100,
+        currency: :EUR,
+        asset_account_name: ["Assets", "Bank"]
+      }
+
+      non_matching = %ImportMovements.Movement{
+        on_date: ~D[2026-07-02],
+        description: "x",
+        amount: -100,
+        currency: :EUR,
+        asset_account_name: ["Assets", "Bank"]
+      }
+
+      command = %ImportMovements{movements: [matching, non_matching]}
+
+      assert %MovementsImported{movements: [matched, unmatched]} =
+               Reconciliation.execute(reconciliation, command)
+
+      assert matched.account_name == ["Expenses", "Misc"]
+      assert is_nil(unmatched.account_name)
+    end
+
+    test "a malformed numeric value on less_than/greater_than never matches (regression)" do
+      rule = %{
+        id: Ecto.UUID.generate(),
+        name: "Broken rule",
+        conditions: [%{field: :amount, comparator: :less_than, value: "not-a-number", value_to: nil}],
+        match_type: :all,
+        account_name: ["Expenses", "Should never apply"]
+      }
+
+      other_rule = %{
+        id: Ecto.UUID.generate(),
+        name: "Also broken rule",
+        conditions: [%{field: :amount, comparator: :greater_than, value: "not-a-number", value_to: nil}],
+        match_type: :all,
+        account_name: ["Expenses", "Should never apply either"]
+      }
+
+      reconciliation = %Reconciliation{match_rules: [rule, other_rule]}
+
+      command = %ImportMovements{
+        movements: [
+          %ImportMovements.Movement{
+            on_date: ~D[2026-07-01],
+            description: "x",
+            amount: -1_000_000,
+            currency: :EUR,
+            asset_account_name: ["Assets", "Bank"]
+          },
+          %ImportMovements.Movement{
+            on_date: ~D[2026-07-01],
+            description: "x",
+            amount: 1_000_000,
+            currency: :EUR,
+            asset_account_name: ["Assets", "Bank"]
+          }
+        ]
+      }
+
+      assert %MovementsImported{movements: [first, second]} = Reconciliation.execute(reconciliation, command)
+      assert is_nil(first.account_name)
+      assert is_nil(second.account_name)
+    end
   end
 end
