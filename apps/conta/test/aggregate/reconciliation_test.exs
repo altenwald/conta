@@ -55,6 +55,20 @@ defmodule Conta.Aggregate.ReconciliationTest do
       assert id_b == rule_b.id
     end
 
+    test "updating with an unknown id returns an error instead of creating a new rule" do
+      reconciliation = %Reconciliation{match_rules: []}
+
+      command = %SetMatchRule{
+        id: Ecto.UUID.generate(),
+        name: "Ghost",
+        conditions: [%SetMatchRule.Condition{field: :description, comparator: :equals, value: "x"}],
+        match_type: :all,
+        account_name: ["X"]
+      }
+
+      assert {:error, %{id: ["not found"]}} = Reconciliation.execute(reconciliation, command)
+    end
+
     test "remove a rule" do
       rule = %{id: Ecto.UUID.generate(), name: "A", conditions: [], match_type: :all, account_name: ["X"]}
       reconciliation = %Reconciliation{match_rules: [rule]}

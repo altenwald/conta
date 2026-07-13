@@ -30,8 +30,12 @@ defmodule Conta.Aggregate.Reconciliation do
     build_match_rule_set(command, Ecto.UUID.generate())
   end
 
-  def execute(%__MODULE__{}, %SetMatchRule{} = command) do
-    build_match_rule_set(command, command.id)
+  def execute(%__MODULE__{match_rules: match_rules}, %SetMatchRule{id: id} = command) do
+    if Enum.any?(match_rules, &(&1.id == id)) do
+      build_match_rule_set(command, id)
+    else
+      {:error, %{id: ["not found"]}}
+    end
   end
 
   def execute(%__MODULE__{match_rules: match_rules}, %RemoveMatchRule{id: id} = command) do
@@ -75,12 +79,13 @@ defmodule Conta.Aggregate.Reconciliation do
       account_name: event.account_name
     }
 
-    match_rules =
-      if Enum.any?(match_rules, &(&1.id == rule.id)) do
-        Enum.map(match_rules, fn existing -> if existing.id == rule.id, do: rule, else: existing end)
-      else
-        match_rules ++ [rule]
-      end
+    {match_rules, found?} =
+      Enum.map_reduce(match_rules, false, fn
+        %{id: id}, _found? when id == rule.id -> {rule, true}
+        existing, found? -> {existing, found?}
+      end)
+
+    match_rules = if found?, do: match_rules, else: match_rules ++ [rule]
 
     %__MODULE__{reconciliation | match_rules: match_rules}
   end
