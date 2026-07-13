@@ -612,6 +612,18 @@ defmodule Conta.Aggregate.ReconciliationTest do
 
       assert {:error, %{currency: ["is invalid"]}} = Reconciliation.execute(reconciliation, command)
     end
+
+    test "editing an already-transacted movement is rejected", %{
+      reconciliation: reconciliation,
+      movement: movement
+    } do
+      transacted_movement = %{movement | transacted: true}
+      reconciliation = %Reconciliation{reconciliation | movements: %{movement.id => transacted_movement}}
+
+      command = %UpdateMovement{id: movement.id, changes: %{"description" => "whatever"}}
+
+      assert {:error, %{id: ["already transacted"]}} = Reconciliation.execute(reconciliation, command)
+    end
   end
 
   describe "remove and mark movement" do

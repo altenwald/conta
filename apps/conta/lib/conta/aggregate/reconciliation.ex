@@ -100,6 +100,9 @@ defmodule Conta.Aggregate.Reconciliation do
       nil ->
         {:error, %{id: ["not found"]}}
 
+      %{transacted: true} ->
+        {:error, %{id: ["already transacted"]}}
+
       movement ->
         case apply_changes_to_movement(movement, changes) do
           {:error, errors} ->
