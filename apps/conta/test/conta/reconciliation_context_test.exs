@@ -31,7 +31,7 @@ defmodule Conta.ReconciliationContextTest do
       assert Enum.any?(result, &(&1.id == movement.id))
     end
 
-    test "list_movements/0 splits by whether account_name is present" do
+    test "list_movements/0 returns movements regardless of account_name" do
       with_account = insert(:movement, account_name: ["Expenses", "Misc"])
       without_account = insert(:movement, account_name: nil)
 
