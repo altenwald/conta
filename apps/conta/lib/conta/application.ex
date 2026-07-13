@@ -17,6 +17,7 @@ defmodule Conta.Application do
       Conta.Projector.Book,
       Conta.Projector.Directory,
       Conta.Projector.Ledger,
+      Conta.Projector.Reconciliation,
       Conta.Projector.Stats
     ]
 

@@ -37,6 +37,29 @@ defmodule Conta.Projector.ReconciliationTest do
                Repo.get_by!(Reconciliation.MatchRule, id: event.id)
     end
 
+    test "MatchRuleSet with an existing id updates the row in place", metadata do
+      rule = insert_match_rule(position: 1, name: "Old name")
+
+      event = %Conta.Event.MatchRuleSet{
+        id: rule.id,
+        name: "New name",
+        conditions: [
+          %Conta.Event.MatchRuleSet.Condition{field: :description, comparator: :equals, value: "SPOTIFY"}
+        ],
+        match_type: :any,
+        account_name: ["Expenses", "Subscriptions"]
+      }
+
+      assert :ok = Reconciliation.handle(event, metadata)
+
+      assert [updated] = Repo.all(Reconciliation.MatchRule)
+      assert updated.id == rule.id
+      assert updated.name == "New name"
+      assert updated.match_type == :any
+      assert updated.position == 1
+      assert [%{field: :description, comparator: :equals, value: "SPOTIFY"}] = updated.conditions
+    end
+
     test "MatchRuleRemoved deletes the row", metadata do
       rule = insert_match_rule(position: 0)
 
