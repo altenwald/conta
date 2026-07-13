@@ -17,6 +17,11 @@ defmodule Conta.Aggregate.ReconciliationTest do
   alias Conta.Command.UpdateMovement
   alias Conta.Event.MovementUpdated
 
+  alias Conta.Command.MarkMovementTransacted
+  alias Conta.Command.RemoveMovement
+  alias Conta.Event.MovementRemoved
+  alias Conta.Event.MovementTransacted
+
   describe "match rules" do
     test "create a new rule successfully" do
       reconciliation = %Reconciliation{}
@@ -606,6 +611,52 @@ defmodule Conta.Aggregate.ReconciliationTest do
       command = %UpdateMovement{id: movement.id, changes: %{"currency" => "not-a-real-currency"}}
 
       assert {:error, %{currency: ["is invalid"]}} = Reconciliation.execute(reconciliation, command)
+    end
+  end
+
+  describe "remove and mark movement" do
+    setup do
+      movement = %{
+        id: Ecto.UUID.generate(),
+        on_date: ~D[2026-07-01],
+        description: "x",
+        amount: -100,
+        currency: :EUR,
+        asset_account_name: ["Assets", "Bank"],
+        account_name: ["Expenses", "Misc"],
+        source: "bank x",
+        transacted: false
+      }
+
+      %{reconciliation: %Reconciliation{movements: %{movement.id => movement}}, movement: movement}
+    end
+
+    test "remove an existing movement", %{reconciliation: reconciliation, movement: movement} do
+      event = Reconciliation.execute(reconciliation, %RemoveMovement{id: movement.id})
+      assert %MovementRemoved{id: id} = event
+      assert id == movement.id
+
+      reconciliation = Reconciliation.apply(reconciliation, event)
+      assert reconciliation.movements == %{}
+    end
+
+    test "removing an unknown movement returns an error", %{reconciliation: reconciliation} do
+      assert {:error, %{id: ["not found"]}} =
+               Reconciliation.execute(reconciliation, %RemoveMovement{id: Ecto.UUID.generate()})
+    end
+
+    test "mark a movement as transacted", %{reconciliation: reconciliation, movement: movement} do
+      event = Reconciliation.execute(reconciliation, %MarkMovementTransacted{id: movement.id})
+      assert %MovementTransacted{id: id} = event
+      assert id == movement.id
+
+      reconciliation = Reconciliation.apply(reconciliation, event)
+      assert reconciliation.movements[movement.id].transacted
+    end
+
+    test "marking an unknown movement as transacted returns an error", %{reconciliation: reconciliation} do
+      assert {:error, %{id: ["not found"]}} =
+               Reconciliation.execute(reconciliation, %MarkMovementTransacted{id: Ecto.UUID.generate()})
     end
   end
 end

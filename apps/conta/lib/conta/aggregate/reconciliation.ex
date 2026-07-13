@@ -1,6 +1,8 @@
 defmodule Conta.Aggregate.Reconciliation do
   alias Conta.Command.ImportMovements
+  alias Conta.Command.MarkMovementTransacted
   alias Conta.Command.RemoveMatchRule
+  alias Conta.Command.RemoveMovement
   alias Conta.Command.ReorderMatchRules
   alias Conta.Command.SetMatchRule
   alias Conta.Command.UpdateMovement
@@ -8,7 +10,9 @@ defmodule Conta.Aggregate.Reconciliation do
   alias Conta.Event.MatchRuleRemoved
   alias Conta.Event.MatchRuleSet
   alias Conta.Event.MatchRulesReordered
+  alias Conta.Event.MovementRemoved
   alias Conta.Event.MovementsImported
+  alias Conta.Event.MovementTransacted
   alias Conta.Event.MovementUpdated
 
   @derive Jason.Encoder
@@ -127,6 +131,26 @@ defmodule Conta.Aggregate.Reconciliation do
             }
             |> MovementUpdated.changeset()
         end
+    end
+  end
+
+  def execute(%__MODULE__{movements: movements}, %RemoveMovement{id: id} = command) do
+    if Map.has_key?(movements, id) do
+      command
+      |> Map.from_struct()
+      |> MovementRemoved.changeset()
+    else
+      {:error, %{id: ["not found"]}}
+    end
+  end
+
+  def execute(%__MODULE__{movements: movements}, %MarkMovementTransacted{id: id} = command) do
+    if Map.has_key?(movements, id) do
+      command
+      |> Map.from_struct()
+      |> MovementTransacted.changeset()
+    else
+      {:error, %{id: ["not found"]}}
     end
   end
 
@@ -314,6 +338,14 @@ defmodule Conta.Aggregate.Reconciliation do
       end)
 
     %__MODULE__{reconciliation | movements: movements}
+  end
+
+  def apply(%__MODULE__{movements: movements} = reconciliation, %MovementRemoved{id: id}) do
+    %__MODULE__{reconciliation | movements: Map.delete(movements, id)}
+  end
+
+  def apply(%__MODULE__{movements: movements} = reconciliation, %MovementTransacted{id: id}) do
+    %__MODULE__{reconciliation | movements: Map.update!(movements, id, &Map.put(&1, :transacted, true))}
   end
 
   def apply(reconciliation, _event), do: reconciliation
