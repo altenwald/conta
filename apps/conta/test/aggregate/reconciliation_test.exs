@@ -11,6 +11,9 @@ defmodule Conta.Aggregate.ReconciliationTest do
   alias Conta.Event.MatchRuleSet
   alias Conta.Event.MatchRulesReordered
 
+  alias Conta.Command.ImportMovements
+  alias Conta.Event.MovementsImported
+
   describe "match rules" do
     test "create a new rule successfully" do
       reconciliation = %Reconciliation{}
@@ -106,6 +109,156 @@ defmodule Conta.Aggregate.ReconciliationTest do
 
       assert {:error, %{ids: ["must match existing rule ids"]}} =
                Reconciliation.execute(reconciliation, %ReorderMatchRules{ids: [Ecto.UUID.generate()]})
+    end
+  end
+
+  describe "import movements" do
+    setup do
+      netflix_rule = %{
+        id: Ecto.UUID.generate(),
+        name: "Netflix",
+        conditions: [%{field: :description, comparator: :contains, value: "NETFLIX", value_to: nil}],
+        match_type: :all,
+        account_name: ["Expenses", "Subscriptions"]
+      }
+
+      %{reconciliation: %Reconciliation{match_rules: [netflix_rule]}, netflix_rule: netflix_rule}
+    end
+
+    test "a movement matching a rule gets account_name proposed", %{reconciliation: reconciliation} do
+      command = %ImportMovements{
+        movements: [
+          %ImportMovements.Movement{
+            on_date: ~D[2026-07-01],
+            description: "NETFLIX.COM SUBSCRIPTION",
+            amount: -1399,
+            currency: :EUR,
+            asset_account_name: ["Assets", "Bank"]
+          }
+        ]
+      }
+
+      event = Reconciliation.execute(reconciliation, command)
+
+      assert %MovementsImported{movements: [movement]} = event
+      assert movement.account_name == ["Expenses", "Subscriptions"]
+      assert movement.description == "NETFLIX.COM SUBSCRIPTION"
+      refute is_nil(movement.id)
+      refute movement.transacted
+
+      reconciliation = Reconciliation.apply(reconciliation, event)
+      assert map_size(reconciliation.movements) == 1
+      assert [{_id, %{account_name: ["Expenses", "Subscriptions"]}}] = Map.to_list(reconciliation.movements)
+    end
+
+    test "a movement matching no rule gets account_name nil", %{reconciliation: reconciliation} do
+      command = %ImportMovements{
+        movements: [
+          %ImportMovements.Movement{
+            on_date: ~D[2026-07-01],
+            description: "UNKNOWN TRANSFER",
+            amount: -4530,
+            currency: :EUR,
+            asset_account_name: ["Assets", "Bank"]
+          }
+        ]
+      }
+
+      assert %MovementsImported{movements: [%{account_name: nil}]} =
+               Reconciliation.execute(reconciliation, command)
+    end
+
+    test "first matching rule wins when several would match", %{netflix_rule: netflix_rule} do
+      second_rule = %{
+        id: Ecto.UUID.generate(),
+        name: "Also contains NETFLIX",
+        conditions: [%{field: :description, comparator: :contains, value: "NETFLIX", value_to: nil}],
+        match_type: :all,
+        account_name: ["Expenses", "Other"]
+      }
+
+      reconciliation = %Reconciliation{match_rules: [netflix_rule, second_rule]}
+
+      command = %ImportMovements{
+        movements: [
+          %ImportMovements.Movement{
+            on_date: ~D[2026-07-01],
+            description: "NETFLIX.COM",
+            amount: -1399,
+            currency: :EUR,
+            asset_account_name: ["Assets", "Bank"]
+          }
+        ]
+      }
+
+      assert %MovementsImported{movements: [%{account_name: ["Expenses", "Subscriptions"]}]} =
+               Reconciliation.execute(reconciliation, command)
+    end
+
+    test "match_type any requires only one condition to hold" do
+      rule = %{
+        id: Ecto.UUID.generate(),
+        name: "big or Netflix",
+        conditions: [
+          %{field: :description, comparator: :contains, value: "NETFLIX", value_to: nil},
+          %{field: :amount, comparator: :greater_than, value: "100000", value_to: nil}
+        ],
+        match_type: :any,
+        account_name: ["Expenses", "Subscriptions"]
+      }
+
+      reconciliation = %Reconciliation{match_rules: [rule]}
+
+      command = %ImportMovements{
+        movements: [
+          %ImportMovements.Movement{
+            on_date: ~D[2026-07-01],
+            description: "totally unrelated",
+            amount: 200_000,
+            currency: :EUR,
+            asset_account_name: ["Assets", "Bank"]
+          }
+        ]
+      }
+
+      assert %MovementsImported{movements: [%{account_name: ["Expenses", "Subscriptions"]}]} =
+               Reconciliation.execute(reconciliation, command)
+    end
+
+    test "on_date between condition" do
+      rule = %{
+        id: Ecto.UUID.generate(),
+        name: "July",
+        conditions: [%{field: :on_date, comparator: :between, value: "2026-07-01", value_to: "2026-07-31"}],
+        match_type: :all,
+        account_name: ["Expenses", "Misc"]
+      }
+
+      reconciliation = %Reconciliation{match_rules: [rule]}
+
+      in_range = %ImportMovements.Movement{
+        on_date: ~D[2026-07-15],
+        description: "x",
+        amount: -100,
+        currency: :EUR,
+        asset_account_name: ["Assets", "Bank"]
+      }
+
+      out_of_range = %ImportMovements.Movement{
+        on_date: ~D[2026-08-01],
+        description: "x",
+        amount: -100,
+        currency: :EUR,
+        asset_account_name: ["Assets", "Bank"]
+      }
+
+      command = %ImportMovements{movements: [in_range, out_of_range]}
+
+      assert %MovementsImported{movements: [matched, unmatched]} =
+               Reconciliation.execute(reconciliation, command)
+
+      assert matched.account_name == ["Expenses", "Misc"]
+      assert is_nil(unmatched.account_name)
     end
   end
 end

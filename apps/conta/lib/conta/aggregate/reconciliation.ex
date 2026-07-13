@@ -1,4 +1,5 @@
 defmodule Conta.Aggregate.Reconciliation do
+  alias Conta.Command.ImportMovements
   alias Conta.Command.RemoveMatchRule
   alias Conta.Command.ReorderMatchRules
   alias Conta.Command.SetMatchRule
@@ -6,6 +7,7 @@ defmodule Conta.Aggregate.Reconciliation do
   alias Conta.Event.MatchRuleRemoved
   alias Conta.Event.MatchRuleSet
   alias Conta.Event.MatchRulesReordered
+  alias Conta.Event.MovementsImported
 
   @derive Jason.Encoder
 
@@ -62,6 +64,100 @@ defmodule Conta.Aggregate.Reconciliation do
     end
   end
 
+  # `MovementsImported.changeset/2` (Task 5) already ends its own pipeline with
+  # `|> get_result()`, so it returns the resolved `%MovementsImported{}` struct or
+  # `{:error, errors}` directly — piping that into `Conta.EctoHelpers.get_result/1`
+  # again would raise, since `get_result/1` requires a raw `%Ecto.Changeset{}`, not an
+  # already-resolved struct. Do not add a trailing `get_result()` call here.
+  def execute(%__MODULE__{match_rules: match_rules}, %ImportMovements{movements: movements}) do
+    movements =
+      Enum.map(movements, fn movement ->
+        movement
+        |> Map.from_struct()
+        |> Map.put(:id, Ecto.UUID.generate())
+        |> Map.put(:account_name, evaluate_rules(match_rules, movement))
+        |> Map.put(:transacted, false)
+      end)
+
+    %{movements: movements}
+    |> MovementsImported.changeset()
+  end
+
+  defp evaluate_rules(match_rules, movement) do
+    Enum.find_value(match_rules, fn rule ->
+      if rule_matches?(rule, movement), do: rule.account_name
+    end)
+  end
+
+  defp rule_matches?(%{conditions: conditions, match_type: :all}, movement) do
+    Enum.all?(conditions, &condition_matches?(&1, movement))
+  end
+
+  defp rule_matches?(%{conditions: conditions, match_type: :any}, movement) do
+    Enum.any?(conditions, &condition_matches?(&1, movement))
+  end
+
+  defp condition_matches?(%{field: :description, comparator: :contains, value: value}, movement) do
+    String.contains?(movement.description || "", value)
+  end
+
+  defp condition_matches?(%{field: :description, comparator: :equals, value: value}, movement) do
+    movement.description == value
+  end
+
+  defp condition_matches?(%{field: :description, comparator: :regex, value: value}, movement) do
+    case Regex.compile(value) do
+      {:ok, regex} -> Regex.match?(regex, movement.description || "")
+      {:error, _} -> false
+    end
+  end
+
+  defp condition_matches?(%{field: :amount, comparator: :equals, value: value}, movement) do
+    movement.amount == parse_integer(value)
+  end
+
+  defp condition_matches?(%{field: :amount, comparator: :greater_than, value: value}, movement) do
+    movement.amount > parse_integer(value)
+  end
+
+  defp condition_matches?(%{field: :amount, comparator: :less_than, value: value}, movement) do
+    movement.amount < parse_integer(value)
+  end
+
+  defp condition_matches?(%{field: :on_date, comparator: :equals, value: value}, movement) do
+    movement.on_date == parse_date(value)
+  end
+
+  defp condition_matches?(%{field: :on_date, comparator: :between, value: from, value_to: to}, movement) do
+    from = parse_date(from)
+    to = parse_date(to)
+
+    not is_nil(from) and not is_nil(to) and Date.compare(movement.on_date, from) != :lt and
+      Date.compare(movement.on_date, to) != :gt
+  end
+
+  defp condition_matches?(_condition, _movement), do: false
+
+  defp parse_integer(value) when is_integer(value), do: value
+
+  defp parse_integer(value) when is_binary(value) do
+    case Integer.parse(value) do
+      {integer, ""} -> integer
+      _ -> nil
+    end
+  end
+
+  defp parse_date(value) when is_struct(value, Date), do: value
+
+  defp parse_date(value) when is_binary(value) do
+    case Date.from_iso8601(value) do
+      {:ok, date} -> date
+      {:error, _} -> nil
+    end
+  end
+
+  defp parse_date(_value), do: nil
+
   defp build_match_rule_set(command, id) do
     command
     |> Map.from_struct()
@@ -97,6 +193,15 @@ defmodule Conta.Aggregate.Reconciliation do
   def apply(%__MODULE__{match_rules: match_rules} = reconciliation, %MatchRulesReordered{ids: ids}) do
     by_id = Map.new(match_rules, &{&1.id, &1})
     %__MODULE__{reconciliation | match_rules: Enum.map(ids, &by_id[&1])}
+  end
+
+  def apply(%__MODULE__{movements: movements} = reconciliation, %MovementsImported{movements: imported}) do
+    new_movements =
+      Map.new(imported, fn movement ->
+        {movement.id, Map.from_struct(movement)}
+      end)
+
+    %__MODULE__{reconciliation | movements: Map.merge(movements, new_movements)}
   end
 
   def apply(reconciliation, _event), do: reconciliation
