@@ -14,6 +14,9 @@ defmodule Conta.Aggregate.ReconciliationTest do
   alias Conta.Command.ImportMovements
   alias Conta.Event.MovementsImported
 
+  alias Conta.Command.UpdateMovement
+  alias Conta.Event.MovementUpdated
+
   describe "match rules" do
     test "create a new rule successfully" do
       reconciliation = %Reconciliation{}
@@ -482,6 +485,87 @@ defmodule Conta.Aggregate.ReconciliationTest do
       assert %MovementsImported{movements: [first, second]} = Reconciliation.execute(reconciliation, command)
       assert is_nil(first.account_name)
       assert is_nil(second.account_name)
+    end
+  end
+
+  describe "update movement" do
+    setup do
+      rule = %{
+        id: Ecto.UUID.generate(),
+        name: "Netflix",
+        conditions: [%{field: :description, comparator: :contains, value: "NETFLIX", value_to: nil}],
+        match_type: :all,
+        account_name: ["Expenses", "Subscriptions"]
+      }
+
+      movement = %{
+        id: Ecto.UUID.generate(),
+        on_date: ~D[2026-07-01],
+        description: "unrelated typo",
+        amount: -1399,
+        currency: :EUR,
+        asset_account_name: ["Assets", "Bank"],
+        account_name: nil,
+        source: "bank x",
+        transacted: false
+      }
+
+      %{
+        reconciliation: %Reconciliation{match_rules: [rule], movements: %{movement.id => movement}},
+        movement: movement
+      }
+    end
+
+    test "editing description re-evaluates rules when account_name is nil", %{
+      reconciliation: reconciliation,
+      movement: movement
+    } do
+      command = %UpdateMovement{id: movement.id, changes: %{"description" => "NETFLIX.COM"}}
+
+      event = Reconciliation.execute(reconciliation, command)
+
+      assert %MovementUpdated{id: id, description: "NETFLIX.COM", account_name: ["Expenses", "Subscriptions"]} =
+               event
+
+      assert id == movement.id
+
+      reconciliation = Reconciliation.apply(reconciliation, event)
+      assert reconciliation.movements[movement.id].account_name == ["Expenses", "Subscriptions"]
+    end
+
+    test "editing description does not overwrite a manually-assigned account_name", %{
+      reconciliation: reconciliation,
+      movement: movement
+    } do
+      movement_with_account = %{movement | account_name: ["Expenses", "Groceries"]}
+      reconciliation = %Reconciliation{reconciliation | movements: %{movement.id => movement_with_account}}
+
+      command = %UpdateMovement{id: movement.id, changes: %{"description" => "NETFLIX.COM typo fix"}}
+
+      event = Reconciliation.execute(reconciliation, command)
+      assert %MovementUpdated{account_name: nil} = event
+
+      reconciliation = Reconciliation.apply(reconciliation, event)
+      assert reconciliation.movements[movement.id].account_name == ["Expenses", "Groceries"]
+      assert reconciliation.movements[movement.id].description == "NETFLIX.COM typo fix"
+    end
+
+    test "editing account_name directly is respected as-is and skips re-evaluation", %{
+      reconciliation: reconciliation,
+      movement: movement
+    } do
+      command = %UpdateMovement{id: movement.id, changes: %{"account_name" => ["Expenses", "Manual"]}}
+
+      event = Reconciliation.execute(reconciliation, command)
+      assert %MovementUpdated{account_name: ["Expenses", "Manual"]} = event
+
+      reconciliation = Reconciliation.apply(reconciliation, event)
+      assert reconciliation.movements[movement.id].account_name == ["Expenses", "Manual"]
+    end
+
+    test "updating an unknown movement returns an error", %{reconciliation: reconciliation} do
+      assert {:error, %{id: ["not found"]}} =
+               Reconciliation.execute(reconciliation, %UpdateMovement{id: Ecto.UUID.generate(), changes: %{}})
     end
   end
 end

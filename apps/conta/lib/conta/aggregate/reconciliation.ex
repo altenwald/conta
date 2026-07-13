@@ -3,11 +3,13 @@ defmodule Conta.Aggregate.Reconciliation do
   alias Conta.Command.RemoveMatchRule
   alias Conta.Command.ReorderMatchRules
   alias Conta.Command.SetMatchRule
+  alias Conta.Command.UpdateMovement
 
   alias Conta.Event.MatchRuleRemoved
   alias Conta.Event.MatchRuleSet
   alias Conta.Event.MatchRulesReordered
   alias Conta.Event.MovementsImported
+  alias Conta.Event.MovementUpdated
 
   @derive Jason.Encoder
 
@@ -81,6 +83,62 @@ defmodule Conta.Aggregate.Reconciliation do
 
     %{movements: movements}
     |> MovementsImported.changeset()
+  end
+
+  # `MovementUpdated.changeset/2` (Task 5) also ends its own pipeline with
+  # `|> get_result()`, so the same reasoning as above applies: do not pipe its
+  # result into `Conta.EctoHelpers.get_result/1` again.
+  def execute(%__MODULE__{movements: movements, match_rules: match_rules}, %UpdateMovement{
+        id: id,
+        changes: changes
+      }) do
+    case movements[id] do
+      nil ->
+        {:error, %{id: ["not found"]}}
+
+      movement ->
+        updated = apply_changes_to_movement(movement, changes)
+
+        # `nil` here means "no change to account_name" (see `apply/2` below), not
+        # "unassign" — when the movement already has an account_name and the edit
+        # doesn't touch it directly, we leave it untouched rather than re-stamping
+        # the current value into the event.
+        account_name =
+          cond do
+            Map.has_key?(changes, "account_name") -> updated.account_name
+            is_nil(movement.account_name) -> evaluate_rules(match_rules, updated)
+            :else -> nil
+          end
+
+        %{
+          id: id,
+          on_date: updated.on_date,
+          description: updated.description,
+          amount: updated.amount,
+          currency: updated.currency,
+          account_name: account_name
+        }
+        |> MovementUpdated.changeset()
+    end
+  end
+
+  defp apply_changes_to_movement(movement, changes) do
+    movement
+    |> maybe_put(:on_date, changes["on_date"], &parse_date/1)
+    |> maybe_put(:description, changes["description"], & &1)
+    |> maybe_put(:amount, changes["amount"], &parse_integer/1)
+    |> maybe_put(:currency, changes["currency"], &parse_currency/1)
+    |> maybe_put(:account_name, changes["account_name"], & &1)
+  end
+
+  defp maybe_put(map, _key, nil, _cast_fun), do: map
+  defp maybe_put(map, key, value, cast_fun), do: Map.put(map, key, cast_fun.(value))
+
+  defp parse_currency(value) when is_atom(value), do: value
+
+  defp parse_currency(value) when is_binary(value) do
+    currencies = Money.Currency.all() |> Map.keys() |> Enum.map(&to_string/1)
+    if value in currencies, do: String.to_atom(value)
   end
 
   defp evaluate_rules(match_rules, movement) do
@@ -214,6 +272,23 @@ defmodule Conta.Aggregate.Reconciliation do
       end)
 
     %__MODULE__{reconciliation | movements: Map.merge(movements, new_movements)}
+  end
+
+  def apply(%__MODULE__{movements: movements} = reconciliation, %MovementUpdated{} = event) do
+    movements =
+      Map.update!(movements, event.id, fn movement ->
+        movement
+        |> Map.put(:on_date, event.on_date)
+        |> Map.put(:description, event.description)
+        |> Map.put(:amount, event.amount)
+        |> Map.put(:currency, event.currency)
+        # `event.account_name` is `nil` when `execute/2` decided the account_name
+        # shouldn't be touched (see the comment there) — keep the movement's
+        # current value in that case instead of wiping it out.
+        |> Map.put(:account_name, event.account_name || movement.account_name)
+      end)
+
+    %__MODULE__{reconciliation | movements: movements}
   end
 
   def apply(reconciliation, _event), do: reconciliation
