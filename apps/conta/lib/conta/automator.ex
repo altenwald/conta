@@ -6,13 +6,17 @@ defmodule Conta.Automator do
 
   alias Conta.Automator.Excel
   alias Conta.Automator.Lua
+  alias Conta.Command.ImportMovements
   alias Conta.Command.RemoveFilter
+  alias Conta.Command.RemoveImporter
   alias Conta.Command.RemoveShortcut
   alias Conta.Command.SetAccountTransaction
   alias Conta.Command.SetFilter
+  alias Conta.Command.SetImporter
   alias Conta.Command.SetInvoice
   alias Conta.Command.SetShortcut
   alias Conta.Projector.Automator.Filter
+  alias Conta.Projector.Automator.Importer
   alias Conta.Projector.Automator.Param
   alias Conta.Projector.Automator.Shortcut
   alias Conta.Repo
@@ -25,6 +29,15 @@ defmodule Conta.Automator do
       s in Shortcut,
       where: s.automator == ^automator,
       order_by: s.name
+    )
+    |> Repo.all()
+  end
+
+  def list_importers(automator \\ @default_automator) do
+    from(
+      i in Importer,
+      where: i.automator == ^automator,
+      order_by: i.name
     )
     |> Repo.all()
   end
@@ -58,6 +71,16 @@ defmodule Conta.Automator do
     }
   end
 
+  def get_remove_importer(id) when is_binary(id),
+    do: get_remove_importer(get_importer!(id))
+
+  def get_remove_importer(%Importer{} = importer) do
+    %RemoveImporter{
+      name: importer.name,
+      automator: importer.automator
+    }
+  end
+
   def get_remove_filter(id) when is_binary(id),
     do: get_remove_filter(get_filter!(id))
 
@@ -65,6 +88,22 @@ defmodule Conta.Automator do
     %RemoveFilter{
       name: filter.name,
       automator: filter.automator
+    }
+  end
+
+  def get_set_importer(id) when is_binary(id) do
+    if importer = get_importer(id) do
+      get_set_importer(importer)
+    end
+  end
+
+  def get_set_importer(%Importer{} = importer) do
+    %SetImporter{
+      name: importer.name,
+      description: importer.description,
+      automator: importer.automator,
+      code: importer.code,
+      language: importer.language
     }
   end
 
@@ -120,6 +159,10 @@ defmodule Conta.Automator do
     }
   end
 
+  def get_importer_by_name(automator \\ @default_automator, name) do
+    Repo.get_by(Importer, name: name, automator: automator)
+  end
+
   def get_shortcut_by_name(automator \\ @default_automator, name) do
     Repo.get_by(Shortcut, name: name, automator: automator)
   end
@@ -136,6 +179,14 @@ defmodule Conta.Automator do
     Repo.get_by!(Shortcut, id: id, automator: automator)
   end
 
+  def get_importer(automator \\ @default_automator, id) do
+    Repo.get_by(Importer, id: id, automator: automator)
+  end
+
+  def get_importer!(automator \\ @default_automator, id) do
+    Repo.get_by!(Importer, id: id, automator: automator)
+  end
+
   def get_filter(automator \\ @default_automator, id) do
     Repo.get_by(Filter, id: id, automator: automator)
   end
@@ -150,6 +201,10 @@ defmodule Conta.Automator do
 
   def new_set_shortcut(automator \\ @default_automator) do
     %SetShortcut{automator: automator, language: :lua, code: "-- Lua code\n", params: []}
+  end
+
+  def new_set_importer(automator \\ @default_automator) do
+    %SetImporter{automator: automator, language: :lua, code: "-- Lua code\n"}
   end
 
   def test_run_filter(params_defs, code, test_params) do
@@ -200,6 +255,33 @@ defmodule Conta.Automator do
   end
 
   defp run(%_{code: code, language: :lua}, params), do: Lua.run(code, params)
+
+  def run_importer(automator \\ @default_automator, name_or_importer, params, asset_account_name)
+
+  def run_importer(automator, name, params, asset_account_name) when is_binary(name) do
+    if importer = get_importer_by_name(automator, name) do
+      run_importer(automator, importer, params, asset_account_name)
+    else
+      {:error, :importer_not_found}
+    end
+  end
+
+  def run_importer(_automator, %Importer{} = importer, params, asset_account_name) do
+    with {:ok, %{"status" => "ok", "commands" => commands}} <- run(importer, params) do
+      movements =
+        for %{"type" => "movement", "data" => data} <- commands do
+          Map.merge(data, %{"asset_account_name" => asset_account_name, "source" => importer.name})
+        end
+
+      %{"movements" => movements}
+      |> ImportMovements.changeset()
+      |> Conta.EctoHelpers.get_result()
+      |> case do
+        %ImportMovements{} = command -> dispatch(command)
+        {:error, _} = error -> error
+      end
+    end
+  end
 
   def run_filter(automator \\ @default_automator, name, params)
 

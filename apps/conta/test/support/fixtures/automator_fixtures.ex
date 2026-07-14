@@ -40,4 +40,14 @@ defmodule Conta.AutomatorFixtures do
       type: :date
     }
   end
+
+  def importer_factory do
+    %Conta.Projector.Automator.Importer{
+      name: "bank csv",
+      automator: "automator",
+      description: "import bank csv rows",
+      code: "-- Lua code\n",
+      language: :lua
+    }
+  end
 end

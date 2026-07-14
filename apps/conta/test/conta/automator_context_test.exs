@@ -1,8 +1,11 @@
 defmodule Conta.AutomatorContextTest do
   use Conta.DataCase
+  import Commanded.Assertions.EventAssertions
   import Conta.AutomatorFixtures
 
   alias Conta.Automator
+  alias Conta.Event.MovementsImported
+  alias Conta.Projector.Automator.Importer
   alias Conta.Projector.Automator.Shortcut
   alias Conta.Projector.Automator.Param
 
@@ -65,6 +68,58 @@ defmodule Conta.AutomatorContextTest do
       shortcut = insert(:shortcut)
       remove = Automator.get_remove_shortcut(shortcut)
       assert remove.automator == shortcut.automator
+    end
+  end
+
+  describe "importers — DB queries" do
+    test "list_importers/0 returns all importers for default automator" do
+      importer = insert(:importer)
+      result = Automator.list_importers()
+      assert Enum.any?(result, &(&1.id == importer.id))
+    end
+
+    test "get_importer/1 by id returns the importer" do
+      importer = insert(:importer)
+      assert %Importer{id: id} = Automator.get_importer(importer.id)
+      assert id == importer.id
+    end
+
+    test "get_importer_by_name/1 returns importer by name" do
+      importer = insert(:importer)
+      assert %Importer{name: name} = Automator.get_importer_by_name(importer.name)
+      assert name == importer.name
+    end
+
+    test "get_set_importer/1 returns SetImporter command" do
+      importer = insert(:importer)
+      set_importer = Automator.get_set_importer(importer.id)
+      assert set_importer.name == importer.name
+      assert set_importer.code == importer.code
+      assert set_importer.description == importer.description
+    end
+
+    test "get_set_importer/1 returns nil for unknown id" do
+      assert nil == Automator.get_set_importer(Ecto.UUID.generate())
+    end
+
+    test "get_remove_importer/1 returns RemoveImporter command from id" do
+      importer = insert(:importer)
+      remove = Automator.get_remove_importer(importer.id)
+      assert remove.name == importer.name
+    end
+
+    test "get_remove_importer/1 returns RemoveImporter from struct" do
+      importer = insert(:importer)
+      remove = Automator.get_remove_importer(importer)
+      assert remove.automator == importer.automator
+    end
+  end
+
+  describe "new_set_importer/0" do
+    test "new_set_importer/0 defaults automator and language" do
+      set_importer = Automator.new_set_importer()
+      assert set_importer.automator == "automator"
+      assert set_importer.language == :lua
     end
   end
 
@@ -438,6 +493,51 @@ defmodule Conta.AutomatorContextTest do
 
       assert {:ok, ["Assets", "Bank"]} =
                Automator.test_run_filter(params_defs, "return account", %{"account" => "Assets.Bank"})
+    end
+  end
+
+  describe "run_importer/3" do
+    test "dispatches ImportMovements from the Lua script's movement commands" do
+      importer =
+        insert(:importer,
+          code: """
+          local commands = {}
+          for i, row in ipairs(movements) do
+            commands[i] = {
+              type = "movement",
+              data = {
+                on_date = row.date,
+                description = row.description,
+                amount = math.floor(tonumber(row.amount)),
+                currency = "EUR"
+              }
+            }
+          end
+          return {status = "ok", commands = commands}
+          """
+        )
+
+      rows = [%{"date" => "2026-07-01", "description" => "test row", "amount" => "-100"}]
+
+      # Single-segment, uniquely-suffixed account name on purpose: `ImportMovements`
+      # dispatch here is a real end-to-end call through the router into the
+      # `Reconciliation` aggregate, and its read-model projection runs
+      # asynchronously in a different process. Without waiting for the resulting
+      # `MovementsImported` event, this test (and the sandboxed DB connection it
+      # owns) can finish and tear down before the async `Conta.Projector.Reconciliation`
+      # handler gets to persist the projection, which crashes that handler's
+      # connection and — because the sandbox is shared across the whole test run —
+      # takes down every other test's DB access for the remainder of the suite.
+      # A unique account name also keeps the `wait_for_event/3` predicate from
+      # matching some other test's leftover event on the process-wide in-memory
+      # event store.
+      asset_account_name = ["Bank #{System.unique_integer([:positive])}"]
+
+      assert :ok = Automator.run_importer(importer, %{"movements" => rows}, asset_account_name)
+
+      wait_for_event(Conta.Commanded.Application, MovementsImported, fn event ->
+        Enum.any?(event.movements, &(&1.asset_account_name == asset_account_name))
+      end)
     end
   end
 
