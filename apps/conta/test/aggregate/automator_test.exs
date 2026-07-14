@@ -2,9 +2,13 @@ defmodule Aggregate.AutomatorTest do
   use ExUnit.Case
 
   alias Conta.Aggregate.Automator
+  alias Conta.Command.RemoveImporter
   alias Conta.Command.SetFilter
+  alias Conta.Command.SetImporter
   alias Conta.Command.SetShortcut
   alias Conta.Event.FilterSet
+  alias Conta.Event.ImporterRemoved
+  alias Conta.Event.ImporterSet
   alias Conta.Event.ShortcutSet
 
   describe "shortcut" do
@@ -54,7 +58,7 @@ defmodule Aggregate.AutomatorTest do
     test "create successfully" do
       automator = %Automator{}
 
-      command = %Conta.Command.SetImporter{
+      command = %SetImporter{
         automator: "automator",
         name: "bank x csv",
         code: "-- lua",
@@ -63,7 +67,7 @@ defmodule Aggregate.AutomatorTest do
 
       event = Automator.execute(automator, command)
 
-      assert %Conta.Event.ImporterSet{
+      assert %ImporterSet{
                automator: "automator",
                name: "bank x csv",
                code: "-- lua",
@@ -71,6 +75,35 @@ defmodule Aggregate.AutomatorTest do
              } = event
 
       assert %Automator{importers: MapSet.new(["bank x csv"])} == Automator.apply(automator, event)
+    end
+
+    test "remove successfully" do
+      automator = %Automator{importers: MapSet.new(["bank x csv"])}
+
+      command = %RemoveImporter{
+        automator: "automator",
+        name: "bank x csv"
+      }
+
+      event = Automator.execute(automator, command)
+
+      assert %ImporterRemoved{
+               automator: "automator",
+               name: "bank x csv"
+             } == event
+
+      assert %Automator{importers: MapSet.new()} == Automator.apply(automator, event)
+    end
+
+    test "remove not found" do
+      automator = %Automator{}
+
+      command = %RemoveImporter{
+        automator: "automator",
+        name: "bank x csv"
+      }
+
+      assert {:error, %{name: ["not found"]}} == Automator.execute(automator, command)
     end
   end
 end
