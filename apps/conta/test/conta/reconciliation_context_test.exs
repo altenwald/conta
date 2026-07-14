@@ -217,6 +217,85 @@ defmodule Conta.ReconciliationContextTest do
     end
   end
 
+  describe "confirm_movements/1" do
+    setup do
+      # Single-segment `bank_name`/`good_account` names, for the same
+      # `valid_parent?/2` reason documented in the `confirm_movement/1` describe
+      # block's `setup` above (a two-segment name like `["Expenses", "Good 1"]`
+      # would need `["Expenses"]` pre-created as a real account first).
+      bank_name = ["Bank #{System.unique_integer([:positive])}"]
+      good_account = ["Good #{System.unique_integer([:positive])}"]
+
+      :ok = dispatch(%SetAccount{name: bank_name, type: :assets, currency: :EUR, ledger: "default"})
+      :ok = dispatch(%SetAccount{name: good_account, type: :expenses, currency: :EUR, ledger: "default"})
+
+      :ok =
+        dispatch(%ImportMovements{
+          movements: [
+            %ImportMovements.Movement{
+              on_date: ~D[2026-07-01],
+              description: "ok one",
+              amount: -100,
+              currency: :EUR,
+              asset_account_name: bank_name
+            },
+            %ImportMovements.Movement{
+              on_date: ~D[2026-07-01],
+              description: "bad one",
+              amount: -100,
+              currency: :EUR,
+              asset_account_name: bank_name
+            }
+          ]
+        })
+
+      # As in the `confirm_movement/1` setup above, filter on `asset_account_name`
+      # (unique per test) rather than `description` alone, and read the movement
+      # ids straight off the matched event's own data instead of doing a
+      # description-based `Repo.get_by!/2` lookup afterwards — that would risk
+      # matching a same-description row from a different test against the
+      # process-wide, never-reset in-memory event store / read model.
+      event =
+        wait_for_event(Conta.Commanded.Application, MovementsImported, fn event ->
+          Enum.any?(event.movements, &(&1.asset_account_name == bank_name))
+        end)
+
+      %{id: good_id} = Enum.find(event.data.movements, &(&1.description == "ok one"))
+      %{id: bad_id} = Enum.find(event.data.movements, &(&1.description == "bad one"))
+
+      good = eventually(fn -> Repo.get(Movement, good_id) end)
+      bad = eventually(fn -> Repo.get(Movement, bad_id) end)
+
+      bad_account_name = ["Expenses", "Nonexistent #{System.unique_integer([:positive])}"]
+
+      :ok = Reconciliation.update_movement(good.id, %{"account_name" => good_account})
+      :ok = Reconciliation.update_movement(bad.id, %{"account_name" => bad_account_name})
+
+      eventually(fn ->
+        Repo.get(Movement, good.id).account_name == good_account and
+          Repo.get(Movement, bad.id).account_name == bad_account_name
+      end)
+
+      %{good: good, bad: bad}
+    end
+
+    test "processes each movement independently and reports per-movement result", %{good: good, bad: bad} do
+      results = Reconciliation.confirm_movements([good.id, bad.id])
+
+      assert {:ok, %{movement_id: _}} = results[good.id]
+      assert {:error, _reason} = results[bad.id]
+
+      # `confirm_movement/1`'s success path dispatches `RemoveMovement` and returns
+      # before the projector (a separate, eventually-consistent process — see the
+      # `confirm_movement/1` describe block's `setup` comment above) has necessarily
+      # applied it to the read model yet, so poll instead of asserting immediately.
+      eventually(fn -> is_nil(Repo.get(Movement, good.id)) end)
+
+      refute Repo.get(Movement, good.id)
+      assert Repo.get(Movement, bad.id)
+    end
+  end
+
   # Bounded poll for asynchronous read-model consistency — see the long comment in
   # the `confirm_movement/1` describe block's `setup` above for why this is needed
   # instead of relying solely on `wait_for_event/2,3`/`assert_receive_event/3,4`.

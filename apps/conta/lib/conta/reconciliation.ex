@@ -43,6 +43,10 @@ defmodule Conta.Reconciliation do
     |> do_confirm_movement()
   end
 
+  def confirm_movements(ids) when is_list(ids) do
+    Map.new(ids, fn id -> {id, confirm_movement(id)} end)
+  end
+
   # Paso 0 del algoritmo del spec: si ya está `transacted: true`, un intento anterior
   # ya creó la transacción y solo falló al retirar el movimiento — no se vuelve a
   # construir ni despachar `SetAccountTransaction` (evitaría una transacción
@@ -67,16 +71,18 @@ defmodule Conta.Reconciliation do
          # dispatch fails *after* `SetAccountTransaction` above already succeeded, the
          # movement's read model never picks up `transacted: true`, so a retry of
          # `confirm_movement/1` would re-enter this clause and dispatch
-         # `SetAccountTransaction` a second time — a duplicate transaction. This is
-         # currently unreachable because nothing in this codebase calls
-         # `confirm_movement/1` more than once for the same movement yet — the only
-         # caller is this module itself. Task 16's batch confirmation (or any future
-         # retry-on-failure caller) removes this precondition and should re-examine
-         # whether this gap needs closing (e.g. via an idempotency check at the
-         # `Ledger` aggregate boundary) rather than just documenting it. This is a
-         # two-phase-commit across two aggregates with no Process Manager to make it
-         # atomic, matching this project's existing conventions — not something to
-         # redesign here on its own.
+         # `SetAccountTransaction` a second time — a duplicate transaction. `confirm_movements/1`
+         # doesn't introduce this itself: it calls `confirm_movement/1` exactly once per
+         # id in a single pass, same as calling it directly, so a batch alone can't
+         # trigger the retry. The actual gap is a *human*/UI-level concern — e.g. a user
+         # re-clicking "Confirm" on a row stuck after a partial failure, dispatching
+         # `confirm_movement/1` or `confirm_movements/1` a second time for the same
+         # movement id across separate calls — which is out of scope here and belongs to
+         # whichever future task adds that retry affordance. Re-examine then whether this
+         # gap needs closing (e.g. via an idempotency check at the `Ledger` aggregate
+         # boundary) rather than just documenting it. This is a two-phase-commit across
+         # two aggregates with no Process Manager to make it atomic, matching this
+         # project's existing conventions — not something to redesign here on its own.
          :ok <- dispatch(%MarkMovementTransacted{id: movement.id}) do
       retire_movement(movement)
     end
