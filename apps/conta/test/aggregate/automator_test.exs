@@ -49,4 +49,28 @@ defmodule Aggregate.AutomatorTest do
                Automator.execute(automator, command)
     end
   end
+
+  describe "importer" do
+    test "create successfully" do
+      automator = %Automator{}
+
+      command = %Conta.Command.SetImporter{
+        automator: "automator",
+        name: "bank x csv",
+        code: "-- lua",
+        language: "lua"
+      }
+
+      event = Automator.execute(automator, command)
+
+      assert %Conta.Event.ImporterSet{
+               automator: "automator",
+               name: "bank x csv",
+               code: "-- lua",
+               language: :lua
+             } = event
+
+      assert %Automator{importers: MapSet.new(["bank x csv"])} == Automator.apply(automator, event)
+    end
+  end
 end
