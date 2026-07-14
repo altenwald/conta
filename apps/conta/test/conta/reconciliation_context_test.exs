@@ -1,11 +1,16 @@
 defmodule Conta.ReconciliationContextTest do
   use Conta.DataCase
-
+  import Commanded.Assertions.EventAssertions
   import Conta.ReconciliationFixtures
+  import Conta.Commanded.Application, only: [dispatch: 1]
 
+  alias Conta.Reconciliation
+  alias Conta.Command.ImportMovements
+  alias Conta.Command.SetAccount
+  alias Conta.Event.MovementsImported
+  alias Conta.Event.TransactionCreated
   alias Conta.Projector.Reconciliation.MatchRule
   alias Conta.Projector.Reconciliation.Movement
-  alias Conta.Reconciliation
 
   describe "match rules" do
     test "list_match_rules/0 returns rules ordered by position" do
@@ -46,4 +51,137 @@ defmodule Conta.ReconciliationContextTest do
       assert id == movement.id
     end
   end
+
+  describe "confirm_movement/1" do
+    setup do
+      # Single-segment names on purpose: `SetAccount`'s `valid_parent?/2` requires any
+      # parent segment (all but the last element of a multi-segment name) to already
+      # exist as an account in the real `Ledger` aggregate. A two-segment name like
+      # `["Assets", "Bank 1"]` would need `["Assets"]` pre-created too, and since the
+      # in-memory event store is shared across the whole test run, a fixed top-level
+      # `["Assets"]`/`["Expenses"]` name risks colliding with accounts other tests set
+      # up with different attributes. A single-segment, fully unique name sidesteps
+      # both problems while still exercising a real `assets` account and a real
+      # counterpart account in the aggregate.
+      bank_name = ["Bank #{System.unique_integer([:positive])}"]
+      expense_name = ["Misc #{System.unique_integer([:positive])}"]
+
+      :ok = dispatch(%SetAccount{name: bank_name, type: :assets, currency: :EUR, ledger: "default"})
+      :ok = dispatch(%SetAccount{name: expense_name, type: :expenses, currency: :EUR, ledger: "default"})
+
+      :ok =
+        dispatch(%ImportMovements{
+          movements: [
+            %ImportMovements.Movement{
+              on_date: ~D[2026-07-01],
+              description: "test movement",
+              amount: -1500,
+              currency: :EUR,
+              asset_account_name: bank_name
+            }
+          ]
+        })
+
+      # `wait_for_event/3` returns the `%Commanded.EventStore.RecordedEvent{}` itself
+      # (not just `:ok`), so we read the aggregate-generated movement `id` straight off
+      # the event's data instead of guessing it — and filter the predicate on
+      # `asset_account_name == bank_name` (unique per test via `System.unique_integer/1`
+      # above), not on `description == "test movement"` like every other test in this
+      # describe block also uses: a description-only predicate would happily match a
+      # *different* test's `MovementsImported` event from earlier in this same test
+      # run (the in-memory event store is process-wide and never reset), which is
+      # exactly the `Ecto.NoResultsError` this used to produce intermittently.
+      event =
+        wait_for_event(Conta.Commanded.Application, MovementsImported, fn event ->
+          Enum.any?(event.movements, &(&1.asset_account_name == bank_name))
+        end)
+
+      %{id: movement_id} = Enum.find(event.data.movements, &(&1.asset_account_name == bank_name))
+
+      # Beyond the event being appended to the store, `confirm_movement/1` and this
+      # test's own assertions read `Conta.Projector.Reconciliation`'s Postgres-backed
+      # read model directly. That projector is a separate, independently scheduled
+      # `Commanded.Event.Handler` process — `wait_for_event/2,3` only proves *this
+      # test's own* ad-hoc event-store subscription received the event, not that the
+      # projector's process has finished its `Ecto.Multi` write yet. Dispatching with
+      # `consistency: :strong` would normally close that gap, but it's a no-op in this
+      # app: `Conta.Projector` (apps/conta/lib/conta/projector.ex:25) strips the
+      # `:consistency` option before it reaches `Commanded.Event.Handler`, so every
+      # projector is always registered `:eventual` regardless of the `config :conta,
+      # consistency: :strong` test setting — a pre-existing gap in shared production
+      # code, out of scope for this task. Polling the read model directly is the only
+      # reliable way, from here, to know the projection has actually caught up.
+      movement = eventually(fn -> Repo.get(Movement, movement_id) end)
+
+      %{movement: movement, bank_name: bank_name, expense_name: expense_name}
+    end
+
+    test "confirms a movement with a valid account and creates the transaction", %{
+      movement: movement,
+      expense_name: expense_name
+    } do
+      :ok = Reconciliation.update_movement(movement.id, %{"account_name" => expense_name})
+      eventually(fn -> Repo.get(Movement, movement.id).account_name == expense_name end)
+
+      assert {:ok, %{movement_id: confirmed_id}} = Reconciliation.confirm_movement(movement.id)
+      assert confirmed_id == movement.id
+
+      wait_for_event(Conta.Commanded.Application, TransactionCreated)
+      eventually(fn -> is_nil(Repo.get(Movement, movement.id)) end)
+
+      refute Repo.get(Movement, movement.id)
+    end
+
+    test "leaves the movement pending when the counterpart account doesn't exist", %{movement: movement} do
+      bad_account_name = ["Expenses", "Does Not Exist #{System.unique_integer([:positive])}"]
+      :ok = Reconciliation.update_movement(movement.id, %{"account_name" => bad_account_name})
+      eventually(fn -> Repo.get(Movement, movement.id).account_name == bad_account_name end)
+
+      assert {:error, _reason} = Reconciliation.confirm_movement(movement.id)
+
+      assert Repo.get(Movement, movement.id)
+      refute Repo.get(Movement, movement.id).transacted
+    end
+
+    test "confirming a movement without an assigned account returns an error and doesn't touch it", %{
+      movement: movement
+    } do
+      assert {:error, :no_account_assigned} = Reconciliation.confirm_movement(movement.id)
+      assert Repo.get(Movement, movement.id)
+    end
+
+    test "confirming a zero-amount movement returns an error and doesn't touch it", %{
+      movement: movement,
+      expense_name: expense_name
+    } do
+      :ok = Reconciliation.update_movement(movement.id, %{"account_name" => expense_name, "amount" => 0})
+
+      eventually(fn ->
+        movement = Repo.get(Movement, movement.id)
+        movement.account_name == expense_name and movement.amount == 0
+      end)
+
+      assert {:error, :zero_amount} = Reconciliation.confirm_movement(movement.id)
+
+      refute Repo.get(Movement, movement.id).transacted
+    end
+  end
+
+  # Bounded poll for asynchronous read-model consistency — see the long comment in
+  # the `confirm_movement/1` describe block's `setup` above for why this is needed
+  # instead of relying solely on `wait_for_event/2,3`/`assert_receive_event/3,4`.
+  # Retries every 10ms for up to 1s; the final attempt's result (or `nil`/`false`) is
+  # returned as-is so callers get a normal assertion failure with real values instead
+  # of an opaque timeout error.
+  defp eventually(fun, attempts \\ 100)
+
+  defp eventually(fun, attempts) when attempts > 1 do
+    fun.() ||
+      (
+        Process.sleep(10)
+        eventually(fun, attempts - 1)
+      )
+  end
+
+  defp eventually(fun, _attempts), do: fun.()
 end
