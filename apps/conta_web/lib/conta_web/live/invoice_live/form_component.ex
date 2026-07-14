@@ -10,116 +10,105 @@ defmodule ContaWeb.InvoiceLive.FormComponent do
   @impl true
   def render(assigns) do
     ~H"""
-    <div class="modal is-active">
-      <div class="modal-background"></div>
-      <div class="modal-card">
-        <header class="modal-card-head">
-          <h2>{@title}</h2>
-        </header>
-        <section class="modal-card-body">
-          <.simple_form for={@form} id="invoice-form" phx-target={@myself} phx-change="validate" phx-submit="save">
-            <.input field={@form[:nif]} type="text" label={gettext("Company NIF")} disabled="true" />
-            <.input field={@form[:name]} type="text" label={gettext("Name")} />
-            <.input field={@form[:invoice_number]} type="number" label={gettext("Invoice Number")} />
-            <.input field={@form[:invoice_date]} type="date" label={gettext("Invoice Date")} />
-            <.input field={@form[:due_date]} type="date" label={gettext("Due Date")} />
-            <.input field={@form[:paid_date]} type="date" label={gettext("Paid Date")} />
-            <.input
-              field={@form[:type]}
-              type="select"
-              label={gettext("Type")}
-              options={[{gettext("Product"), "product"}, {gettext("Service"), "service"}]}
-              prompt={gettext("Choose a type")}
-            />
-            <.input
-              field={@form[:client_nif]}
-              type="select"
-              label={gettext("Client")}
-              options={list_clients()}
-              prompt={gettext("No client")}
-            />
-            <.input
-              field={@form[:payment_method]}
-              type="select"
-              label={gettext("Payment Method")}
-              options={list_payment_methods(@company_nif)}
-              prompt={gettext("Choose a payment method...")}
-            />
-            <.input
-              field={@form[:template]}
-              type="select"
-              label={gettext("Template")}
-              options={list_templates(@company_nif)}
-              prompt={gettext("Choose a template...")}
-            />
-            <.input
-              field={@form[:currency]}
-              type="select"
-              label={gettext("Currency")}
-              options={list_currencies()}
-              prompt={gettext("Choose a currency...")}
-            />
-            <.input field={@form[:subtotal_price]} type="number" step=".01" label={gettext("Subtotal")} />
-            <.input field={@form[:tax_price]} type="number" step=".01" label={gettext("Tax Price")} />
-            <.input field={@form[:total_price]} type="number" step=".01" label={gettext("Total Price")} />
-            <.input
-              :if={@form[:client_nif].value in [nil, ""]}
-              field={@form[:destination_country]}
-              type="select"
-              label={gettext("Client Country")}
-              options={list_countries()}
-              prompt={gettext("Choose a country...")}
-            />
-            <.input
-              :if={@form[:client_nif].value not in [nil, ""]}
-              field={@form[:destination_country]}
-              type="hidden"
-            />
-            <div class="field is-horizontal">
-              <div class="field-label is-normal">
-                <label class="label">{gettext("Details")}</label>
-              </div>
-              <div class="field-body">
-                <.link class="button" phx-target={@myself} phx-click="add_detail">
-                  {gettext("Add Detail")}
-                </.link>
-              </div>
+    <div>
+      <h3 class="font-bold text-lg mb-4">{@title}</h3>
+
+      <.simple_form for={@form} id="invoice-form" phx-target={@myself} phx-change="validate" phx-submit="save">
+        <.input field={@form[:nif]} type="text" label={gettext("Company NIF")} disabled="true" />
+        <.input field={@form[:name]} type="text" label={gettext("Name")} />
+        <.input field={@form[:invoice_number]} type="number" label={gettext("Invoice Number")} />
+        <.input field={@form[:invoice_date]} type="date" label={gettext("Invoice Date")} />
+        <.input field={@form[:due_date]} type="date" label={gettext("Due Date")} />
+        <.input field={@form[:paid_date]} type="date" label={gettext("Paid Date")} />
+        <.input
+          field={@form[:type]}
+          type="select"
+          label={gettext("Type")}
+          options={[{gettext("Product"), "product"}, {gettext("Service"), "service"}]}
+          prompt={gettext("Choose a type")}
+        />
+        <.input
+          field={@form[:client_nif]}
+          type="select"
+          label={gettext("Client")}
+          options={list_clients()}
+          prompt={gettext("No client")}
+        />
+        <.input
+          field={@form[:payment_method]}
+          type="select"
+          label={gettext("Payment Method")}
+          options={list_payment_methods(@company_nif)}
+          prompt={gettext("Choose a payment method...")}
+        />
+        <.input
+          field={@form[:template]}
+          type="select"
+          label={gettext("Template")}
+          options={list_templates(@company_nif)}
+          prompt={gettext("Choose a template...")}
+        />
+        <.input
+          field={@form[:currency]}
+          type="select"
+          label={gettext("Currency")}
+          options={list_currencies()}
+          prompt={gettext("Choose a currency...")}
+        />
+        <.input field={@form[:subtotal_price]} type="number" step=".01" label={gettext("Subtotal")} />
+        <.input field={@form[:tax_price]} type="number" step=".01" label={gettext("Tax Price")} />
+        <.input field={@form[:total_price]} type="number" step=".01" label={gettext("Total Price")} />
+        <.input
+          :if={@form[:client_nif].value in [nil, ""]}
+          field={@form[:destination_country]}
+          type="select"
+          label={gettext("Client Country")}
+          options={list_countries()}
+          prompt={gettext("Choose a country...")}
+        />
+        <.input
+          :if={@form[:client_nif].value not in [nil, ""]}
+          field={@form[:destination_country]}
+          type="hidden"
+        />
+        <div class="flex items-center justify-between mt-4">
+          <label class="font-semibold">{gettext("Details")}</label>
+          <.link class="btn btn-sm" phx-target={@myself} phx-click="add_detail">
+            {gettext("Add Detail")}
+          </.link>
+        </div>
+        <.inputs_for :let={d} field={@form[:details]}>
+          <div class="flex gap-4 items-start border-t border-base-200 pt-2 mt-2">
+            <div class="flex-1">
+              <.input field={d[:sku]} type="text" label={gettext("SKU")} />
+              <.input field={d[:description]} type="text" label={gettext("Description")} />
+              <.input field={d[:tax]} type="number" label={gettext("Tax (%)")} />
+              <.input field={d[:base_price]} type="number" step=".01" label={gettext("Base Price")} />
+              <.input field={d[:units]} type="number" label={gettext("Units")} />
+              <.input field={d[:tax_price]} type="number" step=".01" label={gettext("Tax Price")} />
+              <.input field={d[:total_price]} type="number" step=".01" label={gettext("Total Price")} />
             </div>
-            <.inputs_for :let={d} field={@form[:details]}>
-              <div class="columns">
-                <div class="column is-one-fifth">
-                  <.link
-                    class="button is-danger"
-                    phx-target={@myself}
-                    phx-click="del_detail"
-                    phx-value-index={d.index}
-                  >
-                    {gettext("Remove")}
-                  </.link>
-                </div>
-                <div class="column">
-                  <.input field={d[:sku]} type="text" label={gettext("SKU")} />
-                  <.input field={d[:description]} type="text" label={gettext("Description")} />
-                  <.input field={d[:tax]} type="number" label={gettext("Tax (%)")} />
-                  <.input field={d[:base_price]} type="number" step=".01" label={gettext("Base Price")} />
-                  <.input field={d[:units]} type="number" label={gettext("Units")} />
-                  <.input field={d[:tax_price]} type="number" step=".01" label={gettext("Tax Price")} />
-                  <.input field={d[:total_price]} type="number" step=".01" label={gettext("Total Price")} />
-                </div>
-              </div>
-            </.inputs_for>
-            <.input field={@form[:comments]} type="textarea" label={gettext("Comments")} />
-          </.simple_form>
-        </section>
-        <footer class="modal-card-foot is-at-right">
-          <.button form="invoice-form" class="is-primary" phx-disable-with={gettext("Saving...")}>
+            <.link
+              class="btn btn-error btn-outline btn-sm"
+              phx-target={@myself}
+              phx-click="del_detail"
+              phx-value-index={d.index}
+            >
+              {gettext("Remove")}
+            </.link>
+          </div>
+        </.inputs_for>
+        <.input field={@form[:comments]} type="textarea" label={gettext("Comments")} />
+
+        <:actions>
+          <.button class="btn-primary" phx-disable-with={gettext("Saving...")}>
             {gettext("Save Invoice")}
           </.button>
-          <.link class="button" patch={~p"/books/invoices"}>
+          <.link class="btn btn-ghost" patch={~p"/books/invoices"}>
             {gettext("Cancel")}
           </.link>
-        </footer>
-      </div>
+        </:actions>
+      </.simple_form>
     </div>
     """
   end

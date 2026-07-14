@@ -10,69 +10,64 @@ defmodule ContaWeb.ExpenseLive.FormComponent do
   @impl true
   def render(assigns) do
     ~H"""
-    <div class="modal is-active">
-      <div class="modal-background"></div>
-      <div class="modal-card">
-        <header class="modal-card-head">
-          <h2>{@title}</h2>
-        </header>
-        <section class="modal-card-body">
-          <.simple_form for={@form} id="expense-form" phx-target={@myself} phx-change="validate" phx-submit="save">
-            <.input field={@form[:nif]} type="text" label={gettext("Company NIF")} disabled="true" />
-            <.input field={@form[:name]} type="text" label={gettext("Name")} />
-            <.input field={@form[:invoice_number]} type="text" label={gettext("Invoice Number")} />
-            <.input field={@form[:invoice_date]} type="date" label={gettext("Invoice Date")} />
-            <.input field={@form[:due_date]} type="date" label={gettext("Due Date")} />
-            <.input
-              field={@form[:category]}
-              type="select"
-              label={gettext("Category")}
-              options={list_categories()}
-              prompt={gettext("Choose a category...")}
-            />
-            <.input
-              field={@form[:provider_nif]}
-              type="select"
-              label={gettext("Provider")}
-              options={list_providers()}
-              prompt={gettext("Choose a provider...")}
-            />
-            <.input
-              field={@form[:payment_method]}
-              type="select"
-              label={gettext("Payment Method")}
-              options={list_payment_methods(@company_nif)}
-              prompt={gettext("Choose a payment method...")}
-            />
-            <.input
-              field={@form[:currency]}
-              type="select"
-              label={gettext("Currency")}
-              options={list_currencies()}
-              prompt={gettext("Choose a currency...")}
-            />
-            <.input field={@form[:subtotal_price]} type="number" step=".01" label={gettext("Subtotal")} />
-            <.input field={@form[:tax_price]} type="number" step=".01" label={gettext("Tax Price")} />
-            <.input field={@form[:total_price]} type="number" step=".01" label={gettext("Total Price")} />
-            <.input
-              field={@form[:attachments]}
-              type="file"
-              upload={@uploads.attachments}
-              phx-target={@myself}
-              files={@attachments}
-              label={gettext("Attachments")}
-            />
-          </.simple_form>
-        </section>
-        <footer class="modal-card-foot is-at-right">
-          <.button form="expense-form" class="is-primary" phx-disable-with={gettext("Saving...")}>
+    <div>
+      <h3 class="font-bold text-lg mb-4">{@title}</h3>
+
+      <.simple_form for={@form} id="expense-form" phx-target={@myself} phx-change="validate" phx-submit="save">
+        <.input field={@form[:nif]} type="text" label={gettext("Company NIF")} disabled="true" />
+        <.input field={@form[:name]} type="text" label={gettext("Name")} />
+        <.input field={@form[:invoice_number]} type="text" label={gettext("Invoice Number")} />
+        <.input field={@form[:invoice_date]} type="date" label={gettext("Invoice Date")} />
+        <.input field={@form[:due_date]} type="date" label={gettext("Due Date")} />
+        <.input
+          field={@form[:category]}
+          type="select"
+          label={gettext("Category")}
+          options={list_categories()}
+          prompt={gettext("Choose a category...")}
+        />
+        <.input
+          field={@form[:provider_nif]}
+          type="select"
+          label={gettext("Provider")}
+          options={list_providers()}
+          prompt={gettext("Choose a provider...")}
+        />
+        <.input
+          field={@form[:payment_method]}
+          type="select"
+          label={gettext("Payment Method")}
+          options={list_payment_methods(@company_nif)}
+          prompt={gettext("Choose a payment method...")}
+        />
+        <.input
+          field={@form[:currency]}
+          type="select"
+          label={gettext("Currency")}
+          options={list_currencies()}
+          prompt={gettext("Choose a currency...")}
+        />
+        <.input field={@form[:subtotal_price]} type="number" step=".01" label={gettext("Subtotal")} />
+        <.input field={@form[:tax_price]} type="number" step=".01" label={gettext("Tax Price")} />
+        <.input field={@form[:total_price]} type="number" step=".01" label={gettext("Total Price")} />
+        <.input
+          field={@form[:attachments]}
+          type="file"
+          upload={@uploads.attachments}
+          phx-target={@myself}
+          files={@attachments}
+          label={gettext("Attachments")}
+        />
+
+        <:actions>
+          <.button class="btn-primary" phx-disable-with={gettext("Saving...")}>
             {gettext("Save Expense")}
           </.button>
-          <.link class="button" patch={~p"/books/expenses"}>
+          <.link class="btn btn-ghost" patch={~p"/books/expenses"}>
             {gettext("Cancel")}
           </.link>
-        </footer>
-      </div>
+        </:actions>
+      </.simple_form>
     </div>
     """
   end

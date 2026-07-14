@@ -8,40 +8,35 @@ defmodule ContaWeb.ContactLive.FormComponent do
   @impl true
   def render(assigns) do
     ~H"""
-    <div class="modal is-active">
-      <div class="modal-background"></div>
-      <div class="modal-card">
-        <header class="modal-card-head">
-          <h2>{@title}</h2>
-        </header>
-        <section class="modal-card-body">
-          <.simple_form for={@form} id="contact-form" phx-target={@myself} phx-change="validate" phx-submit="save">
-            <.input field={@form[:company_nif]} type="text" label={gettext("Company NIF")} disabled="true" />
-            <.input field={@form[:nif]} type="text" label={gettext("Contact NIF")} />
-            <.input field={@form[:name]} type="text" label={gettext("Name")} />
-            <.input field={@form[:intracommunity]} type="checkbox" label={gettext("Intracommunity?")} />
-            <.input field={@form[:address]} type="text" label={gettext("Address")} />
-            <.input field={@form[:postcode]} type="text" label={gettext("Postcode")} />
-            <.input field={@form[:city]} type="text" label={gettext("City")} />
-            <.input field={@form[:state]} type="text" label={gettext("State")} />
-            <.input
-              field={@form[:country]}
-              type="select"
-              options={list_countries()}
-              label={gettext("Country")}
-              phx-debounce={500}
-            />
-          </.simple_form>
-        </section>
-        <footer class="modal-card-foot is-at-right">
-          <.button form="contact-form" class="is-primary" phx-disable-with={gettext("Saving...")}>
+    <div>
+      <h3 class="font-bold text-lg mb-4">{@title}</h3>
+
+      <.simple_form for={@form} id="contact-form" phx-target={@myself} phx-change="validate" phx-submit="save">
+        <.input field={@form[:company_nif]} type="text" label={gettext("Company NIF")} disabled="true" />
+        <.input field={@form[:nif]} type="text" label={gettext("Contact NIF")} />
+        <.input field={@form[:name]} type="text" label={gettext("Name")} />
+        <.input field={@form[:intracommunity]} type="checkbox" label={gettext("Intracommunity?")} />
+        <.input field={@form[:address]} type="text" label={gettext("Address")} />
+        <.input field={@form[:postcode]} type="text" label={gettext("Postcode")} />
+        <.input field={@form[:city]} type="text" label={gettext("City")} />
+        <.input field={@form[:state]} type="text" label={gettext("State")} />
+        <.input
+          field={@form[:country]}
+          type="select"
+          options={list_countries()}
+          label={gettext("Country")}
+          phx-debounce={500}
+        />
+
+        <:actions>
+          <.button class="btn-primary" phx-disable-with={gettext("Saving...")}>
             {gettext("Save Contact")}
           </.button>
-          <.link class="button" patch={@patch}>
+          <.link class="btn btn-ghost" patch={@patch}>
             {gettext("Cancel")}
           </.link>
-        </footer>
-      </div>
+        </:actions>
+      </.simple_form>
     </div>
     """
   end

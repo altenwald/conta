@@ -12,141 +12,130 @@ defmodule ContaWeb.EntryLive.FormComponent do
   @impl true
   def render(assigns) do
     ~H"""
-    <div class="modal is-active">
-      <div class="modal-background"></div>
-      <div class="modal-card">
-        <header class="modal-card-head">
-          <h2>{@title}</h2>
-          <div :if={@breakdown} class="is-right">
-            {gettext("imbalance: %{currency_data}", currency_data: @currency_data)}
+    <div>
+      <h3 class="font-bold text-lg mb-4 flex items-center justify-between">
+        {@title}
+        <span :if={@breakdown} class="text-sm font-normal opacity-70">
+          {gettext("imbalance: %{currency_data}", currency_data: @currency_data)}
+        </span>
+      </h3>
+
+      <.simple_form
+        for={@form}
+        id="account-transaction-form"
+        phx-target={@myself}
+        phx-change="validate"
+        phx-submit="save"
+      >
+        <.input field={@form[:ledger]} type="hidden" />
+        <.input field={@form[:on_date]} type="date" label={gettext("Date")} />
+        <.input field={@form[:breakdown]} type="checkbox" label={gettext("Breakdown")} />
+        <%= if @breakdown do %>
+          <div class="flex items-center justify-between mt-4">
+            <label class="font-semibold">{gettext("Entries")}</label>
+            <.link class="btn btn-sm" phx-target={@myself} phx-click="add_entry">
+              {gettext("Add Entry")}
+            </.link>
           </div>
-        </header>
-        <section class="modal-card-body">
-          <.simple_form
-            for={@form}
-            id="account-transaction-form"
-            phx-target={@myself}
-            phx-change="validate"
-            phx-submit="save"
-          >
-            <.input field={@form[:ledger]} type="hidden" />
-            <.input field={@form[:on_date]} type="date" label={gettext("Date")} />
-            <.input field={@form[:breakdown]} type="checkbox" label={gettext("Breakdown")} />
-            <%= if @breakdown do %>
-              <div class="field is-horizontal">
-                <div class="field-label is-normal">
-                  <label class="label">{gettext("Entries")}</label>
-                </div>
-                <div class="field-body">
-                  <.link class="button" phx-target={@myself} phx-click="add_entry">
-                    {gettext("Add Entry")}
-                  </.link>
-                </div>
-              </div>
-              <div class="notification">
-                <.error :for={{error, _} <- @form[:entries].errors}>
-                  <strong><%= gettext("Entries") %></strong>&nbsp;{error}
-                </.error>
-              </div>
-              <.inputs_for :let={d} field={@form[:entries]}>
-                <div class="columns">
-                  <div class="column is-one-fifth">
-                    <.link
-                      class="button is-danger"
-                      phx-target={@myself}
-                      phx-click="del_entry"
-                      phx-value-index={d.index}
-                    >
-                      {gettext("Remove")}
-                    </.link>
-                  </div>
-                  <div class="column">
-                    <.input
-                      field={d[:description]}
-                      label={gettext("Description")}
-                      phx-mounted={if(d.index == 0, do: JS.focus())}
-                    />
-                    <.input
-                      field={d[:account_name]}
-                      label={gettext("Account")}
-                      type="select"
-                      options={list_accounts(@accounts)}
-                      prompt={gettext("Choose an account...")}
-                    />
-                    <%= if @different_currency? do %>
-                      <.input field={d[:currency]} type="hidden" />
-                      <.input
-                        field={d[:amount]}
-                        label={gettext("Amount (%{currency})", currency: d[:currency].value)}
-                        type="number"
-                        step=".01"
-                      />
-                      <.input field={d[:change_currency]} type="hidden" />
-                      <.input
-                        field={d[:change_amount]}
-                        label={gettext("Amount (%{currency})", currency: d[:change_currency].value)}
-                        type="number"
-                        step=".01"
-                      />
-                    <% else %>
-                      <.input field={d[:currency]} type="hidden" />
-                      <.input field={d[:amount]} label={gettext("Amount")} type="number" step=".01" />
-                    <% end %>
-                  </div>
-                </div>
-              </.inputs_for>
-            <% else %>
-              <.input
-                field={@form[:description]}
-                label={gettext("Description")}
-                type="text"
-                phx-mounted={JS.focus()}
-              />
-              <.input
-                field={@form[:account_name]}
-                label={gettext("Account")}
-                type="select"
-                options={list_accounts(@accounts)}
-                prompt={gettext("Choose an account...")}
-              />
-              <.input
-                field={@form[:related_account_name]}
-                label={gettext("Related Account")}
-                type="select"
-                options={list_accounts(@accounts)}
-                prompt={gettext("Choose an account...")}
-              />
-              <%= if @different_currency? do %>
+          <.error :for={{error, _} <- @form[:entries].errors}>
+            <strong>{gettext("Entries")}</strong>&nbsp;{error}
+          </.error>
+          <.inputs_for :let={d} field={@form[:entries]}>
+            <div class="flex gap-4 items-start border-t border-base-200 pt-2 mt-2">
+              <div class="flex-1">
                 <.input
-                  field={@form[:amount]}
-                  label={gettext("Amount (%{currency})", currency: @form[:currency].value)}
-                  type="number"
-                  step=".01"
+                  field={d[:description]}
+                  label={gettext("Description")}
+                  phx-mounted={if(d.index == 0, do: JS.focus())}
                 />
-                <.input field={@form[:currency]} type="hidden" />
                 <.input
-                  field={@form[:change_amount]}
-                  label={gettext("Amount (%{currency})", currency: @form[:change_currency].value)}
-                  type="number"
-                  step=".01"
+                  field={d[:account_name]}
+                  label={gettext("Account")}
+                  type="select"
+                  options={list_accounts(@accounts)}
+                  prompt={gettext("Choose an account...")}
                 />
-                <.input field={@form[:change_currency]} type="hidden" />
-              <% else %>
-                <.input field={@form[:amount]} label={gettext("Amount")} type="number" step=".01" />
-                <.input field={@form[:change_amount]} type="hidden" value={@form[:amount].value} />
-              <% end %>
-            <% end %>
-          </.simple_form>
-        </section>
-        <footer class="modal-card-foot is-at-right">
-          <.button form="account-transaction-form" class="is-primary" phx-disable-with={gettext("Saving...")}>
+                <%= if @different_currency? do %>
+                  <.input field={d[:currency]} type="hidden" />
+                  <.input
+                    field={d[:amount]}
+                    label={gettext("Amount (%{currency})", currency: d[:currency].value)}
+                    type="number"
+                    step=".01"
+                  />
+                  <.input field={d[:change_currency]} type="hidden" />
+                  <.input
+                    field={d[:change_amount]}
+                    label={gettext("Amount (%{currency})", currency: d[:change_currency].value)}
+                    type="number"
+                    step=".01"
+                  />
+                <% else %>
+                  <.input field={d[:currency]} type="hidden" />
+                  <.input field={d[:amount]} label={gettext("Amount")} type="number" step=".01" />
+                <% end %>
+              </div>
+              <.link
+                class="btn btn-error btn-outline btn-sm"
+                phx-target={@myself}
+                phx-click="del_entry"
+                phx-value-index={d.index}
+              >
+                {gettext("Remove")}
+              </.link>
+            </div>
+          </.inputs_for>
+        <% else %>
+          <.input
+            field={@form[:description]}
+            label={gettext("Description")}
+            type="text"
+            phx-mounted={JS.focus()}
+          />
+          <.input
+            field={@form[:account_name]}
+            label={gettext("Account")}
+            type="select"
+            options={list_accounts(@accounts)}
+            prompt={gettext("Choose an account...")}
+          />
+          <.input
+            field={@form[:related_account_name]}
+            label={gettext("Related Account")}
+            type="select"
+            options={list_accounts(@accounts)}
+            prompt={gettext("Choose an account...")}
+          />
+          <%= if @different_currency? do %>
+            <.input
+              field={@form[:amount]}
+              label={gettext("Amount (%{currency})", currency: @form[:currency].value)}
+              type="number"
+              step=".01"
+            />
+            <.input field={@form[:currency]} type="hidden" />
+            <.input
+              field={@form[:change_amount]}
+              label={gettext("Amount (%{currency})", currency: @form[:change_currency].value)}
+              type="number"
+              step=".01"
+            />
+            <.input field={@form[:change_currency]} type="hidden" />
+          <% else %>
+            <.input field={@form[:amount]} label={gettext("Amount")} type="number" step=".01" />
+            <.input field={@form[:change_amount]} type="hidden" value={@form[:amount].value} />
+          <% end %>
+        <% end %>
+
+        <:actions>
+          <.button class="btn-primary" phx-disable-with={gettext("Saving...")}>
             {gettext("Save Transaction")}
           </.button>
-          <.link class="button" patch={~p"/ledger/accounts/#{@account}/entries"}>
+          <.link class="btn btn-ghost" patch={~p"/ledger/accounts/#{@account}/entries"}>
             {gettext("Cancel")}
           </.link>
-        </footer>
-      </div>
+        </:actions>
+      </.simple_form>
     </div>
     """
   end
