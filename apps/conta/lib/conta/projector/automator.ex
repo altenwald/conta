@@ -9,10 +9,13 @@ defmodule Conta.Projector.Automator do
 
   alias Conta.Event.FilterRemoved
   alias Conta.Event.FilterSet
+  alias Conta.Event.ImporterRemoved
+  alias Conta.Event.ImporterSet
   alias Conta.Event.ShortcutRemoved
   alias Conta.Event.ShortcutSet
 
   alias Conta.Projector.Automator.Filter
+  alias Conta.Projector.Automator.Importer
   alias Conta.Projector.Automator.Shortcut
 
   alias Conta.Repo
@@ -58,6 +61,26 @@ defmodule Conta.Projector.Automator do
   project(%FilterRemoved{} = event, _metadata, fn multi ->
     if filter = Repo.get_by(Filter, name: event.name, automator: event.automator) do
       Ecto.Multi.delete(multi, :delete, filter)
+    else
+      multi
+    end
+  end)
+
+  project(%ImporterSet{} = event, _metadata, fn multi ->
+    event = Map.from_struct(event)
+
+    if importer = Repo.get_by(Importer, name: event.name, automator: event.automator) do
+      changeset = Importer.changeset(importer, event)
+      Ecto.Multi.update(multi, :importer_update, changeset)
+    else
+      data = Importer.changeset(event)
+      Ecto.Multi.insert(multi, :importer_create, data)
+    end
+  end)
+
+  project(%ImporterRemoved{} = event, _metadata, fn multi ->
+    if importer = Repo.get_by(Importer, name: event.name, automator: event.automator) do
+      Ecto.Multi.delete(multi, :delete, importer)
     else
       multi
     end

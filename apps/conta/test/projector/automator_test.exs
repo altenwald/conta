@@ -13,6 +13,7 @@ defmodule Conta.Projector.AutomatorTest do
     on_exit(fn ->
       Repo.delete_all(Automator.Shortcut)
       Repo.delete_all(Automator.Filter)
+      Repo.delete_all(Automator.Importer)
       Repo.delete_all(Automator.ProjectionVersion)
     end)
 
@@ -56,6 +57,43 @@ defmodule Conta.Projector.AutomatorTest do
 
       filter = Repo.get_by!(Automator.Filter, name: "expenses report", automator: "automator")
       assert [%Automator.Param{name: "expenses", type: :table, sample_limit: 10}] = filter.params
+    end
+  end
+
+  describe "importer" do
+    test "create successfully", metadata do
+      event = %Conta.Event.ImporterSet{
+        automator: "default",
+        name: "bank csv",
+        code: "-- something in Lua",
+        language: :lua
+      }
+
+      assert :ok = Automator.handle(event, metadata)
+
+      assert %Automator.Importer{
+               automator: "default",
+               name: "bank csv",
+               code: "-- something in Lua",
+               language: :lua
+             } = Repo.get_by!(Automator.Importer, name: "bank csv", automator: "default")
+    end
+
+    test "ImporterRemoved deletes the row", metadata do
+      event = %Conta.Event.ImporterSet{
+        automator: "default",
+        name: "bank csv",
+        code: "-- something in Lua",
+        language: :lua
+      }
+
+      assert :ok = Automator.handle(event, metadata)
+
+      removed_event = %Conta.Event.ImporterRemoved{automator: "default", name: "bank csv"}
+      metadata2 = %{metadata | event_number: metadata.event_number + 1}
+      assert :ok = Automator.handle(removed_event, metadata2)
+
+      refute Repo.get_by(Automator.Importer, name: "bank csv", automator: "default")
     end
   end
 end
