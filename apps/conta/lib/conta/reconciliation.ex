@@ -63,6 +63,19 @@ defmodule Conta.Reconciliation do
     with {:ok, changeset} <- build_transaction_changeset(movement),
          command = SetAccountTransaction.to_command(changeset),
          :ok <- dispatch(command),
+         # Residual risk (documented, accepted): if this `MarkMovementTransacted`
+         # dispatch fails *after* `SetAccountTransaction` above already succeeded, the
+         # movement's read model never picks up `transacted: true`, so a retry of
+         # `confirm_movement/1` would re-enter this clause and dispatch
+         # `SetAccountTransaction` a second time — a duplicate transaction. This is
+         # currently unreachable in practice because `retire_movement/1` (and thus
+         # `RemoveMovement`) has no other call site in the codebase, so nothing can
+         # race the movement out from under an in-flight `confirm_movement/1` call
+         # between these two dispatches. This precondition should be revisited if a
+         # manual "delete/unmatch movement" UI action is ever added elsewhere. This is
+         # a two-phase-commit across two aggregates with no Process Manager to make it
+         # atomic, matching this project's existing conventions — not something to
+         # redesign here.
          :ok <- dispatch(%MarkMovementTransacted{id: movement.id}) do
       retire_movement(movement)
     end

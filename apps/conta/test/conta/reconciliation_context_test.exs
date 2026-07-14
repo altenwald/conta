@@ -6,6 +6,7 @@ defmodule Conta.ReconciliationContextTest do
 
   alias Conta.Reconciliation
   alias Conta.Command.ImportMovements
+  alias Conta.Command.MarkMovementTransacted
   alias Conta.Command.SetAccount
   alias Conta.Event.MovementsImported
   alias Conta.Event.TransactionCreated
@@ -164,6 +165,39 @@ defmodule Conta.ReconciliationContextTest do
       assert {:error, :zero_amount} = Reconciliation.confirm_movement(movement.id)
 
       refute Repo.get(Movement, movement.id).transacted
+    end
+
+    test "retrying confirm_movement/1 on an already-transacted movement only retires it, without dispatching SetAccountTransaction again",
+         %{movement: movement} do
+      # Reproduces the exact end-state the `%Movement{transacted: true}` clause exists
+      # to guard: a *previous* `confirm_movement/1` call already dispatched
+      # `SetAccountTransaction` (creating the real ledger transaction) and
+      # `MarkMovementTransacted`, but crashed or errored before reaching
+      # `RemoveMovement` — leaving the movement `transacted: true` yet still present
+      # in the read model. We reproduce that end-state directly, by dispatching
+      # `MarkMovementTransacted` without ever dispatching `SetAccountTransaction`, so
+      # this test can prove — via `refute_receive_event/4`, not just by checking the
+      # end state looks right — that retrying `confirm_movement/1` does NOT dispatch a
+      # second `SetAccountTransaction` (no `TransactionCreated` is produced for this
+      # movement's accounts). If the `transacted: true` clause were ever accidentally
+      # reordered after the general clause, this test would fail because a real
+      # `TransactionCreated` (a duplicate transaction) would show up during the
+      # `refute_receive_event/4` window.
+      :ok = dispatch(%MarkMovementTransacted{id: movement.id})
+      eventually(fn -> Repo.get(Movement, movement.id).transacted end)
+
+      refute_receive_event(
+        Conta.Commanded.Application,
+        TransactionCreated,
+        fn ->
+          assert {:ok, %{movement_id: confirmed_id}} = Reconciliation.confirm_movement(movement.id)
+          assert confirmed_id == movement.id
+        end,
+        predicate: fn event -> Enum.any?(event.entries, &(&1.account_name == movement.asset_account_name)) end
+      )
+
+      eventually(fn -> is_nil(Repo.get(Movement, movement.id)) end)
+      refute Repo.get(Movement, movement.id)
     end
   end
 
