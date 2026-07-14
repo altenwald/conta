@@ -10,6 +10,7 @@ defmodule Conta.ReconciliationContextTest do
   alias Conta.Command.SetAccount
   alias Conta.Event.MovementsImported
   alias Conta.Event.TransactionCreated
+  alias Conta.Projector.Ledger.Entry, as: LedgerEntry
   alias Conta.Projector.Reconciliation.MatchRule
   alias Conta.Projector.Reconciliation.Movement
 
@@ -276,7 +277,7 @@ defmodule Conta.ReconciliationContextTest do
           Repo.get(Movement, bad.id).account_name == bad_account_name
       end)
 
-      %{good: good, bad: bad}
+      %{good: good, bad: bad, good_account: good_account}
     end
 
     test "processes each movement independently and reports per-movement result", %{good: good, bad: bad} do
@@ -293,6 +294,53 @@ defmodule Conta.ReconciliationContextTest do
 
       refute Repo.get(Movement, good.id)
       assert Repo.get(Movement, bad.id)
+    end
+
+    test "a stale/nonexistent id in the batch doesn't crash the batch or block the other rows", %{
+      good: good,
+      bad: bad
+    } do
+      bogus_id = Ecto.UUID.generate()
+
+      results = Reconciliation.confirm_movements([good.id, bogus_id, bad.id])
+
+      assert {:ok, %{movement_id: _}} = results[good.id]
+      assert {:error, :not_found} = results[bogus_id]
+      assert {:error, _reason} = results[bad.id]
+
+      eventually(fn -> is_nil(Repo.get(Movement, good.id)) end)
+
+      refute Repo.get(Movement, good.id)
+      assert Repo.get(Movement, bad.id)
+    end
+
+    test "a repeated id in the batch is confirmed exactly once, not double-dispatched", %{
+      good: good,
+      good_account: good_account
+    } do
+      results = Reconciliation.confirm_movements([good.id, good.id])
+
+      assert map_size(results) == 1
+      assert {:ok, %{movement_id: confirmed_id}} = results[good.id]
+      assert confirmed_id == good.id
+
+      eventually(fn -> is_nil(Repo.get(Movement, good.id)) end)
+      refute Repo.get(Movement, good.id)
+
+      # Prove this isn't just a coincidentally-clean result map: if the repeated
+      # id had slipped past `Enum.uniq/1` and re-entered `confirm_movement/1` a
+      # second time, it would have dispatched a second `SetAccountTransaction`,
+      # which would show up here as a second ledger entry on the counterpart
+      # account (one entry per transaction side, per real transaction).
+      entries =
+        eventually(fn ->
+          case Repo.all(from(e in LedgerEntry, where: e.account_name == ^good_account)) do
+            [] -> nil
+            entries -> entries
+          end
+        end)
+
+      assert length(entries) == 1
     end
   end
 
