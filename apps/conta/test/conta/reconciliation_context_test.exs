@@ -168,21 +168,37 @@ defmodule Conta.ReconciliationContextTest do
     end
 
     test "retrying confirm_movement/1 on an already-transacted movement only retires it, without dispatching SetAccountTransaction again",
-         %{movement: movement} do
+         %{movement: movement, expense_name: expense_name} do
       # Reproduces the exact end-state the `%Movement{transacted: true}` clause exists
       # to guard: a *previous* `confirm_movement/1` call already dispatched
       # `SetAccountTransaction` (creating the real ledger transaction) and
       # `MarkMovementTransacted`, but crashed or errored before reaching
       # `RemoveMovement` — leaving the movement `transacted: true` yet still present
-      # in the read model. We reproduce that end-state directly, by dispatching
-      # `MarkMovementTransacted` without ever dispatching `SetAccountTransaction`, so
-      # this test can prove — via `refute_receive_event/4`, not just by checking the
-      # end state looks right — that retrying `confirm_movement/1` does NOT dispatch a
+      # in the read model, with `account_name` set (in real production, a movement can
+      # only reach `transacted: true` via `do_confirm_movement/1`'s general clause,
+      # which already requires `account_name` to be non-nil — the `account_name: nil`
+      # guard clause runs first). We reproduce that end-state directly, by first
+      # assigning `account_name` via `update_movement/2` (matching the sibling
+      # "confirms a movement..." test above) and only then dispatching
+      # `MarkMovementTransacted` — without ever dispatching `SetAccountTransaction` —
+      # so the movement looks exactly like a real interrupted confirmation: transacted,
+      # with a real counterpart account, amount unchanged. Skipping the `update_movement/2`
+      # step here would leave `account_name: nil`, so removing the `transacted: true`
+      # clause would make `do_confirm_movement/1` hit the `account_name: nil` guard
+      # clause instead of the general clause — an early exit that produces no
+      # `TransactionCreated` at all, making the `refute_receive_event/4` below pass for
+      # the wrong reason instead of actually detecting a duplicate dispatch.
+      #
+      # This test proves — via `refute_receive_event/4`, not just by checking the end
+      # state looks right — that retrying `confirm_movement/1` does NOT dispatch a
       # second `SetAccountTransaction` (no `TransactionCreated` is produced for this
       # movement's accounts). If the `transacted: true` clause were ever accidentally
       # reordered after the general clause, this test would fail because a real
       # `TransactionCreated` (a duplicate transaction) would show up during the
       # `refute_receive_event/4` window.
+      :ok = Reconciliation.update_movement(movement.id, %{"account_name" => expense_name})
+      eventually(fn -> Repo.get(Movement, movement.id).account_name == expense_name end)
+
       :ok = dispatch(%MarkMovementTransacted{id: movement.id})
       eventually(fn -> Repo.get(Movement, movement.id).transacted end)
 

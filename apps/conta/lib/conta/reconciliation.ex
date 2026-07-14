@@ -68,14 +68,15 @@ defmodule Conta.Reconciliation do
          # movement's read model never picks up `transacted: true`, so a retry of
          # `confirm_movement/1` would re-enter this clause and dispatch
          # `SetAccountTransaction` a second time — a duplicate transaction. This is
-         # currently unreachable in practice because `retire_movement/1` (and thus
-         # `RemoveMovement`) has no other call site in the codebase, so nothing can
-         # race the movement out from under an in-flight `confirm_movement/1` call
-         # between these two dispatches. This precondition should be revisited if a
-         # manual "delete/unmatch movement" UI action is ever added elsewhere. This is
-         # a two-phase-commit across two aggregates with no Process Manager to make it
+         # currently unreachable because nothing in this codebase calls
+         # `confirm_movement/1` more than once for the same movement yet — the only
+         # caller is this module itself. Task 16's batch confirmation (or any future
+         # retry-on-failure caller) removes this precondition and should re-examine
+         # whether this gap needs closing (e.g. via an idempotency check at the
+         # `Ledger` aggregate boundary) rather than just documenting it. This is a
+         # two-phase-commit across two aggregates with no Process Manager to make it
          # atomic, matching this project's existing conventions — not something to
-         # redesign here.
+         # redesign here on its own.
          :ok <- dispatch(%MarkMovementTransacted{id: movement.id}) do
       retire_movement(movement)
     end
