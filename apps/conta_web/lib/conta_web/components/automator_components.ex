@@ -13,7 +13,10 @@ defmodule ContaWeb.AutomatorComponents do
 
   The editor container has `phx-update="ignore"` so LiveView never
   touches its DOM after mount — all syncing back to the form happens
-  through the hidden input via the `MonacoEditor` JS hook.
+  through the hidden textarea via the `MonacoEditor` JS hook. It must be
+  a `<textarea>`, not `type="text"`: single-line text inputs run the
+  HTML value-sanitization algorithm, which silently strips newlines
+  from `.value` every time the hook copies Monaco's content into it.
   """
   attr :field, Phoenix.HTML.FormField, required: true
   attr :height, :string, default: "420px", doc: "minimum height; grows to fill a flex parent"
@@ -31,7 +34,11 @@ defmodule ContaWeb.AutomatorComponents do
         style={"flex: 1; min-height: #{@height}; border: 1px solid oklch(var(--bc)/0.2);"}
       >
       </div>
-      <input type="text" class="hidden" id={@field.id} name={@field.name} value={@field.value} />
+      <textarea
+        class="hidden"
+        id={@field.id}
+        name={@field.name}
+      >{Phoenix.HTML.Form.normalize_value("textarea", @field.value)}</textarea>
     </div>
     """
   end
