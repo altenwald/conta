@@ -34,8 +34,8 @@ const MonacoEditor = {
     });
 
     // Sync to the hidden input only on blur, not on every keystroke. A
-    // native "input" event bubbles into the surrounding <form>'s
-    // phx-change="validate", which re-renders the page while the editor
+    // native "input" event bubbling into the surrounding <form>'s
+    // phx-change="validate" would re-render the page while the editor
     // still has focus. Even though the editor's own container is
     // phx-update="ignore", that re-render of its siblings was enough to
     // corrupt Monaco's internal selection/keyboard state on macOS Chrome:
@@ -47,6 +47,18 @@ const MonacoEditor = {
       this.hiddenInput.value = this.editor.getValue();
       this.hiddenInput.dispatchEvent(new Event("input", { bubbles: true }));
     });
+
+    // Monaco's own keyboard-capture element is a real <textarea>, and every
+    // keystroke inside it fires native "input"/"change" events that bubble
+    // by default - straight past this ignored container into the form,
+    // triggering phx-change="validate" on every keystroke regardless of the
+    // blur-only sync above. That is the actual trigger for the corruption
+    // described above: it was never fully fixed, just made less frequent.
+    // Stop those native events at the container boundary; our own
+    // synthetic dispatch above targets the hidden input, which lives
+    // outside this container, so it is unaffected.
+    this.el.addEventListener("input", (e) => e.stopPropagation());
+    this.el.addEventListener("change", (e) => e.stopPropagation());
   },
 
   destroyed() {

@@ -94,6 +94,18 @@
 /* Make LiveView wrapper divs transparent for layout */
 [data-phx-session], [data-phx-teleported-src] { display: contents }
 
+/* Reserve space for the vertical scrollbar at all times. Without this,
+   content appended below the fold (e.g. the Filter/Shortcut "Run"/"Load
+   real data" results) makes a scrollbar appear where there wasn't one,
+   narrowing the viewport by its width. The Monaco editor's
+   `automaticLayout` watches its own container size via ResizeObserver, so
+   that narrowing mid-session triggers a relayout while focus is
+   transitioning off the editor - which is when Monaco's keyboard/cursor
+   state has been observed to get corrupted (see monaco_editor.js). */
+html {
+  scrollbar-gutter: stable;
+}
+
 /* Self-hosted (not @import'd) so it works with no outbound internet access -
    needed for chromic_pdf's headless Chrome to render invoice PDFs correctly
    in restricted/offline environments, and sidesteps Tailwind v4 always
