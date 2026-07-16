@@ -8,6 +8,7 @@ defmodule Conta.AutomatorContextTest do
   alias Conta.Projector.Automator.Importer
   alias Conta.Projector.Automator.Shortcut
   alias Conta.Projector.Automator.Param
+  alias Conta.Projector.Reconciliation.Movement, as: ReconciliationMovement
 
   describe "shortcuts — DB queries" do
     test "list_shortcuts/0 returns all shortcuts for default automator" do
@@ -82,6 +83,12 @@ defmodule Conta.AutomatorContextTest do
       importer = insert(:importer)
       assert %Importer{id: id} = Automator.get_importer(importer.id)
       assert id == importer.id
+    end
+
+    test "get_importer!/1 by id raises on missing" do
+      assert_raise Ecto.NoResultsError, fn ->
+        Automator.get_importer!(Ecto.UUID.generate())
+      end
     end
 
     test "get_importer_by_name/1 returns importer by name" do
@@ -508,6 +515,8 @@ defmodule Conta.AutomatorContextTest do
               data = {
                 on_date = row.date,
                 description = row.description,
+                -- tonumber(row.amount) can come back as a float (e.g. -100.0);
+                -- the `amount` field is an :integer, so it must be floored/cast here.
                 amount = math.floor(tonumber(row.amount)),
                 currency = "EUR"
               }
@@ -538,6 +547,27 @@ defmodule Conta.AutomatorContextTest do
       wait_for_event(Conta.Commanded.Application, MovementsImported, fn event ->
         Enum.any?(event.movements, &(&1.asset_account_name == asset_account_name))
       end)
+
+      # As documented at length in `reconciliation_context_test.exs`'s
+      # `confirm_movement/1` setup block: `wait_for_event/3` only proves this test's
+      # own ad-hoc event-store subscription saw the event, not that the separate
+      # `Conta.Projector.Reconciliation` `Commanded.Event.Handler` subscription has
+      # finished writing the projection to Postgres. Poll the actual read model too,
+      # so this test (and the sandboxed DB connection it owns) can't tear down before
+      # that async write lands.
+      assert eventually(fn -> Repo.get_by(ReconciliationMovement, asset_account_name: asset_account_name) end)
+    end
+
+    test "returns {:error, :importer_not_found} when the importer doesn't exist" do
+      assert {:error, :importer_not_found} =
+               Automator.run_importer("does-not-exist-#{System.unique_integer([:positive])}", %{}, [])
+    end
+
+    test "returns an error when the Lua code doesn't return the expected shape" do
+      importer = insert(:importer, code: "return {status = \"error\"}")
+
+      assert {:error, {:invalid_code_return, %{"status" => "error"}}} =
+               Automator.run_importer(importer, %{"movements" => []}, ["Bank"])
     end
   end
 
@@ -557,4 +587,21 @@ defmodule Conta.AutomatorContextTest do
       assert {:error, {:invalid_code_return, 42}} = Automator.test_run_shortcut([], "return 42", %{})
     end
   end
+
+  # See the identical helper (and the detailed rationale in `confirm_movement/1`'s
+  # setup block) in `reconciliation_context_test.exs`: `wait_for_event/2,3` only
+  # proves this test's own ad-hoc event-store subscription saw an event, not that a
+  # separate `Commanded.Event.Handler` projector has finished writing to Postgres.
+  # Polling the read model directly is the reliable way to know a projection landed.
+  defp eventually(fun, attempts \\ 100)
+
+  defp eventually(fun, attempts) when attempts > 1 do
+    fun.() ||
+      (
+        Process.sleep(10)
+        eventually(fun, attempts - 1)
+      )
+  end
+
+  defp eventually(fun, _attempts), do: fun.()
 end
