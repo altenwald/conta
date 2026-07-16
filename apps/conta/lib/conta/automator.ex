@@ -227,6 +227,23 @@ defmodule Conta.Automator do
     Enum.map(params, fn param -> %Param{name: param.name, type: param.type, options: param.options} end)
   end
 
+  # Unlike Filter/Shortcut, an Importer has no user-editable params list - it
+  # always takes exactly one implicit `movements` table param, hardcoded here
+  # rather than passed in by the caller.
+  def test_run_importer(code, test_movements_json) do
+    param = %Param{name: "movements", type: :table}
+    cast_params = Map.new(cast([param], %{"movements" => test_movements_json}, []))
+
+    with :ok <- validate_params([param], cast_params),
+         {:ok, %{"status" => "ok", "commands" => commands}} when is_list(commands) <-
+           Lua.run(code, cast_params) do
+      {:ok, commands}
+    else
+      {:error, _} = error -> error
+      {:ok, return} -> {:error, {:invalid_code_return, return}}
+    end
+  end
+
   def run_shortcut(automator \\ @default_automator, name, params)
 
   def run_shortcut(automator, name, params) when is_binary(name) do

@@ -1,0 +1,46 @@
+<section class="py-6">
+  <.breadcrumbs>
+    <:breadcrumb label={gettext("Dashboard")} href={~p"/"} />
+    <:breadcrumb label={gettext("Importers")} href={~p"/automation/importers"} />
+    <:breadcrumb label={@page_title} href="#" />
+  </.breadcrumbs>
+
+  <.simple_form for={@form} id="importer-form" phx-change="validate" phx-submit="save">
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
+      <div class="card bg-base-100 shadow-xl border border-base-200 p-4">
+        <h2 class="font-semibold mb-2">{gettext("General data")}</h2>
+        <.input field={@form[:name]} type="text" label={gettext("Name")} />
+        <.input field={@form[:description]} type="text" label={gettext("Description")} />
+      </div>
+
+      <div class="card bg-base-100 shadow-xl border border-base-200 p-4 flex flex-col">
+        <.monaco_editor field={@form[:code]} />
+      </div>
+    </div>
+
+    <:actions>
+      <.button class="btn-primary" phx-disable-with={gettext("Saving...")}>
+        {gettext("Save")}
+      </.button>
+      <.link navigate={~p"/automation/importers"} class="btn">{gettext("Cancel")}</.link>
+    </:actions>
+  </.simple_form>
+
+  <div class="card bg-base-100 shadow-xl border border-base-200 p-4 mt-6">
+    <h2 class="font-semibold mb-2">{gettext("Test data")}</h2>
+    <p class="text-sm opacity-70 mb-2">
+      {gettext("Running here never dispatches real commands — it only shows what would be generated.")}
+    </p>
+    <form phx-submit="test_run">
+      <.test_param_input param={@movements_param} />
+      <div class="flex flex-wrap items-center gap-2 mt-2">
+        <button type="submit" class="btn btn-primary">{gettext("Run")}</button>
+      </div>
+    </form>
+
+    <div :if={@test_result} class="mt-4">
+      <p :if={elem(@test_result, 0) == :error} class="text-error font-semibold">{gettext("Error")}</p>
+      <pre class="bg-base-200 p-4 rounded overflow-x-auto text-sm">{elem(@test_result, 1)}</pre>
+    </div>
+  </div>
+</section>

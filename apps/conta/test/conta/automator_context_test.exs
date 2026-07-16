@@ -588,6 +588,34 @@ defmodule Conta.AutomatorContextTest do
     end
   end
 
+  describe "test_run_importer/2" do
+    test "returns the commands the Lua code would generate, without dispatching them" do
+      code = ~S"""
+      return {status = "ok", commands = {{type = "movement", data = {foo = "bar"}}}}
+      """
+
+      assert {:ok, [%{"type" => "movement", "data" => %{"foo" => "bar"}}]} =
+               Automator.test_run_importer(code, "[]")
+    end
+
+    test "passes the decoded movements table into the Lua script as the fixed `movements` param" do
+      code = ~S"""
+      local total = 0
+      for _, row in ipairs(movements) do
+        total = total + row.amount
+      end
+      return {status = "ok", commands = {{type = "total", data = {total = total}}}}
+      """
+
+      assert {:ok, [%{"type" => "total", "data" => %{"total" => 15}}]} =
+               Automator.test_run_importer(code, ~S([{"amount": 10}, {"amount": 5}]))
+    end
+
+    test "returns an error when the Lua code doesn't return the expected shape" do
+      assert {:error, {:invalid_code_return, 42}} = Automator.test_run_importer("return 42", "[]")
+    end
+  end
+
   # See the identical helper (and the detailed rationale in `confirm_movement/1`'s
   # setup block) in `reconciliation_context_test.exs`: `wait_for_event/2,3` only
   # proves this test's own ad-hoc event-store subscription saw an event, not that a

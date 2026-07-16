@@ -188,6 +188,12 @@ defmodule ContaWeb.Router do
         live "/new", ShortcutLive.Form, :new
         live "/:id/edit", ShortcutLive.Form, :edit
       end
+
+      scope "/automation/importers/" do
+        live "/", ImporterLive.Index, :index
+        live "/new", ImporterLive.Form, :new
+        live "/:id/edit", ImporterLive.Form, :edit
+      end
     end
   end
 
