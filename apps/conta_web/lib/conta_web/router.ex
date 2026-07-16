@@ -194,6 +194,10 @@ defmodule ContaWeb.Router do
         live "/new", ImporterLive.Form, :new
         live "/:id/edit", ImporterLive.Form, :edit
       end
+
+      scope "/ledger/reconciliation/" do
+        live "/upload", ReconciliationLive.Upload, :new
+      end
     end
   end
 

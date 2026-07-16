@@ -1,0 +1,50 @@
+<section class="py-6">
+  <.breadcrumbs>
+    <:breadcrumb label={gettext("Dashboard")} href={~p"/"} />
+    <:breadcrumb label={@page_title} href="#" />
+  </.breadcrumbs>
+
+  <div class="card bg-base-100 shadow-xl border border-base-200 p-4 mt-6">
+    <form id="upload-form" phx-change="validate" phx-submit="save">
+      <div class="fieldset mb-2">
+        <label class="label mb-1">{gettext("Bank statement (CSV)")}</label>
+        <.live_file_input upload={@uploads.statement} class="file-input file-input-bordered w-full" />
+      </div>
+
+      <.input
+        type="select"
+        name="importer_name"
+        value=""
+        label={gettext("Importer")}
+        prompt={gettext("Choose an importer...")}
+        options={for importer <- @importers, do: {importer.name, importer.name}}
+      />
+
+      <.input
+        type="select"
+        name="asset_account_name"
+        value=""
+        label={gettext("Bank account")}
+        prompt={gettext("Choose an account...")}
+        options={
+          for account <- @asset_accounts, do: {Enum.join(account.name, "."), Enum.join(account.name, ".")}
+        }
+      />
+
+      <p :if={@error} class="text-error font-semibold mt-2">{@error}</p>
+
+      <div class="mt-4">
+        <.button class="btn-primary" phx-disable-with={gettext("Uploading...")}>
+          {gettext("Upload and import")}
+        </.button>
+      </div>
+    </form>
+  </div>
+
+  <div :if={@imported_rows} class="card bg-base-100 shadow-xl border border-base-200 p-4 mt-6">
+    <h2 class="font-semibold mb-2">{gettext("Imported movements")}</h2>
+    <ul>
+      <li :for={row <- @imported_rows}>{row["date"]} - {row["description"]} - {row["amount"]}</li>
+    </ul>
+  </div>
+</section>
