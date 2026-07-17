@@ -1,0 +1,79 @@
+<section class="py-6">
+  <.breadcrumbs>
+    <:breadcrumb label={gettext("Dashboard")} href={~p"/"} />
+    <:breadcrumb label={gettext("Match rules")} href={~p"/ledger/reconciliation/matches"} />
+    <:breadcrumb label={@page_title} href="#" />
+  </.breadcrumbs>
+
+  <.simple_form for={@form} id="match-rule-form" phx-change="validate" phx-submit="save">
+    <div class="card bg-base-100 shadow-xl border border-base-200 p-4 mt-6">
+      <h2 class="font-semibold mb-2">{gettext("General data")}</h2>
+      <.input field={@form[:name]} type="text" label={gettext("Name")} />
+      <.input
+        field={@form[:match_type]}
+        type="select"
+        label={gettext("Match")}
+        options={[{gettext("All conditions"), "all"}, {gettext("Any condition"), "any"}]}
+      />
+      <.input
+        field={@form[:account_name]}
+        type="select"
+        label={gettext("Target account")}
+        prompt={gettext("Choose an account...")}
+        value={Enum.join(@form[:account_name].value || [], ".")}
+        options={for account <- @accounts, name = Enum.join(account.name, "."), do: {name, name}}
+      />
+
+      <div class="flex items-center justify-between mt-4 mb-2">
+        <h3 class="font-semibold">{gettext("Conditions")}</h3>
+        <.button type="button" phx-click="add_condition" class="btn-sm">
+          {gettext("Add condition")}
+        </.button>
+      </div>
+
+      <.inputs_for :let={c} field={@form[:conditions]}>
+        <div class="grid grid-cols-[1fr_1fr_1fr_1fr_auto] gap-2 items-end mb-2">
+          <.input
+            field={c[:field]}
+            type="select"
+            label={gettext("Field")}
+            options={[
+              {gettext("Description"), "description"},
+              {gettext("Amount"), "amount"},
+              {gettext("Date"), "on_date"}
+            ]}
+          />
+          <.input
+            field={c[:comparator]}
+            type="select"
+            label={gettext("Comparator")}
+            options={[
+              {gettext("Contains"), "contains"},
+              {gettext("Equals"), "equals"},
+              {gettext("Regex"), "regex"},
+              {gettext("Greater than"), "greater_than"},
+              {gettext("Less than"), "less_than"},
+              {gettext("Between"), "between"}
+            ]}
+          />
+          <.input field={c[:value]} label={gettext("Value")} />
+          <%= if to_string(c[:comparator].value) == "between" do %>
+            <.input field={c[:value_to]} label={gettext("Value to")} />
+          <% else %>
+            <div></div>
+          <% end %>
+          <.button_inline type="button" phx-click="del_condition" phx-value-index={c.index} class="btn-error">
+            {gettext("Remove")}
+          </.button_inline>
+        </div>
+      </.inputs_for>
+    </div>
+
+    <:actions>
+      <.button class="btn-primary" phx-disable-with={gettext("Saving...")}>
+        {gettext("Save")}
+      </.button>
+      <.link navigate={~p"/ledger/reconciliation/matches"} class="btn">{gettext("Cancel")}</.link>
+    </:actions>
+  </.simple_form>
+</section>

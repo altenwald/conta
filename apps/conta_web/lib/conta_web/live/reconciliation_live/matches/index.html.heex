@@ -1,0 +1,64 @@
+<section class="py-6">
+  <.breadcrumbs>
+    <:breadcrumb label={gettext("Dashboard")} href={~p"/"} />
+    <:breadcrumb label={gettext("Match rules")} href={~p"/ledger/reconciliation/matches"} />
+  </.breadcrumbs>
+
+  <div class="card bg-base-100 shadow-xl border border-base-200 mt-6">
+    <div class="card-body p-0">
+      <div class="p-4 flex justify-between items-center border-b border-base-200">
+        <h1 class="text-lg font-semibold">{gettext("Match rules")}</h1>
+        <.link patch={~p"/ledger/reconciliation/matches/new"} class="btn btn-primary">
+          <.icon name="hero-plus-circle" class="w-5 h-5 mr-2" />
+          <span>{gettext("New match rule")}</span>
+        </.link>
+      </div>
+      <div class="overflow-x-auto">
+        <.table id="match_rules" rows={@streams.match_rules}>
+          <:action :let={{_id, rule}}>
+            <.link
+              phx-click="move_up"
+              phx-value-id={rule.id}
+              class="btn btn-ghost btn-sm"
+              title={gettext("Move up")}
+            >
+              <.icon name="hero-arrow-up" class="w-4 h-4" />
+            </.link>
+          </:action>
+          <:action :let={{_id, rule}}>
+            <.link
+              phx-click="move_down"
+              phx-value-id={rule.id}
+              class="btn btn-ghost btn-sm"
+              title={gettext("Move down")}
+            >
+              <.icon name="hero-arrow-down" class="w-4 h-4" />
+            </.link>
+          </:action>
+          <:action :let={{_id, rule}}>
+            <.link
+              patch={~p"/ledger/reconciliation/matches/#{rule}/edit"}
+              class="btn btn-ghost btn-sm"
+              title={gettext("Edit")}
+            >
+              <.icon name="hero-pencil" class="w-4 h-4" />
+            </.link>
+          </:action>
+          <:action :let={{id, rule}}>
+            <.link
+              phx-click={JS.push("delete", value: %{id: rule.id, dom_id: id})}
+              class="btn btn-error btn-outline btn-sm"
+              data-confirm={gettext("Are you sure?")}
+              title={gettext("Delete")}
+            >
+              {gettext("Delete")}
+            </.link>
+          </:action>
+          <:col :let={{_id, rule}} label={gettext("Name")}>{rule.name}</:col>
+          <:col :let={{_id, rule}} label={gettext("Match")}>{rule.match_type}</:col>
+          <:col :let={{_id, rule}} label={gettext("Account")}>{Enum.join(rule.account_name, ".")}</:col>
+        </.table>
+      </div>
+    </div>
+  </div>
+</section>

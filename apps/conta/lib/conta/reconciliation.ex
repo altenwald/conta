@@ -10,6 +10,7 @@ defmodule Conta.Reconciliation do
   alias Conta.Command.MarkMovementTransacted
   alias Conta.Command.RemoveMovement
   alias Conta.Command.SetAccountTransaction
+  alias Conta.Command.SetMatchRule
   alias Conta.Command.UpdateMovement
   alias Conta.Projector.Reconciliation.MatchRule
   alias Conta.Projector.Reconciliation.Movement
@@ -22,6 +23,38 @@ defmodule Conta.Reconciliation do
 
   def get_match_rule!(id) do
     Repo.get!(MatchRule, id)
+  end
+
+  @doc "Blank `SetMatchRule` command struct for the \"new match rule\" form."
+  def new_set_match_rule do
+    %SetMatchRule{conditions: []}
+  end
+
+  @doc """
+  Loads a `SetMatchRule` command struct from an existing read-model row, for the
+  "edit match rule" form (and for tests that need to seed the aggregate to match a
+  read-model-only fixture, mirroring `Conta.Automator.get_set_shortcut/1`).
+  """
+  def get_set_match_rule(id) when is_binary(id) do
+    id |> get_match_rule!() |> get_set_match_rule()
+  end
+
+  def get_set_match_rule(%MatchRule{} = rule) do
+    %SetMatchRule{
+      id: rule.id,
+      name: rule.name,
+      conditions:
+        for condition <- rule.conditions do
+          %SetMatchRule.Condition{
+            field: condition.field,
+            comparator: condition.comparator,
+            value: condition.value,
+            value_to: condition.value_to
+          }
+        end,
+      match_type: rule.match_type,
+      account_name: rule.account_name
+    }
   end
 
   def list_movements do
