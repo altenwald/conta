@@ -6,10 +6,14 @@
 
   <div class="card bg-base-100 shadow-xl border border-base-200 p-4 mt-6">
     <form id="upload-form" phx-change="validate" phx-submit="save">
-      <div class="fieldset mb-2">
-        <label class="label mb-1">{gettext("Bank statement (CSV)")}</label>
-        <.live_file_input upload={@uploads.statement} class="file-input file-input-bordered w-full" />
-      </div>
+      <.input
+        type="file"
+        name="statement"
+        upload={@uploads.statement}
+        files={[]}
+        phx-target={nil}
+        label={gettext("Bank statement (CSV)")}
+      />
 
       <.input
         type="select"
@@ -27,7 +31,9 @@
         label={gettext("Bank account")}
         prompt={gettext("Choose an account...")}
         options={
-          for account <- @asset_accounts, do: {Enum.join(account.name, "."), Enum.join(account.name, ".")}
+          for account <- @asset_accounts,
+              name = Enum.join(account.name, "."),
+              do: {name, name}
         }
       />
 
@@ -41,10 +47,7 @@
     </form>
   </div>
 
-  <div :if={@imported_rows} class="card bg-base-100 shadow-xl border border-base-200 p-4 mt-6">
-    <h2 class="font-semibold mb-2">{gettext("Imported movements")}</h2>
-    <ul>
-      <li :for={row <- @imported_rows}>{row["date"]} - {row["description"]} - {row["amount"]}</li>
-    </ul>
+  <div :if={@imported_count} class="card bg-base-100 shadow-xl border border-base-200 p-4 mt-6">
+    <p class="font-semibold">{gettext("Imported %{count} movements", count: @imported_count)}</p>
   </div>
 </section>

@@ -13,13 +13,17 @@ defmodule ContaWeb.ReconciliationLive.Upload do
      |> assign(:importers, Automator.list_importers())
      |> assign(:asset_accounts, Ledger.list_accounts(:assets))
      |> assign(:error, nil)
-     |> assign(:imported_rows, nil)
+     |> assign(:imported_count, nil)
      |> allow_upload(:statement, accept: ~w(.csv), max_entries: 1)}
   end
 
   @impl true
   def handle_event("validate", _params, socket) do
     {:noreply, socket}
+  end
+
+  def handle_event("remove", %{"ref" => ref}, socket) do
+    {:noreply, cancel_upload(socket, :statement, ref)}
   end
 
   # sobelow_skip ["Traversal.FileModule"]
@@ -38,25 +42,27 @@ defmodule ContaWeb.ReconciliationLive.Upload do
       {:noreply,
        socket
        |> assign(:error, nil)
-       |> assign(:imported_rows, rows)
+       |> assign(:imported_count, length(rows))
        |> put_flash(:info, gettext("Bank statement imported successfully"))}
     else
-      [] ->
-        {:noreply, assign(socket, :error, gettext("Please choose a file to upload"))}
-
-      {:error, :empty_file} ->
-        {:noreply, assign(socket, :error, gettext("The uploaded file is empty"))}
-
-      {:error, {:column_mismatch, line}} ->
-        {:noreply,
-         assign(
-           socket,
-           :error,
-           gettext("Row %{line} has a different number of columns than the header", line: line)
-         )}
-
-      {:error, reason} ->
-        {:noreply, assign(socket, :error, inspect(reason))}
+      reason -> {:noreply, assign(socket, :error, error_message(reason))}
     end
   end
+
+  @doc false
+  # Maps the possible failure results of the "save" event's `with/else` chain
+  # to the message shown to the user. Public (rather than private) so it can
+  # be unit-tested directly: the `:empty_file` case corresponds to a
+  # zero-byte upload, which `Phoenix.LiveViewTest`'s chunked-upload simulator
+  # (as of phoenix_live_view 1.1.27) cannot itself reproduce — its
+  # `UploadClient.progress_stats/2` divides by the entry's byte size, which
+  # raises `ArithmeticError` for a genuinely empty file.
+  def error_message([]), do: gettext("Please choose a file to upload")
+  def error_message({:error, :empty_file}), do: gettext("The uploaded file is empty")
+
+  def error_message({:error, {:column_mismatch, line}}) do
+    gettext("Row %{line} has a different number of columns than the header", line: line)
+  end
+
+  def error_message({:error, reason}), do: inspect(reason)
 end
