@@ -83,32 +83,20 @@ defmodule ContaWeb.EntryLive.Index do
     {:noreply, reset_view(socket)}
   end
 
-  def handle_event("search", %{"search" => ""}, socket) do
-    {:noreply, reset_view(socket)}
-  end
-
   def handle_event("search", %{"search" => text}, socket) do
-    dates_per_page = socket.assigns.page * @dates_per_page
-
-    entries =
-      socket.assigns.account
-      |> Ledger.search_entries_by_account(text, 1, dates_per_page)
-      |> flat_title_and_entries()
-
-    socket =
-      socket
-      |> stream(:ledger_entries, entries, reset: true)
-      |> assign(:search, text)
-
-    {:noreply, socket}
+    {:noreply, reset_view(assign(socket, :search, text))}
   end
 
   defp reset_view(socket) do
-    dates_per_page = socket.assigns.page * @dates_per_page
+    %{page: page, account: account, search: search} = socket.assigns
+    dates_per_page = page * @dates_per_page
 
     entries =
-      socket.assigns.account
-      |> Ledger.list_entries_by_account(1, dates_per_page)
+      if search == "" do
+        Ledger.list_entries_by_account(account, 1, dates_per_page)
+      else
+        Ledger.search_entries_by_account(account, search, 1, dates_per_page)
+      end
       |> flat_title_and_entries()
 
     stream(socket, :ledger_entries, entries, reset: true)

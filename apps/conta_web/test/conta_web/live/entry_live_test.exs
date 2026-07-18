@@ -46,6 +46,33 @@ defmodule ContaWeb.EntryLiveTest do
       assert html =~ "10,00 €"
     end
 
+    test "keeps the active search filter when the view is reset", %{conn: conn} = data do
+      insert(:entry, %{
+        description: "Pay rent",
+        on_date: ~D[2024-01-02],
+        account_name: ~w[Assets Bank],
+        related_account_name: ~w[Expenses Supermarket]
+      })
+
+      conn = log_in_user(conn, data.user)
+      {:ok, index_live, _html} = live(conn, ~p"/ledger/accounts/#{data.bank}/entries")
+
+      html =
+        index_live
+        |> element("form[role=search]")
+        |> render_change(%{"search" => "rent"})
+
+      assert html =~ "Pay rent"
+      refute html =~ "Buy something"
+
+      # same refresh path triggered after creating, duplicating or deleting an entry
+      send(index_live.pid, {:reset_view, "transaction-id"})
+      html = render(index_live)
+
+      assert html =~ "Pay rent"
+      refute html =~ "Buy something"
+    end
+
     @tag skip: :broken
     test "saves new entry", %{conn: conn} = data do
       conn = log_in_user(conn, data.user)
