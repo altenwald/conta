@@ -9,19 +9,12 @@ defmodule ContaWeb.ImporterLive.Form do
 
   alias Conta.Automator
   alias Conta.Command.SetImporter
-  alias Conta.Projector.Automator.Param
-
-  # An Importer has exactly one fixed, implicit param (unlike Filter/Shortcut,
-  # which have a user-editable params list) - the raw movements table handed
-  # to the Lua script, not something the user configures.
-  @movements_param %Param{name: "movements", type: :table}
+  alias Conta.Reconciliation.CsvImport
+  alias ContaWeb.CsvImportMessages
 
   @impl true
   def mount(_params, _session, socket) do
-    {:ok,
-     socket
-     |> assign(:test_result, nil)
-     |> assign(:movements_param, @movements_param)}
+    {:ok, assign(socket, :test_result, nil)}
   end
 
   @impl true
@@ -77,11 +70,23 @@ defmodule ContaWeb.ImporterLive.Form do
     raw_test_params = Map.get(params, "test_params", %{})
     changeset = socket.assigns.form.source
     code = get_field(changeset, :code) || ""
-    test_movements_json = raw_test_params["movements"]
+    csv_text = raw_test_params["movements"] || ""
 
-    result = Automator.test_run_importer(code, test_movements_json)
+    result =
+      case parse_movements_csv(csv_text) do
+        {:ok, rows} -> Automator.test_run_importer(code, rows)
+        {:error, _reason} = error -> {:error, CsvImportMessages.error_message(error)}
+      end
 
     {:noreply, assign(socket, :test_result, format_test_result(result))}
+  end
+
+  defp parse_movements_csv(csv_text) do
+    if String.trim(csv_text) == "" do
+      {:ok, []}
+    else
+      CsvImport.parse(csv_text)
+    end
   end
 
   defp force_constants(params) do

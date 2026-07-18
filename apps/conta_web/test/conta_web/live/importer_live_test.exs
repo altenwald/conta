@@ -100,7 +100,7 @@ defmodule ContaWeb.ImporterLiveTest do
       assert html =~ "foo"
     end
 
-    test "test-runs the fixed movements table param's raw JSON test data through the script", %{
+    test "test-runs the fixed movements table param's CSV test data through the script", %{
       conn: conn,
       user: user
     } do
@@ -110,7 +110,7 @@ defmodule ContaWeb.ImporterLiveTest do
       code = ~S"""
       local total = 0
       for _, row in ipairs(movements) do
-        total = total + row.amount
+        total = total + tonumber(row.amount)
       end
       return {status = "ok", commands = {{type = "total", data = {total = total}}}}
       """
@@ -119,13 +119,61 @@ defmodule ContaWeb.ImporterLiveTest do
       |> form("#importer-form", set_importer: %{name: "sum rows", code: code})
       |> render_change()
 
+      csv = "amount\n10\n5\n"
+
       html =
         form_live
         |> element("form[phx-submit=test_run]")
-        |> render_submit(%{"test_params" => %{"movements" => ~S([{"amount": 10}, {"amount": 5}])}})
+        |> render_submit(%{"test_params" => %{"movements" => csv}})
 
       assert html =~ "total"
       assert html =~ "15"
+    end
+
+    test "shows a column-mismatch error for malformed CSV test data", %{conn: conn, user: user} do
+      conn = log_in_user(conn, user)
+      {:ok, form_live, _html} = live(conn, ~p"/automation/importers/new")
+
+      code = ~S[return {status = "ok", commands = {}}]
+
+      form_live
+      |> form("#importer-form", set_importer: %{name: "malformed csv", code: code})
+      |> render_change()
+
+      csv = "date,amount\n2026-07-01\n"
+
+      html =
+        form_live
+        |> element("form[phx-submit=test_run]")
+        |> render_submit(%{"test_params" => %{"movements" => csv}})
+
+      assert html =~ "Row 2 has a different number of columns than the header"
+    end
+
+    test "treats blank movements test data as an empty table, not an error", %{
+      conn: conn,
+      user: user
+    } do
+      conn = log_in_user(conn, user)
+      {:ok, form_live, _html} = live(conn, ~p"/automation/importers/new")
+
+      code = ~S"""
+      local count = 0
+      for _ in ipairs(movements) do count = count + 1 end
+      return {status = "ok", commands = {{type = "count", data = {count = count}}}}
+      """
+
+      form_live
+      |> form("#importer-form", set_importer: %{name: "count rows", code: code})
+      |> render_change()
+
+      html =
+        form_live
+        |> element("form[phx-submit=test_run]")
+        |> render_submit(%{"test_params" => %{"movements" => ""}})
+
+      refute html =~ "Error"
+      assert html =~ "count"
     end
   end
 end

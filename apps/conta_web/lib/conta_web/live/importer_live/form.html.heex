@@ -32,7 +32,28 @@
       {gettext("Running here never dispatches real commands — it only shows what would be generated.")}
     </p>
     <form phx-submit="test_run">
-      <.test_param_input param={@movements_param} />
+      <div class="fieldset mb-2">
+        <label for="test_params_movements">
+          <span class="label mb-1">{gettext("movements (CSV)")}</span>
+        </label>
+        <input
+          type="file"
+          accept=".csv"
+          id="movements-csv-file"
+          phx-hook="CsvFileInput"
+          data-target="test_params_movements"
+          class="file-input file-input-bordered w-full mb-2"
+        />
+        <textarea
+          id="test_params_movements"
+          name="test_params[movements]"
+          class="w-full textarea textarea-bordered font-mono text-sm"
+          rows="6"
+        ></textarea>
+        <p class="text-sm opacity-70 mt-1">
+          {gettext("Comma-separated CSV, double quotes (\") to escape values containing commas or newlines.")}
+        </p>
+      </div>
       <div class="flex flex-wrap items-center gap-2 mt-2">
         <button type="submit" class="btn btn-primary">{gettext("Run")}</button>
       </div>
