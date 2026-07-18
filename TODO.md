@@ -48,3 +48,27 @@ lectura inmediata del read-model.
 Arreglo: que `Conta.Projector` deje pasar `:consistency` a
 `Commanded.Event.Handler` (quitarla de la lista de `Keyword.drop/2`), y
 revisar qué projectors deberían pasar a `:strong` de verdad.
+
+## `Reconciliation.get_set_match_rule/1` no fija `:id` en las condiciones existentes
+
+`get_set_match_rule/1` (`apps/conta/lib/conta/reconciliation.ex`) construye el
+`SetMatchRule` de edición a partir del read-model sin asignar `:id` a cada
+`SetMatchRule.Condition`. Como el embed usa la primary key por defecto de Ecto
+(`:id`), cualquier sesión de edición real con 2+ condiciones que pulse "Add
+condition" dispara un warning de Ecto:
+
+```
+found duplicate primary keys for association/embed :conditions in
+Conta.Command.SetMatchRule ... only the last entry with the same ID will be
+kept
+```
+
+Detectado durante la revisión de calidad de la Task 28 (pantalla de
+Concordancias) al añadir un test de regresión que abre el formulario de
+edición con condiciones ya existentes. El test sigue pasando (el warning no
+afecta al HTML renderizado en este camino), pero es una señal de un problema
+latente en el diseño del schema del embed — antes de que se le den ids reales
+usados para identificar filas individualmente (p. ej. al implementar borrado
+de una condición concreta en vez de por índice), revisar si el embed necesita
+`primary_key: false` o si `get_set_match_rule/1` debe asignar `:id` explícito
+por condición.
