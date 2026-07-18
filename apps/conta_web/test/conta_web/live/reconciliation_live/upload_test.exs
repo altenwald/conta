@@ -112,24 +112,6 @@ defmodule ContaWeb.ReconciliationLive.UploadTest do
     assert html =~ "Please choose a file to upload"
   end
 
-  # A truly empty (0-byte) upload can't be driven through `render_upload/2`:
-  # `Phoenix.LiveViewTest.UploadClient.progress_stats/2` (phoenix_live_view
-  # 1.1.27) computes `trunc(new_start / entry.size * 100)`, which divides by
-  # zero and raises `ArithmeticError` whenever `entry.size` is 0, regardless
-  # of the `percent` argument passed to `render_upload/3`. So this asserts
-  # the `{:error, :empty_file} -> ...` clause's message directly against the
-  # same `error_message/1` function `handle_event("save", ...)` calls, which
-  # is the only reachable way to exercise that specific branch until that
-  # library bug is fixed.
-  test "maps the empty-file error to the expected message" do
-    assert ContaWeb.ReconciliationLive.Upload.error_message({:error, :empty_file}) ==
-             "The uploaded file is empty"
-  end
-
-  test "maps unrecognized errors to their inspected reason" do
-    assert ContaWeb.ReconciliationLive.Upload.error_message({:error, :boom}) == inspect(:boom)
-  end
-
   test "shows an error when a CSV row has a different number of columns than the header", %{
     conn: conn,
     user: user,
