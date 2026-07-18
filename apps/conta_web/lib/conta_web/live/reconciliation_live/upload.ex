@@ -4,6 +4,7 @@ defmodule ContaWeb.ReconciliationLive.Upload do
   alias Conta.Automator
   alias Conta.Ledger
   alias Conta.Reconciliation.CsvImport
+  alias ContaWeb.CsvImportMessages
 
   @impl true
   def mount(_params, _session, socket) do
@@ -45,24 +46,7 @@ defmodule ContaWeb.ReconciliationLive.Upload do
        |> assign(:imported_count, length(rows))
        |> put_flash(:info, gettext("Bank statement imported successfully"))}
     else
-      reason -> {:noreply, assign(socket, :error, error_message(reason))}
+      reason -> {:noreply, assign(socket, :error, CsvImportMessages.error_message(reason))}
     end
   end
-
-  @doc false
-  # Maps the possible failure results of the "save" event's `with/else` chain
-  # to the message shown to the user. Public (rather than private) so it can
-  # be unit-tested directly: the `:empty_file` case corresponds to a
-  # zero-byte upload, which `Phoenix.LiveViewTest`'s chunked-upload simulator
-  # (as of phoenix_live_view 1.1.27) cannot itself reproduce — its
-  # `UploadClient.progress_stats/2` divides by the entry's byte size, which
-  # raises `ArithmeticError` for a genuinely empty file.
-  def error_message([]), do: gettext("Please choose a file to upload")
-  def error_message({:error, :empty_file}), do: gettext("The uploaded file is empty")
-
-  def error_message({:error, {:column_mismatch, line}}) do
-    gettext("Row %{line} has a different number of columns than the header", line: line)
-  end
-
-  def error_message({:error, reason}), do: inspect(reason)
 end

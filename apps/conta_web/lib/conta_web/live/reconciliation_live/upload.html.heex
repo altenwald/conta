@@ -14,6 +14,9 @@
         phx-target={nil}
         label={gettext("Bank statement (CSV)")}
       />
+      <p class="text-sm opacity-70 mt-1">
+        {gettext("Comma-separated CSV, double quotes (\") to escape values containing commas or newlines.")}
+      </p>
 
       <.input
         type="select"

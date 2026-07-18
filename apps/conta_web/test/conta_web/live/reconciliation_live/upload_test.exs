@@ -141,6 +141,13 @@ defmodule ContaWeb.ReconciliationLive.UploadTest do
     assert html =~ "Row 2 has a different number of columns than the header"
   end
 
+  test "shows the expected CSV format", %{conn: conn, user: user} do
+    conn = log_in_user(conn, user)
+    {:ok, _view, html} = live(conn, ~p"/ledger/reconciliation/upload")
+
+    assert html =~ "Comma-separated CSV"
+  end
+
   defp eventually(fun, attempts \\ 100)
 
   defp eventually(fun, attempts) when attempts > 1 do
