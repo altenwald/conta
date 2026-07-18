@@ -7,13 +7,28 @@ defmodule ContaWeb.CsvImportMessages do
   """
   use Gettext, backend: ContaWeb.Gettext
 
-  @doc false
-  # Public (rather than private) so it can be unit-tested directly: the
-  # `:empty_file` case corresponds to a zero-byte upload, which
-  # Phoenix.LiveViewTest's chunked-upload simulator (as of phoenix_live_view
-  # 1.1.27) cannot itself reproduce — its UploadClient.progress_stats/2
-  # divides by the entry's byte size, which raises ArithmeticError for a
-  # genuinely empty file.
+  @doc """
+  Maps a CSV-import outcome to a user-facing message.
+
+  Accepts:
+
+    * `[]` — no upload entry was selected; returns a choose-a-file prompt.
+    * `{:error, :empty_file}` — the CSV input had no content. Worded as "The
+      CSV data is empty" rather than "The uploaded file is empty" because
+      this covers both a zero-byte file upload (ReconciliationLive.Upload)
+      and, in a later caller, a blank pasted-CSV textarea (ImporterLive.Form's
+      test-data panel) — the wording avoids implying a file was necessarily
+      involved.
+    * `{:error, {:column_mismatch, line}}` — a data row had a different
+      number of columns than the header; returns a message naming the line.
+    * `{:error, reason}` — any other parse error; returns `inspect(reason)`.
+
+  The `:empty_file` clause has a direct unit test (rather than relying only
+  on integration coverage) because `Phoenix.LiveViewTest`'s chunked-upload
+  simulator (as of phoenix_live_view 1.1.27) cannot itself reproduce a
+  genuinely empty file — its `UploadClient.progress_stats/2` divides by the
+  entry's byte size, which raises `ArithmeticError` when that size is 0.
+  """
   def error_message([]), do: gettext("Please choose a file to upload")
   def error_message({:error, :empty_file}), do: gettext("The CSV data is empty")
 
