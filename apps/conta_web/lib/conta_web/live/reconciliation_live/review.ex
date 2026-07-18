@@ -10,6 +10,11 @@ defmodule ContaWeb.ReconciliationLive.Review do
   alias Conta.Projector.Reconciliation.Movement
   alias Conta.Reconciliation
 
+  # The exact set of fields the template's `<.editable>` component ever submits
+  # through the `update_field` event. Kept as an allowlist so a forged/unexpected
+  # `field` param can't be forwarded straight into `Reconciliation.update_movement/2`.
+  @editable_fields ~w(on_date description amount)
+
   @impl true
   def mount(_params, _session, socket) do
     {:ok,
@@ -39,28 +44,40 @@ defmodule ContaWeb.ReconciliationLive.Review do
     {succeeded, failed} =
       ids
       |> Reconciliation.confirm_movements()
-      |> Enum.reduce({[], %{}}, fn
-        {id, {:ok, _}}, {succeeded, failed} -> {[id | succeeded], failed}
+      |> Enum.reduce({MapSet.new(), %{}}, fn
+        {id, {:ok, _}}, {succeeded, failed} -> {MapSet.put(succeeded, id), failed}
         {id, {:error, reason}}, {succeeded, failed} -> {succeeded, Map.put(failed, id, reason)}
       end)
 
     socket =
       socket
       |> assign(:movements, Enum.reject(socket.assigns.movements, &(&1.id in succeeded)))
-      |> assign(:selected, MapSet.difference(socket.assigns.selected, MapSet.new(succeeded)))
-      |> assign(:errors, socket.assigns.errors |> Map.drop(succeeded) |> Map.merge(failed))
+      |> assign(:selected, MapSet.difference(socket.assigns.selected, succeeded))
+      |> assign(:errors, socket.assigns.errors |> Map.drop(MapSet.to_list(succeeded)) |> Map.merge(failed))
+      |> mark_drifted_transacted(failed)
       |> maybe_flash_confirm_result(failed)
 
     {:noreply, socket}
   end
 
-  def handle_event("update_account", %{"id" => id, "value" => value}, socket) do
-    account_name = if value in [nil, ""], do: nil, else: String.split(value, ".")
-    perform_update(socket, id, %{"account_name" => account_name})
+  # There is no UI path for unassigning an account back to nil (see
+  # `account_select/1`'s disabled placeholder option below) — every value this
+  # handler receives is a real, existing account name.
+  def handle_event("update_account", %{"id" => id, "value" => value}, socket) when value != "" do
+    perform_update(socket, id, %{"account_name" => String.split(value, ".")})
   end
 
-  def handle_event("update_field", %{"id" => id, "field" => field, "value" => value}, socket) do
+  def handle_event("update_account", %{"value" => ""}, socket) do
+    {:noreply, socket}
+  end
+
+  def handle_event("update_field", %{"id" => id, "field" => field, "value" => value}, socket)
+      when field in @editable_fields do
     perform_update(socket, id, %{field => value})
+  end
+
+  def handle_event("update_field", _params, socket) do
+    {:noreply, socket}
   end
 
   def handle_event("remove", %{"id" => id}, socket) do
@@ -92,6 +109,36 @@ defmodule ContaWeb.ReconciliationLive.Review do
 
   defp maybe_flash_confirm_result(socket, _failed) do
     put_flash(socket, :error, gettext("Some movements could not be confirmed"))
+  end
+
+  # `Reconciliation.confirm_movement/1` documents a residual risk: `SetAccountTransaction`
+  # + `MarkMovementTransacted` can both succeed while the trailing `RemoveMovement` fails,
+  # so the id still comes back in `failed` even though the read model now genuinely has
+  # `transacted: true`. The failure reason alone can't cleanly distinguish this from
+  # "no account assigned"/"zero amount"/etc, so re-check the read model directly for each
+  # failed id and, if it has already flipped to `transacted: true`, mirror that locally so
+  # the row renders with the "pending cleanup" treatment instead of as an ordinary row.
+  defp mark_drifted_transacted(socket, failed) do
+    assign(socket, :movements, Enum.map(socket.assigns.movements, &maybe_mark_transacted(&1, failed)))
+  end
+
+  defp maybe_mark_transacted(%{id: id, transacted: false} = movement, failed) do
+    if Map.has_key?(failed, id) and transacted_in_read_model?(id) do
+      %{movement | transacted: true}
+    else
+      movement
+    end
+  end
+
+  defp maybe_mark_transacted(movement, _failed), do: movement
+
+  defp transacted_in_read_model?(id) do
+    case Reconciliation.get_movement!(id) do
+      %{transacted: true} -> true
+      _ -> false
+    end
+  rescue
+    Ecto.NoResultsError -> false
   end
 
   defp perform_update(socket, id, changes) do
@@ -161,12 +208,13 @@ defmodule ContaWeb.ReconciliationLive.Review do
   attr :id, :string, required: true
   attr :field, :string, required: true
   attr :type, :string, default: "text"
+  attr :step, :string, default: nil
   attr :value, :any, required: true
 
   defp editable(assigns) do
     ~H"""
     <form phx-change="update_field" phx-value-id={@id} phx-value-field={@field} id={"#{@field}-form-#{@id}"}>
-      <input type={@type} name="value" value={@value} class="input input-sm w-full" />
+      <input type={@type} step={@step} name="value" value={@value} class="input input-sm w-full" />
     </form>
     """
   end
@@ -179,7 +227,7 @@ defmodule ContaWeb.ReconciliationLive.Review do
     ~H"""
     <form phx-change="update_account" phx-value-id={@id} id={"account-form-#{@id}"}>
       <select name="value" class="select select-sm w-full">
-        <option value="">{gettext("(No account)")}</option>
+        <option value="" selected={is_nil(@value)} disabled>{gettext("Select an account")}</option>
         <option :for={name <- @accounts} value={name} selected={@value == name}>{name}</option>
       </select>
     </form>

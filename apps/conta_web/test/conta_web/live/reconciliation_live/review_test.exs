@@ -49,6 +49,7 @@ defmodule ContaWeb.ReconciliationLive.ReviewTest do
       |> render_change()
 
       assert has_element?(view, "#movement-#{movement.id} input[type=checkbox]")
+      assert eventually(fn -> Repo.get(Movement, movement.id).account_name == expense end)
     end
 
     test "selecting checkboxes and confirming invokes confirm_movements/1: successful rows disappear, failed rows stay with a visible error",

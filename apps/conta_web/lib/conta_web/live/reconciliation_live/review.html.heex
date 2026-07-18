@@ -76,6 +76,7 @@
                   id={movement.id}
                   field="amount"
                   type="number"
+                  step="1"
                   value={movement.amount}
                 />
                 <span :if={movement.transacted}>{movement.amount}</span>
@@ -145,7 +146,7 @@
                 <.editable id={movement.id} field="description" value={movement.description} />
               </td>
               <td>
-                <.editable id={movement.id} field="amount" type="number" value={movement.amount} />
+                <.editable id={movement.id} field="amount" type="number" step="1" value={movement.amount} />
               </td>
               <td>
                 <.account_select id={movement.id} value={nil} accounts={@accounts} />
