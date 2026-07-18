@@ -75,12 +75,18 @@ defmodule ContaWeb.ImporterLive.Form do
     result =
       case parse_movements_csv(csv_text) do
         {:ok, rows} -> Automator.test_run_importer(code, rows)
-        {:error, _reason} = error -> {:error, CsvImportMessages.error_message(error)}
+        error -> {:error, CsvImportMessages.error_message(error)}
       end
 
     {:noreply, assign(socket, :test_result, format_test_result(result))}
   end
 
+  # A blank test panel means "test against zero rows", not "no file was
+  # provided" - unlike ReconciliationLive.Upload's real import flow, where an
+  # empty file is a genuine error, leaving this textarea empty is a
+  # legitimate way to check how the script behaves with no movements. So we
+  # special-case it to an empty table here rather than letting it fall
+  # through to CsvImport.parse/1's `{:error, :empty_file}`.
   defp parse_movements_csv(csv_text) do
     if String.trim(csv_text) == "" do
       {:ok, []}

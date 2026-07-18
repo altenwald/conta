@@ -14,11 +14,14 @@ defmodule ContaWeb.CsvImportMessages do
 
     * `[]` — no upload entry was selected; returns a choose-a-file prompt.
     * `{:error, :empty_file}` — the CSV input had no content. Worded as "The
-      CSV data is empty" rather than "The uploaded file is empty" because
-      this covers both a zero-byte file upload (ReconciliationLive.Upload)
-      and, in a later caller, a blank pasted-CSV textarea (ImporterLive.Form's
-      test-data panel) — the wording avoids implying a file was necessarily
-      involved.
+      CSV data is empty" rather than "The uploaded file is empty" because a
+      zero-byte upload isn't the only way to reach it — the wording avoids
+      implying a file was necessarily involved. Note that ImporterLive.Form's
+      test-data panel does NOT reach this clause for blank input: it
+      special-cases a blank textarea to an empty table (`[]`) before ever
+      calling `CsvImport.parse/1`, since testing a script against zero rows
+      is a legitimate, error-free use of that panel. This clause is reached
+      there only for genuinely malformed non-blank CSV.
     * `{:error, {:column_mismatch, line}}` — a data row had a different
       number of columns than the header; returns a message naming the line.
     * `{:error, reason}` — any other parse error; returns `inspect(reason)`.

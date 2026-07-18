@@ -472,11 +472,11 @@ defmodule Conta.Automator do
         blank when blank in [nil, ""] -> []
         # A :table param carries arbitrary tabular data to transform, not a
         # reference to one of the app's own data sources. Callers that can't
-        # send a native JSON array/object for it (e.g. a form-encoded POST)
-        # send it JSON-encoded as a single string field instead, same as the
-        # test-run panel's textarea, so it needs decoding here too - without
-        # this, the raw text (e.g. "[]") reached the Lua script as a plain
-        # string instead of an actual table.
+        # send a native JSON array/object for it (e.g. a form-encoded POST,
+        # such as a Filter/Shortcut :table param submitted via the API) send
+        # it JSON-encoded as a single string field instead, so it needs
+        # decoding here too - without this, the raw text (e.g. "[]") reached
+        # the Lua script as a plain string instead of an actual table.
         json when is_binary(json) ->
           case Jason.decode(json) do
             {:ok, decoded} -> to_list(decoded)
