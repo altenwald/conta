@@ -175,6 +175,27 @@ defmodule ContaWeb.ReconciliationLive.MatchesTest do
       assert html =~ "Match rule saved successfully"
       assert html =~ "new name"
     end
+
+    test "keeps existing conditions when clicking Add condition as the first action on an edit page",
+         %{conn: conn, user: user} do
+      rule =
+        insert(:match_rule, %{
+          conditions: [
+            %MatchRule.Condition{field: :description, comparator: :contains, value: "NETFLIX"},
+            %MatchRule.Condition{field: :amount, comparator: :greater_than, value: "100"}
+          ]
+        })
+
+      conn = log_in_user(conn, user)
+      {:ok, form_live, _html} = live(conn, ~p"/ledger/reconciliation/matches/#{rule}/edit")
+
+      html = form_live |> element("button", "Add condition") |> render_click()
+
+      assert html =~ ~s(value="NETFLIX")
+      assert html =~ ~s(value="100")
+      # the newly added third, empty condition
+      assert html =~ ~s(name="set_match_rule[conditions][2][field]")
+    end
   end
 
   defp index_of(html, text) do

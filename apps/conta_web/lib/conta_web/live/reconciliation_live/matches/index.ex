@@ -73,7 +73,11 @@ defmodule ContaWeb.ReconciliationLive.Matches.Index do
     case dispatch(%ReorderMatchRules{ids: new_ids}) do
       :ok ->
         by_id = Map.new(socket.assigns.match_rules, &{&1.id, &1})
-        new_match_rules = Enum.map(new_ids, &by_id[&1])
+
+        new_match_rules =
+          new_ids
+          |> Enum.map(&by_id[&1])
+          |> Enum.with_index(fn rule, index -> %{rule | position: index} end)
 
         socket
         |> assign(:match_rules, new_match_rules)

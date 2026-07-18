@@ -32,8 +32,13 @@ defmodule Conta.Reconciliation do
 
   @doc """
   Loads a `SetMatchRule` command struct from an existing read-model row, for the
-  "edit match rule" form (and for tests that need to seed the aggregate to match a
-  read-model-only fixture, mirroring `Conta.Automator.get_set_shortcut/1`).
+  "edit match rule" form.
+
+  Unlike `Conta.Automator.get_set_shortcut/1`, this cannot be reused by tests to
+  seed the aggregate from a read-model-only fixture: `Reconciliation`'s aggregate
+  rejects a `SetMatchRule` carrying a non-nil `:id` it doesn't already know (see
+  `Conta.Aggregate.Reconciliation.execute/2`), whereas Shortcut/Filter/Importer key
+  off `name` and accept any id.
   """
   def get_set_match_rule(id) when is_binary(id) do
     id |> get_match_rule!() |> get_set_match_rule()
