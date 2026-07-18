@@ -196,6 +196,7 @@ defmodule ContaWeb.Router do
       end
 
       scope "/ledger/reconciliation/" do
+        live "/", ReconciliationLive.Review, :index
         live "/upload", ReconciliationLive.Upload, :new
         live "/matches", ReconciliationLive.Matches.Index, :index
         live "/matches/new", ReconciliationLive.Matches.Form, :new

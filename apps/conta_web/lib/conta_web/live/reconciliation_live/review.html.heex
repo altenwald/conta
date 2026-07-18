@@ -1,0 +1,170 @@
+<section class="py-6">
+  <.breadcrumbs>
+    <:breadcrumb label={gettext("Dashboard")} href={~p"/"} />
+    <:breadcrumb label={gettext("Review")} href={~p"/ledger/reconciliation"} />
+  </.breadcrumbs>
+
+  <% {top, bottom} = Enum.split_with(@movements, & &1.account_name) %>
+
+  <div class="card bg-base-100 shadow-xl border border-base-200 mt-6">
+    <div class="card-body p-0">
+      <div class="p-4 flex justify-between items-center border-b border-base-200">
+        <h1 class="text-lg font-semibold">{gettext("Movements with an account")}</h1>
+        <button
+          type="button"
+          class="btn btn-primary"
+          phx-click="confirm"
+          phx-value-ids={Enum.join(@selected, ",")}
+          disabled={Enum.empty?(@selected)}
+        >
+          <.icon name="hero-check-circle" class="w-5 h-5 mr-2" />
+          <span>{gettext("Confirm")} ({MapSet.size(@selected)})</span>
+        </button>
+      </div>
+      <div class="overflow-x-auto">
+        <table class="table table-zebra">
+          <thead>
+            <tr>
+              <th class="w-0"></th>
+              <th>{gettext("Date")}</th>
+              <th>{gettext("Description")}</th>
+              <th>{gettext("Amount")}</th>
+              <th>{gettext("Account")}</th>
+              <th class="w-0">
+                <span class="sr-only">{gettext("Actions")}</span>
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr
+              :for={movement <- top}
+              id={"movement-#{movement.id}"}
+              class={movement.transacted && "bg-warning/10"}
+            >
+              <td>
+                <input
+                  :if={!movement.transacted}
+                  type="checkbox"
+                  class="checkbox checkbox-sm"
+                  checked={MapSet.member?(@selected, movement.id)}
+                  phx-click="toggle_select"
+                  phx-value-id={movement.id}
+                />
+              </td>
+              <td>
+                <.editable
+                  :if={!movement.transacted}
+                  id={movement.id}
+                  field="on_date"
+                  type="date"
+                  value={Date.to_iso8601(movement.on_date)}
+                />
+                <span :if={movement.transacted}>{movement.on_date}</span>
+              </td>
+              <td>
+                <.editable
+                  :if={!movement.transacted}
+                  id={movement.id}
+                  field="description"
+                  value={movement.description}
+                />
+                <span :if={movement.transacted}>{movement.description}</span>
+              </td>
+              <td>
+                <.editable
+                  :if={!movement.transacted}
+                  id={movement.id}
+                  field="amount"
+                  type="number"
+                  value={movement.amount}
+                />
+                <span :if={movement.transacted}>{movement.amount}</span>
+              </td>
+              <td>
+                <.account_select
+                  :if={!movement.transacted}
+                  id={movement.id}
+                  value={movement.account_name && Enum.join(movement.account_name, ".")}
+                  accounts={@accounts}
+                />
+                <span :if={movement.transacted}>{Enum.join(movement.account_name, ".")}</span>
+                <p :if={movement.transacted} class="text-warning text-xs mt-1">
+                  {gettext("Transaction created, pending cleanup")}
+                </p>
+              </td>
+              <td>
+                <button
+                  type="button"
+                  phx-click="remove"
+                  phx-value-id={movement.id}
+                  class="btn btn-error btn-outline btn-sm"
+                  data-confirm={gettext("Are you sure?")}
+                >
+                  {if movement.transacted, do: gettext("Retry cleanup"), else: gettext("Delete")}
+                </button>
+                <p :if={@errors[movement.id]} class="text-error text-xs mt-1">
+                  {format_error(@errors[movement.id])}
+                </p>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div class="card bg-base-100 shadow-xl border border-base-200 mt-6">
+    <div class="card-body p-0">
+      <div class="p-4 flex justify-between items-center border-b border-base-200">
+        <h1 class="text-lg font-semibold">{gettext("Movements without an account")}</h1>
+      </div>
+      <div class="overflow-x-auto">
+        <table class="table table-zebra">
+          <thead>
+            <tr>
+              <th>{gettext("Date")}</th>
+              <th>{gettext("Description")}</th>
+              <th>{gettext("Amount")}</th>
+              <th>{gettext("Account")}</th>
+              <th class="w-0">
+                <span class="sr-only">{gettext("Actions")}</span>
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr :for={movement <- bottom} id={"movement-#{movement.id}"}>
+              <td>
+                <.editable
+                  id={movement.id}
+                  field="on_date"
+                  type="date"
+                  value={Date.to_iso8601(movement.on_date)}
+                />
+              </td>
+              <td>
+                <.editable id={movement.id} field="description" value={movement.description} />
+              </td>
+              <td>
+                <.editable id={movement.id} field="amount" type="number" value={movement.amount} />
+              </td>
+              <td>
+                <.account_select id={movement.id} value={nil} accounts={@accounts} />
+              </td>
+              <td>
+                <button
+                  type="button"
+                  phx-click="remove"
+                  phx-value-id={movement.id}
+                  class="btn btn-error btn-outline btn-sm"
+                  data-confirm={gettext("Are you sure?")}
+                >
+                  {gettext("Delete")}
+                </button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</section>
