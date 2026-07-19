@@ -24,6 +24,53 @@ defmodule Conta.Automator do
   @default_xlsx_name "export.xlsx"
   @default_automator "automator"
 
+  @importer_code_skeleton """
+  -- Each row in `movements` is a table keyed by the CSV header names
+  -- (e.g. row.date, row.amount - adjust to match your bank's CSV columns).
+  --
+  -- Must return {status = "ok", commands = {...}}.
+  -- Each command needs type = "movement" and a data table with:
+  --   on_date ("YYYY-MM-DD"), description, amount (integer cents,
+  --   e.g. multiply by 100 if your CSV uses decimal units), currency (e.g. "EUR")
+
+  local commands = {}
+
+  for _, row in ipairs(movements) do
+    table.insert(commands, {
+      type = "movement",
+      data = {
+        on_date = row.date,
+        description = row.description,
+        amount = tonumber(row.amount),
+        currency = "EUR"
+      }
+    })
+  end
+
+  return {status = "ok", commands = commands}
+  """
+
+  @shortcut_code_skeleton """
+  -- Params are the ones you define below, accessible by name
+  -- (e.g. params.account_name for an :account_name param).
+  --
+  -- Must return {status = "ok", commands = {...}}.
+  -- Each command is one of:
+  --   {type = "transaction", data = {on_date, entries = {{description, account_name, credit, debit}, ...}}}
+  --   {type = "invoice", data = {...}}  -- see Conta.Command.SetInvoice for the full field list
+
+  return {status = "ok", commands = {}}
+  """
+
+  @filter_code_skeleton """
+  -- Params are the ones you define below, accessible by name.
+  --
+  -- Return any Lua table (e.g. an array of row-tables); it is serialized
+  -- as JSON or exported to Excel depending on this filter's output setting.
+
+  return {}
+  """
+
   def list_shortcuts(automator \\ @default_automator) do
     from(
       s in Shortcut,
@@ -196,15 +243,15 @@ defmodule Conta.Automator do
   end
 
   def new_set_filter(automator \\ @default_automator) do
-    %SetFilter{automator: automator, language: :lua, output: :json, code: "-- Lua code\n", params: []}
+    %SetFilter{automator: automator, language: :lua, output: :json, code: @filter_code_skeleton, params: []}
   end
 
   def new_set_shortcut(automator \\ @default_automator) do
-    %SetShortcut{automator: automator, language: :lua, code: "-- Lua code\n", params: []}
+    %SetShortcut{automator: automator, language: :lua, code: @shortcut_code_skeleton, params: []}
   end
 
   def new_set_importer(automator \\ @default_automator) do
-    %SetImporter{automator: automator, language: :lua, code: "-- Lua code\n"}
+    %SetImporter{automator: automator, language: :lua, code: @importer_code_skeleton}
   end
 
   def test_run_filter(params_defs, code, test_params) do
