@@ -11,12 +11,31 @@ defmodule ContaWeb.ReconciliationLive.Matches.Index do
 
   @impl true
   def mount(_params, _session, socket) do
+    Phoenix.PubSub.subscribe(Conta.PubSub, "event:match_rule_set")
     match_rules = Reconciliation.list_match_rules()
 
     {:ok,
      socket
      |> assign(:match_rules, match_rules)
      |> stream(:match_rules, match_rules)}
+  end
+
+  @impl true
+  def handle_info({:match_rule_set, match_rule}, socket) do
+    match_rules =
+      if Enum.any?(socket.assigns.match_rules, &(&1.id == match_rule.id)) do
+        Enum.map(socket.assigns.match_rules, fn
+          rule when rule.id == match_rule.id -> match_rule
+          rule -> rule
+        end)
+      else
+        socket.assigns.match_rules ++ [match_rule]
+      end
+
+    {:noreply,
+     socket
+     |> assign(:match_rules, match_rules)
+     |> stream_insert(:match_rules, match_rule)}
   end
 
   @impl true

@@ -118,6 +118,25 @@ defmodule ContaWeb.ReconciliationLive.MatchesTest do
                match?([%{id: ^rule_a_id}, %{id: ^rule_b_id}], Reconciliation.list_match_rules())
              end)
     end
+
+    test "shows a match rule created after the initial mount, via the projector's broadcast", %{
+      conn: conn,
+      user: user
+    } do
+      conn = log_in_user(conn, user)
+      {:ok, index_live, html} = live(conn, ~p"/ledger/reconciliation/matches")
+      refute html =~ "late arriving rule"
+
+      # Simulates the projector finishing its write *after* this index already
+      # mounted and queried - the same race the Form's `push_navigate` can lose
+      # against `Conta.Projector.Reconciliation` in production (command dispatch
+      # defaults to `consistency: :eventual`). The index must pick this up from
+      # the broadcast alone, not by re-querying.
+      late_rule = insert(:match_rule, %{name: "late arriving rule"})
+      send(index_live.pid, {:match_rule_set, late_rule})
+
+      assert render(index_live) =~ "late arriving rule"
+    end
   end
 
   describe "Form" do

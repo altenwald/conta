@@ -8,6 +8,8 @@ defmodule Conta.ReconciliationContextTest do
   alias Conta.Command.ImportMovements
   alias Conta.Command.MarkMovementTransacted
   alias Conta.Command.SetAccount
+  alias Conta.Command.SetMatchRule
+  alias Conta.Commanded.Application, as: CommandedApp
   alias Conta.Event.MovementsImported
   alias Conta.Event.TransactionCreated
   alias Conta.Projector.Ledger.Entry, as: LedgerEntry
@@ -28,6 +30,26 @@ defmodule Conta.ReconciliationContextTest do
       rule = insert(:match_rule)
       assert %MatchRule{id: id} = Reconciliation.get_match_rule!(rule.id)
       assert id == rule.id
+    end
+
+    # Command dispatch in this app defaults to `consistency: :eventual` (see
+    # `Conta.Commanded.Router`), so `ReconciliationLive.Matches.Index`
+    # subscribes to this broadcast instead of only trusting its initial query
+    # after a `push_navigate` from the Form (mirrors
+    # `Conta.Projector.Automator`). This confirms the projector actually sends
+    # it once the read model row lands.
+    test "broadcasts event:match_rule_set after projecting a new match rule" do
+      Phoenix.PubSub.subscribe(Conta.PubSub, "event:match_rule_set")
+
+      :ok =
+        CommandedApp.dispatch(%SetMatchRule{
+          name: "broadcast rule",
+          conditions: [%SetMatchRule.Condition{field: :description, comparator: :contains, value: "X"}],
+          match_type: :all,
+          account_name: ["Expenses", "Misc"]
+        })
+
+      assert_receive {:match_rule_set, %MatchRule{name: "broadcast rule"}}, 1500
     end
   end
 

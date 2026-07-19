@@ -110,4 +110,18 @@ defmodule Conta.Projector.Reconciliation do
       multi
     end
   end)
+
+  # `ReconciliationLive.Matches.Index` subscribes to this so a rule created or
+  # edited from the separate Form LiveView shows up after `push_navigate`
+  # back to the index without racing this projector's write - command
+  # dispatch defaults to `consistency: :eventual` (see `Conta.Commanded.Router`),
+  # so the index's own re-query on mount isn't guaranteed to see it yet.
+  # Mirrors Conta.Projector.Automator's after_update/3.
+  @impl Conta.Projector
+  def after_update(%MatchRuleSet{}, _metadata, changes) do
+    match_rule = changes[:match_rule_create] || changes[:match_rule_update]
+    Phoenix.PubSub.broadcast(Conta.PubSub, "event:match_rule_set", {:match_rule_set, match_rule})
+  end
+
+  def after_update(_event, _metadata, _changes), do: :ok
 end
