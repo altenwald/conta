@@ -52,5 +52,8 @@
 
   <div :if={@imported_count} class="card bg-base-100 shadow-xl border border-base-200 p-4 mt-6">
     <p class="font-semibold">{gettext("Imported %{count} movements", count: @imported_count)}</p>
+    <.link navigate={~p"/ledger/reconciliation"} class="btn btn-primary mt-2">
+      {gettext("Review imported movements")}
+    </.link>
   </div>
 </section>

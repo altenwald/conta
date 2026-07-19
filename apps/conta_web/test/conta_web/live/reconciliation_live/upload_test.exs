@@ -79,6 +79,7 @@ defmodule ContaWeb.ReconciliationLive.UploadTest do
     wait_for_event(Conta.Commanded.Application, MovementsImported)
 
     assert html =~ "Imported 1 movements"
+    assert html =~ ~s(href="/ledger/reconciliation")
 
     # `wait_for_event/2` only proves this test's own ad-hoc event-store subscription
     # saw the event, not that the separate `Conta.Projector.Reconciliation`
