@@ -59,7 +59,17 @@ defmodule Conta.Commanded.Router do
   dispatch(SetPaymentMethod, to: Company, identity: :nif)
   dispatch(SetTemplate, to: Company, identity: :nif)
 
-  identify(Reconciliation, by: :reconciliation)
+  # Reconciliation is a singleton whose commands default their identity field
+  # to the literal string "default" - the same raw identity Ledger's commands
+  # default to. Without a distinct prefix, Commanded uses that raw identity as
+  # the event store's stream_uuid, so both aggregates would read and write
+  # the exact same physical stream and replay each other's events (silently
+  # discarded today only because both `apply/2` have a catch-all clause).
+  # Ledger keeps its unprefixed "default" stream to preserve its existing
+  # history; Reconciliation moves to its own "reconciliation-default" stream,
+  # which starts empty (its prior events stay behind on the old shared
+  # stream, unreachable from here on).
+  identify(Reconciliation, by: :reconciliation, prefix: "reconciliation-")
 
   dispatch(ImportMovements, to: Reconciliation)
   dispatch(MarkMovementTransacted, to: Reconciliation)
