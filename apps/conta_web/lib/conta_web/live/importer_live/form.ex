@@ -14,7 +14,10 @@ defmodule ContaWeb.ImporterLive.Form do
 
   @impl true
   def mount(_params, _session, socket) do
-    {:ok, assign(socket, :test_result, nil)}
+    {:ok,
+     socket
+     |> assign(:test_result, nil)
+     |> assign(:test_movements, "")}
   end
 
   @impl true
@@ -78,7 +81,10 @@ defmodule ContaWeb.ImporterLive.Form do
         error -> {:error, CsvImportMessages.error_message(error)}
       end
 
-    {:noreply, assign(socket, :test_result, format_test_result(result))}
+    {:noreply,
+     socket
+     |> assign(:test_result, format_test_result(result))
+     |> assign(:test_movements, csv_text)}
   end
 
   # A blank test panel means "test against zero rows", not "no file was
