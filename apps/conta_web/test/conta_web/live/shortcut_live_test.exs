@@ -41,6 +41,20 @@ defmodule ContaWeb.ShortcutLiveTest do
 
       refute has_element?(index_live, "#automator_shortcuts-#{shortcut.id}")
     end
+
+    test "shows a shortcut created after the initial mount, via the projector's broadcast", %{
+      conn: conn,
+      user: user
+    } do
+      conn = log_in_user(conn, user)
+      {:ok, index_live, html} = live(conn, ~p"/automation/shortcuts")
+      refute html =~ "late arriving shortcut"
+
+      late_shortcut = insert(:shortcut, %{name: "late arriving shortcut"})
+      send(index_live.pid, {:shortcut_set, late_shortcut})
+
+      assert render(index_live) =~ "late arriving shortcut"
+    end
   end
 
   describe "Form" do

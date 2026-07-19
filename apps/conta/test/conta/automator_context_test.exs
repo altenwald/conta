@@ -4,6 +4,10 @@ defmodule Conta.AutomatorContextTest do
   import Conta.AutomatorFixtures
 
   alias Conta.Automator
+  alias Conta.Command.SetFilter
+  alias Conta.Command.SetImporter
+  alias Conta.Command.SetShortcut
+  alias Conta.Commanded.Application, as: CommandedApp
   alias Conta.Event.MovementsImported
   alias Conta.Projector.Automator.Importer
   alias Conta.Projector.Automator.Shortcut
@@ -127,6 +131,61 @@ defmodule Conta.AutomatorContextTest do
       set_importer = Automator.new_set_importer()
       assert set_importer.automator == "automator"
       assert set_importer.language == :lua
+    end
+
+    test "new_set_importer/0 seeds the code editor with a movement command skeleton" do
+      set_importer = Automator.new_set_importer()
+      assert set_importer.code =~ ~S[type = "movement"]
+      assert set_importer.code =~ "ipairs(movements)"
+    end
+  end
+
+  # Command dispatch in this app defaults to `consistency: :eventual` (see
+  # `Conta.Commanded.Router`), so a caller cannot rely on the read model being
+  # up to date right after `dispatch/1` returns `:ok`. The *Index LiveViews
+  # cope with that by subscribing to these broadcasts (mirroring
+  # Conta.Projector.Book/Directory) instead of only trusting their initial
+  # query - these tests confirm the projector actually sends them once the
+  # read model row lands, independently of the LiveView's reaction to them.
+  describe "Conta.Projector.Automator broadcasts on set" do
+    test "broadcasts event:importer_set after projecting a new importer" do
+      Phoenix.PubSub.subscribe(Conta.PubSub, "event:importer_set")
+
+      :ok =
+        CommandedApp.dispatch(%SetImporter{
+          name: "broadcast importer",
+          automator: "automator",
+          code: "return {status = \"ok\", commands = {}}"
+        })
+
+      assert_receive {:importer_set, %Importer{name: "broadcast importer"}}, 1500
+    end
+
+    test "broadcasts event:filter_set after projecting a new filter" do
+      Phoenix.PubSub.subscribe(Conta.PubSub, "event:filter_set")
+
+      :ok =
+        CommandedApp.dispatch(%SetFilter{
+          name: "broadcast filter",
+          automator: "automator",
+          output: :json,
+          code: "return {}"
+        })
+
+      assert_receive {:filter_set, %Conta.Projector.Automator.Filter{name: "broadcast filter"}}, 1500
+    end
+
+    test "broadcasts event:shortcut_set after projecting a new shortcut" do
+      Phoenix.PubSub.subscribe(Conta.PubSub, "event:shortcut_set")
+
+      :ok =
+        CommandedApp.dispatch(%SetShortcut{
+          name: "broadcast shortcut",
+          automator: "automator",
+          code: "return {status = \"ok\", commands = {}}"
+        })
+
+      assert_receive {:shortcut_set, %Shortcut{name: "broadcast shortcut"}}, 1500
     end
   end
 
@@ -451,11 +510,22 @@ defmodule Conta.AutomatorContextTest do
       assert set_filter.params == []
     end
 
+    test "new_set_filter/0 seeds the code editor with a return-shape skeleton" do
+      set_filter = Automator.new_set_filter()
+      assert set_filter.code =~ "return {}"
+    end
+
     test "new_set_shortcut/0 defaults automator and language" do
       set_shortcut = Automator.new_set_shortcut()
       assert set_shortcut.automator == "automator"
       assert set_shortcut.language == :lua
       assert set_shortcut.params == []
+    end
+
+    test "new_set_shortcut/0 seeds the code editor with a command skeleton" do
+      set_shortcut = Automator.new_set_shortcut()
+      assert set_shortcut.code =~ ~S[type = "transaction"]
+      assert set_shortcut.code =~ ~S[type = "invoice"]
     end
   end
 

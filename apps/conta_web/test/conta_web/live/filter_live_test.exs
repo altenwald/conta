@@ -42,6 +42,20 @@ defmodule ContaWeb.FilterLiveTest do
 
       refute has_element?(index_live, "#automator_filters-#{filter.id}")
     end
+
+    test "shows a filter created after the initial mount, via the projector's broadcast", %{
+      conn: conn,
+      user: user
+    } do
+      conn = log_in_user(conn, user)
+      {:ok, index_live, html} = live(conn, ~p"/automation/filters")
+      refute html =~ "late arriving filter"
+
+      late_filter = insert(:filter, %{name: "late arriving filter"})
+      send(index_live.pid, {:filter_set, late_filter})
+
+      assert render(index_live) =~ "late arriving filter"
+    end
   end
 
   describe "Form" do

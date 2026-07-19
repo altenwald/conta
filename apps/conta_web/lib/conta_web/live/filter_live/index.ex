@@ -10,7 +10,13 @@ defmodule ContaWeb.FilterLive.Index do
 
   @impl true
   def mount(_params, _session, socket) do
+    Phoenix.PubSub.subscribe(Conta.PubSub, "event:filter_set")
     {:ok, stream(socket, :automator_filters, Automator.list_filters())}
+  end
+
+  @impl true
+  def handle_info({:filter_set, filter}, socket) do
+    {:noreply, stream_insert(socket, :automator_filters, filter, at: 0)}
   end
 
   @impl true

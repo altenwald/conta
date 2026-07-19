@@ -41,6 +41,25 @@ defmodule ContaWeb.ImporterLiveTest do
 
       refute has_element?(index_live, "#automator_importers-#{importer.id}")
     end
+
+    test "shows an importer created after the initial mount, via the projector's broadcast", %{
+      conn: conn,
+      user: user
+    } do
+      conn = log_in_user(conn, user)
+      {:ok, index_live, html} = live(conn, ~p"/automation/importers")
+      refute html =~ "late arriving importer"
+
+      # Simulates the projector finishing its write *after* this index already
+      # mounted and queried - the same race the Form's `push_navigate` can lose
+      # against `Conta.Projector.Automator` in production (command dispatch
+      # defaults to `consistency: :eventual`). The index must pick this up from
+      # the broadcast alone, not by re-querying.
+      late_importer = insert(:importer, %{name: "late arriving importer"})
+      send(index_live.pid, {:importer_set, late_importer})
+
+      assert render(index_live) =~ "late arriving importer"
+    end
   end
 
   describe "Form" do
@@ -128,6 +147,29 @@ defmodule ContaWeb.ImporterLiveTest do
 
       assert html =~ "total"
       assert html =~ "15"
+    end
+
+    test "keeps the submitted movements CSV in the textarea after running", %{
+      conn: conn,
+      user: user
+    } do
+      conn = log_in_user(conn, user)
+      {:ok, form_live, _html} = live(conn, ~p"/automation/importers/new")
+
+      code = ~S[return {status = "ok", commands = {}}]
+
+      form_live
+      |> form("#importer-form", set_importer: %{name: "sum rows", code: code})
+      |> render_change()
+
+      csv = "amount\n10\n5\n"
+
+      html =
+        form_live
+        |> element("form[phx-submit=test_run]")
+        |> render_submit(%{"test_params" => %{"movements" => csv}})
+
+      assert html =~ "amount\n10\n5"
     end
 
     test "shows a column-mismatch error for malformed CSV test data", %{conn: conn, user: user} do

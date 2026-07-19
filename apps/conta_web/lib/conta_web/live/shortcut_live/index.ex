@@ -10,7 +10,13 @@ defmodule ContaWeb.ShortcutLive.Index do
 
   @impl true
   def mount(_params, _session, socket) do
+    Phoenix.PubSub.subscribe(Conta.PubSub, "event:shortcut_set")
     {:ok, stream(socket, :automator_shortcuts, Automator.list_shortcuts())}
+  end
+
+  @impl true
+  def handle_info({:shortcut_set, shortcut}, socket) do
+    {:noreply, stream_insert(socket, :automator_shortcuts, shortcut, at: 0)}
   end
 
   @impl true

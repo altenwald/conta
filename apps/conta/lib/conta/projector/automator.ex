@@ -85,4 +85,30 @@ defmodule Conta.Projector.Automator do
       multi
     end
   end)
+
+  # Broadcasts so the *Index LiveViews can pick up rows created/edited from
+  # their separate full-page Form LiveViews. `dispatch/1` in the Form only
+  # waits for this projector's Ecto write with `:strong` consistency, which
+  # this app doesn't request (default dispatch is `:eventual`) - so
+  # `push_navigate`ing straight back to the index right after dispatch can
+  # beat this handler to the read model. Broadcasting here, after the write
+  # actually lands, lets the (already-subscribed) index catch up regardless
+  # of that race, mirroring Conta.Projector.Book's after_update/3.
+  @impl Conta.Projector
+  def after_update(%ShortcutSet{}, _metadata, changes) do
+    shortcut = changes[:shortcut_create] || changes[:shortcut_update]
+    Phoenix.PubSub.broadcast(Conta.PubSub, "event:shortcut_set", {:shortcut_set, shortcut})
+  end
+
+  def after_update(%FilterSet{}, _metadata, changes) do
+    filter = changes[:filter_create] || changes[:filter_update]
+    Phoenix.PubSub.broadcast(Conta.PubSub, "event:filter_set", {:filter_set, filter})
+  end
+
+  def after_update(%ImporterSet{}, _metadata, changes) do
+    importer = changes[:importer_create] || changes[:importer_update]
+    Phoenix.PubSub.broadcast(Conta.PubSub, "event:importer_set", {:importer_set, importer})
+  end
+
+  def after_update(_event, _metadata, _changes), do: :ok
 end

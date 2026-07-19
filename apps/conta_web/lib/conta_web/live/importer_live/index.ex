@@ -10,7 +10,13 @@ defmodule ContaWeb.ImporterLive.Index do
 
   @impl true
   def mount(_params, _session, socket) do
+    Phoenix.PubSub.subscribe(Conta.PubSub, "event:importer_set")
     {:ok, stream(socket, :automator_importers, Automator.list_importers())}
+  end
+
+  @impl true
+  def handle_info({:importer_set, importer}, socket) do
+    {:noreply, stream_insert(socket, :automator_importers, importer, at: 0)}
   end
 
   @impl true
