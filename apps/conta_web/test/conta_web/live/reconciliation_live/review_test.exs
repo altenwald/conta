@@ -156,6 +156,61 @@ defmodule ContaWeb.ReconciliationLive.ReviewTest do
       refute has_element?(view, "#movement-#{movement.id}")
     end
 
+    test "select all selects every checkbox-eligible movement; deselect all clears the selection",
+         %{conn: conn, user: user} do
+      expense = create_expense_account()
+      with_account_a = import_movement() |> assign_account(expense)
+      with_account_b = import_movement() |> assign_account(expense)
+      without_account = import_movement()
+
+      conn = log_in_user(conn, user)
+      {:ok, view, _html} = live(conn, ~p"/ledger/reconciliation")
+
+      html = view |> element("button", "Select all") |> render_click()
+      assert html =~ "2 selected"
+      assert view |> element("#movement-#{with_account_a.id} input[type=checkbox]") |> render() =~ "checked"
+      assert view |> element("#movement-#{with_account_b.id} input[type=checkbox]") |> render() =~ "checked"
+      refute has_element?(view, "#movement-#{without_account.id} input[type=checkbox]")
+
+      html = view |> element("button", "Deselect all") |> render_click()
+      assert html =~ "0 selected"
+      refute view |> element("#movement-#{with_account_a.id} input[type=checkbox]") |> render() =~ "checked"
+    end
+
+    test "invert selection toggles every checkbox-eligible movement", %{conn: conn, user: user} do
+      expense = create_expense_account()
+      a = import_movement() |> assign_account(expense)
+      b = import_movement() |> assign_account(expense)
+
+      conn = log_in_user(conn, user)
+      {:ok, view, _html} = live(conn, ~p"/ledger/reconciliation")
+
+      view |> element("#movement-#{a.id} input[type=checkbox]") |> render_click()
+
+      html = view |> element("button", "Invert selection") |> render_click()
+      assert html =~ "1 selected"
+      refute view |> element("#movement-#{a.id} input[type=checkbox]") |> render() =~ "checked"
+      assert view |> element("#movement-#{b.id} input[type=checkbox]") |> render() =~ "checked"
+    end
+
+    test "batch Delete removes every selected movement", %{conn: conn, user: user} do
+      expense = create_expense_account()
+      a = import_movement() |> assign_account(expense)
+      b = import_movement() |> assign_account(expense)
+
+      conn = log_in_user(conn, user)
+      {:ok, view, _html} = live(conn, ~p"/ledger/reconciliation")
+
+      view |> element("button", "Select all") |> render_click()
+      view |> element("button[phx-click=remove_selected]") |> render_click()
+
+      refute has_element?(view, "#movement-#{a.id}")
+      refute has_element?(view, "#movement-#{b.id}")
+
+      assert eventually(fn -> is_nil(Repo.get(Movement, a.id)) end)
+      assert eventually(fn -> is_nil(Repo.get(Movement, b.id)) end)
+    end
+
     test "editing the description of a normal row dispatches update_movement and reflects the change locally",
          %{conn: conn, user: user} do
       movement = import_movement()

@@ -38,6 +38,42 @@ defmodule ContaWeb.ReconciliationLive.Review do
     {:noreply, assign(socket, :selected, selected)}
   end
 
+  def handle_event("select_all", _params, socket) do
+    selected = MapSet.new(selectable_ids(socket.assigns.movements))
+    {:noreply, assign(socket, :selected, selected)}
+  end
+
+  def handle_event("deselect_all", _params, socket) do
+    {:noreply, assign(socket, :selected, MapSet.new())}
+  end
+
+  def handle_event("invert_selection", _params, socket) do
+    selectable = MapSet.new(selectable_ids(socket.assigns.movements))
+    selected = MapSet.symmetric_difference(selectable, socket.assigns.selected)
+    {:noreply, assign(socket, :selected, selected)}
+  end
+
+  def handle_event("remove_selected", %{"ids" => ids_param}, socket) do
+    ids = String.split(ids_param, ",", trim: true)
+
+    {succeeded, failed} =
+      Enum.reduce(ids, {MapSet.new(), %{}}, fn id, {succeeded, failed} ->
+        case dispatch(%RemoveMovement{id: id}) do
+          :ok -> {MapSet.put(succeeded, id), failed}
+          {:error, reason} -> {succeeded, Map.put(failed, id, reason)}
+        end
+      end)
+
+    socket =
+      socket
+      |> assign(:movements, Enum.reject(socket.assigns.movements, &(&1.id in succeeded)))
+      |> assign(:selected, MapSet.difference(socket.assigns.selected, succeeded))
+      |> assign(:errors, socket.assigns.errors |> Map.drop(MapSet.to_list(succeeded)) |> Map.merge(failed))
+      |> maybe_flash_remove_result(failed)
+
+    {:noreply, socket}
+  end
+
   def handle_event("confirm", %{"ids" => ids_param}, socket) do
     ids = String.split(ids_param, ",", trim: true)
 
@@ -109,6 +145,22 @@ defmodule ContaWeb.ReconciliationLive.Review do
 
   defp maybe_flash_confirm_result(socket, _failed) do
     put_flash(socket, :error, gettext("Some movements could not be confirmed"))
+  end
+
+  defp maybe_flash_remove_result(socket, failed) when map_size(failed) == 0 do
+    put_flash(socket, :info, gettext("Selected movements removed successfully"))
+  end
+
+  defp maybe_flash_remove_result(socket, _failed) do
+    put_flash(socket, :error, gettext("Some movements could not be removed"))
+  end
+
+  # The only movements a checkbox ever renders for (see the `top` table in
+  # review.html.heex) - transacted rows and accountless rows don't get one, so
+  # "select all"/"invert selection" must match that same set or they'd select
+  # ids with no checkbox to represent them.
+  defp selectable_ids(movements) do
+    for movement <- movements, movement.account_name, not movement.transacted, do: movement.id
   end
 
   # `Reconciliation.confirm_movement/1` documents a residual risk: `SetAccountTransaction`

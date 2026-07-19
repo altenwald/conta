@@ -1,25 +1,50 @@
 <section class="py-6">
   <.breadcrumbs>
     <:breadcrumb label={gettext("Dashboard")} href={~p"/"} />
-    <:breadcrumb label={gettext("Review")} href={~p"/ledger/reconciliation"} />
+    <:breadcrumb label={gettext("Reconciliation review")} href={~p"/ledger/reconciliation"} />
   </.breadcrumbs>
 
   <% {top, bottom} = Enum.split_with(@movements, & &1.account_name) %>
 
   <div class="card bg-base-100 shadow-xl border border-base-200 mt-6">
     <div class="card-body p-0">
-      <div class="p-4 flex justify-between items-center border-b border-base-200">
+      <div class="p-4 flex flex-wrap justify-between items-center gap-2 border-b border-base-200">
         <h1 class="text-lg font-semibold">{gettext("Movements with an account")}</h1>
-        <button
-          type="button"
-          class="btn btn-primary"
-          phx-click="confirm"
-          phx-value-ids={Enum.join(@selected, ",")}
-          disabled={Enum.empty?(@selected)}
-        >
-          <.icon name="hero-check-circle" class="w-5 h-5 mr-2" />
-          <span>{gettext("Confirm")} ({MapSet.size(@selected)})</span>
-        </button>
+        <div class="flex flex-wrap items-center gap-2">
+          <span class="text-sm opacity-70">{gettext("%{count} selected", count: MapSet.size(@selected))}</span>
+          <div class="join">
+            <button type="button" class="btn btn-sm btn-outline join-item" phx-click="select_all">
+              {gettext("Select all")}
+            </button>
+            <button type="button" class="btn btn-sm btn-outline join-item" phx-click="deselect_all">
+              {gettext("Deselect all")}
+            </button>
+            <button type="button" class="btn btn-sm btn-outline join-item" phx-click="invert_selection">
+              {gettext("Invert selection")}
+            </button>
+          </div>
+          <button
+            type="button"
+            class="btn btn-primary"
+            phx-click="confirm"
+            phx-value-ids={Enum.join(@selected, ",")}
+            disabled={Enum.empty?(@selected)}
+          >
+            <.icon name="hero-check-circle" class="w-5 h-5 mr-2" />
+            <span>{gettext("Confirm")}</span>
+          </button>
+          <button
+            type="button"
+            class="btn btn-error"
+            phx-click="remove_selected"
+            phx-value-ids={Enum.join(@selected, ",")}
+            disabled={Enum.empty?(@selected)}
+            data-confirm={gettext("Are you sure?")}
+          >
+            <.icon name="hero-trash" class="w-5 h-5 mr-2" />
+            <span>{gettext("Delete")}</span>
+          </button>
+        </div>
       </div>
       <div class="overflow-x-auto">
         <table class="table table-zebra">
