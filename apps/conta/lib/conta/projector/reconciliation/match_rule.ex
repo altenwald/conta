@@ -5,7 +5,7 @@ defmodule Conta.Projector.Reconciliation.MatchRule do
   @primary_key {:id, :binary_id, autogenerate: false}
   @foreign_key_type :binary_id
 
-  @derive {Jason.Encoder, only: ~w[id name conditions match_type account_name position]a}
+  @derive {Jason.Encoder, only: ~w[id name conditions match_type account_name concept position]a}
   typed_schema "reconciliation_match_rules" do
     field :name, :string
 
@@ -18,15 +18,17 @@ defmodule Conta.Projector.Reconciliation.MatchRule do
 
     field :match_type, Ecto.Enum, values: ~w[all any]a, default: :all
     field :account_name, {:array, :string}
+    field :concept, :string
     field :position, :integer
   end
 
   @required_fields ~w[id name match_type account_name position]a
+  @optional_fields ~w[concept]a
 
   @doc false
   def changeset(model \\ %__MODULE__{}, params) do
     model
-    |> cast(params, @required_fields)
+    |> cast(params, @required_fields ++ @optional_fields)
     |> cast_embed(:conditions, with: &changeset_condition/2)
     |> validate_required(@required_fields)
   end

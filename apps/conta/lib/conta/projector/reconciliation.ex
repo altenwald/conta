@@ -29,7 +29,8 @@ defmodule Conta.Projector.Reconciliation do
           name: event.name,
           conditions: conditions,
           match_type: event.match_type,
-          account_name: event.account_name
+          account_name: event.account_name,
+          concept: event.concept
         })
 
       Ecto.Multi.update(multi, :match_rule_update, changeset)
@@ -43,6 +44,7 @@ defmodule Conta.Projector.Reconciliation do
           conditions: conditions,
           match_type: event.match_type,
           account_name: event.account_name,
+          concept: event.concept,
           position: next_position
         })
 

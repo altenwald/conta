@@ -23,6 +23,11 @@
         value={Enum.join(@form[:account_name].value || [], ".")}
         options={for account <- @accounts, name = Enum.join(account.name, "."), do: {name, name}}
       />
+      <.input
+        field={@form[:concept]}
+        type="text"
+        label={gettext("Transformed concept (optional)")}
+      />
 
       <div class="flex items-center justify-between mt-4 mb-2">
         <h3 class="font-semibold">{gettext("Conditions")}</h3>

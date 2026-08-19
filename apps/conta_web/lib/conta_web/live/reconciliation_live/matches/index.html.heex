@@ -57,6 +57,7 @@
           <:col :let={{_id, rule}} label={gettext("Name")}>{rule.name}</:col>
           <:col :let={{_id, rule}} label={gettext("Match")}>{rule.match_type}</:col>
           <:col :let={{_id, rule}} label={gettext("Account")}>{Enum.join(rule.account_name, ".")}</:col>
+          <:col :let={{_id, rule}} label={gettext("Concept")}>{rule.concept}</:col>
         </.table>
       </div>
     </div>

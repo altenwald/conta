@@ -20,10 +20,11 @@ defmodule Conta.Projector.ReconciliationTest do
   end
 
   describe "match rules" do
-    test "MatchRuleSet inserts a row at the next position", metadata do
+    test "MatchRuleSet inserts a row at the next position with concept", metadata do
       event = %Conta.Event.MatchRuleSet{
         id: Ecto.UUID.generate(),
         name: "Netflix",
+        concept: "Suscripción Netflix",
         conditions: [
           %Conta.Event.MatchRuleSet.Condition{field: :description, comparator: :contains, value: "NETFLIX"}
         ],
@@ -33,7 +34,7 @@ defmodule Conta.Projector.ReconciliationTest do
 
       assert :ok = Reconciliation.handle(event, metadata)
 
-      assert %Reconciliation.MatchRule{name: "Netflix", position: 0} =
+      assert %Reconciliation.MatchRule{name: "Netflix", position: 0, concept: "Suscripción Netflix"} =
                Repo.get_by!(Reconciliation.MatchRule, id: event.id)
     end
 

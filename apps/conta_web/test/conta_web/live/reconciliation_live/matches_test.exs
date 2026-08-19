@@ -140,7 +140,7 @@ defmodule ContaWeb.ReconciliationLive.MatchesTest do
   end
 
   describe "Form" do
-    test "creates a new match rule with one condition", %{conn: conn, user: user} do
+    test "creates a new match rule with one condition and concept", %{conn: conn, user: user} do
       conn = log_in_user(conn, user)
       {:ok, form_live, _html} = live(conn, ~p"/ledger/reconciliation/matches/new")
 
@@ -150,26 +150,29 @@ defmodule ContaWeb.ReconciliationLive.MatchesTest do
         form_live
         |> form("#match-rule-form",
           set_match_rule: %{
-            name: "Netflix",
+            name: "Repsol",
+            concept: "Combustible",
             match_type: "all",
-            account_name: "Expenses.Subscriptions",
+            account_name: "Expenses.Misc",
             conditions: %{
-              "0" => %{"field" => "description", "comparator" => "contains", "value" => "NETFLIX"}
+              "0" => %{"field" => "description", "comparator" => "contains", "value" => "REPSOL"}
             }
           }
         )
         |> render_submit()
 
       wait_for_event(Conta.Commanded.Application, Conta.Event.MatchRuleSet, fn event ->
-        event.name == "Netflix"
+        event.name == "Repsol"
       end)
 
-      assert eventually(fn -> Repo.get_by(MatchRule, name: "Netflix") end)
+      rule = eventually(fn -> Repo.get_by(MatchRule, name: "Repsol") end)
+      assert rule.concept == "Combustible"
 
       {:ok, _index_live, html} = follow_redirect(result, conn, ~p"/ledger/reconciliation/matches")
 
       assert html =~ "Match rule saved successfully"
-      assert html =~ "Netflix"
+      assert html =~ "Repsol"
+      assert html =~ "Combustible"
     end
 
     test "edits an existing match rule", %{conn: conn, user: user} do

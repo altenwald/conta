@@ -13,7 +13,7 @@ defmodule Conta.Command.SetMatchRule do
     field :reconciliation, :string, default: "default"
     field :name, :string
 
-    embeds_many :conditions, Condition do
+    embeds_many :conditions, Condition, on_replace: :delete, primary_key: false do
       field :field, Ecto.Enum, values: ~w[description amount on_date]a
       field :comparator, Ecto.Enum, values: ~w[contains equals regex greater_than less_than between]a
       field :value, :string
@@ -22,10 +22,11 @@ defmodule Conta.Command.SetMatchRule do
 
     field :match_type, Ecto.Enum, values: ~w[all any]a, default: :all
     field :account_name, {:array, :string}
+    field :concept, :string
   end
 
   @required_fields ~w[name match_type account_name]a
-  @optional_fields ~w[id reconciliation]a
+  @optional_fields ~w[id reconciliation concept]a
 
   @doc false
   def changeset(model \\ %__MODULE__{}, params) do

@@ -19,14 +19,16 @@ defmodule Conta.Event.MatchRuleSet do
 
     field :match_type, Ecto.Enum, values: ~w[all any]a, default: :all
     field :account_name, {:array, :string}
+    field :concept, :string
   end
 
   @required_fields ~w[id name match_type account_name]a
+  @optional_fields ~w[concept]a
 
   @doc false
   def changeset(model \\ %__MODULE__{}, params) do
     model
-    |> cast(params, @required_fields)
+    |> cast(params, @required_fields ++ @optional_fields)
     |> cast_embed(:conditions, with: &changeset_condition/2)
     |> validate_required(@required_fields)
     |> get_result()
