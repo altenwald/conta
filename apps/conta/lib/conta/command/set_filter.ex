@@ -11,7 +11,7 @@ defmodule Conta.Command.SetFilter do
     field :automator, :string
     field :output, Ecto.Enum, values: ~w[json xlsx]a
 
-    embeds_many :params, Param do
+    embeds_many :params, Param, on_replace: :delete, primary_key: false do
       field :name, :string
       field :type, Ecto.Enum, values: ~w[string date integer money currency options account_name table]a
       field :options, {:array, :string}
