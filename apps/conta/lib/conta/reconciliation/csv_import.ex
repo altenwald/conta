@@ -4,7 +4,31 @@ defmodule Conta.Reconciliation.CsvImport do
   into a list of maps keyed by the CSV header row.
   """
 
-  NimbleCSV.define(Parser, separator: ",", escape: "\"")
+  NimbleCSV.define(Conta.Reconciliation.CsvImport.Parser, separator: ",", escape: "\"")
+  alias Conta.Reconciliation.CsvImport.Parser
+
+  @doc """
+  Dumps a list of rows (list of maps or list of lists with headers) into a CSV string.
+  """
+  def dump([]), do: ""
+
+  def dump([%{} | _] = rows) do
+    headers = Map.keys(List.first(rows))
+
+    table = [
+      headers
+      | Enum.map(rows, fn row ->
+          Enum.map(headers, &to_string(Map.get(row, &1, "")))
+        end)
+    ]
+
+    dump(table)
+  end
+
+  def dump(table) when is_list(table) do
+    Parser.dump_to_iodata(table)
+    |> IO.iodata_to_binary()
+  end
 
   @doc """
   Parses a CSV binary into `{:ok, rows}`, where `rows` is a list of maps

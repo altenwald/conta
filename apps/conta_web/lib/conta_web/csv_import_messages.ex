@@ -34,6 +34,8 @@ defmodule ContaWeb.CsvImportMessages do
   """
   def error_message([]), do: gettext("Please choose a file to upload")
   def error_message({:error, :empty_file}), do: gettext("The CSV data is empty")
+  def error_message({:error, :invalid_excel}), do: gettext("The Excel file is invalid or corrupted")
+  def error_message({:error, :no_headers_found}), do: gettext("No valid table headers found in the file")
 
   def error_message({:error, {:column_mismatch, line}}) do
     gettext("Row %{line} has a different number of columns than the header", line: line)

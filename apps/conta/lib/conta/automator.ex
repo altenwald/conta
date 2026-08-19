@@ -25,15 +25,26 @@ defmodule Conta.Automator do
   @default_automator "automator"
 
   @importer_code_skeleton """
-  -- Each row in `movements` is a table keyed by the CSV header names
-  -- (e.g. row.date, row.amount - adjust to match your bank's CSV columns).
+  -- Each row in `movements` is a table keyed by the CSV/Excel header names
+  -- (e.g. row.date, row.amount - adjust to match your bank's columns).
   --
   -- Must return {status = "ok", commands = {...}}.
   -- Each command needs type = "movement" and a data table with:
   --   on_date ("YYYY-MM-DD"), description, amount (integer cents,
-  --   e.g. multiply by 100 if your CSV uses decimal units), currency (e.g. "EUR")
+  --   e.g. 10.50 EUR -> 1050), currency (e.g. "EUR")
 
   local commands = {}
+
+  local function to_number(value)
+    if not value then return 0 end
+    local num = tonumber((tostring(value):gsub(",", ".")))
+    if not num then return 0 end
+    if num >= 0 then
+      return math.floor(num * 100 + 0.5)
+    else
+      return math.ceil(num * 100 - 0.5)
+    end
+  end
 
   for _, row in ipairs(movements) do
     table.insert(commands, {
@@ -41,7 +52,7 @@ defmodule Conta.Automator do
       data = {
         on_date = row.date,
         description = row.description,
-        amount = tonumber(row.amount),
+        amount = to_number(row.amount),
         currency = "EUR"
       }
     })
@@ -516,7 +527,9 @@ defmodule Conta.Automator do
   defp cast([%Param{type: :table, name: name} | automator_params], params, acc) do
     value =
       case params[name] do
-        blank when blank in [nil, ""] -> []
+        blank when blank in [nil, ""] ->
+          []
+
         # A :table param carries arbitrary tabular data to transform, not a
         # reference to one of the app's own data sources. Callers that can't
         # send a native JSON array/object for it (e.g. a form-encoded POST,

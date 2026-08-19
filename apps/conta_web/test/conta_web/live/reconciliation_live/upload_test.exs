@@ -93,6 +93,95 @@ defmodule ContaWeb.ReconciliationLive.UploadTest do
     assert eventually(fn -> Repo.get_by(ReconciliationMovement, asset_account_name: bank_name) end)
   end
 
+  test "uploads an XLSX file, runs the importer and shows the imported movements", %{
+    conn: conn,
+    user: user,
+    bank_name: bank_name,
+    importer: importer
+  } do
+    conn = log_in_user(conn, user)
+    {:ok, view, _html} = live(conn, ~p"/ledger/reconciliation/upload")
+
+    data = %{
+      "Sheet1" => [
+        %{"date" => "2026-07-01", "description" => "SPOTIFY", "amount" => "-9.99"}
+      ]
+    }
+
+    {:ok, {_fn, binary}} = Conta.Automator.Excel.export(data, "statement.xlsx")
+
+    file =
+      file_input(view, "#upload-form", :statement, [
+        %{
+          name: "statement.xlsx",
+          content: binary,
+          type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        }
+      ])
+
+    render_upload(file, "statement.xlsx")
+
+    html =
+      view
+      |> form("#upload-form", %{
+        "importer_name" => importer.name,
+        "asset_account_name" => Enum.join(bank_name, ".")
+      })
+      |> render_submit()
+
+    wait_for_event(Conta.Commanded.Application, MovementsImported)
+
+    assert html =~ "Imported 1 movements"
+    assert html =~ ~s(href="/ledger/reconciliation")
+    assert eventually(fn -> Repo.get_by(ReconciliationMovement, asset_account_name: bank_name) end)
+  end
+
+  test "uploads an XLS file, runs the importer and shows the imported movements", %{
+    conn: conn,
+    user: user,
+    bank_name: bank_name,
+    importer: importer
+  } do
+    conn = log_in_user(conn, user)
+    {:ok, view, _html} = live(conn, ~p"/ledger/reconciliation/upload")
+
+    xls_content = """
+    <html>
+      <body>
+        <table>
+          <tr><th>date</th><th>description</th><th>amount</th></tr>
+          <tr><td>2026-07-01</td><td>AMAZON PRIME</td><td>-4.99</td></tr>
+        </table>
+      </body>
+    </html>
+    """
+
+    file =
+      file_input(view, "#upload-form", :statement, [
+        %{
+          name: "statement.xls",
+          content: xls_content,
+          type: "application/vnd.ms-excel"
+        }
+      ])
+
+    render_upload(file, "statement.xls")
+
+    html =
+      view
+      |> form("#upload-form", %{
+        "importer_name" => importer.name,
+        "asset_account_name" => Enum.join(bank_name, ".")
+      })
+      |> render_submit()
+
+    wait_for_event(Conta.Commanded.Application, MovementsImported)
+
+    assert html =~ "Imported 1 movements"
+    assert html =~ ~s(href="/ledger/reconciliation")
+    assert eventually(fn -> Repo.get_by(ReconciliationMovement, asset_account_name: bank_name) end)
+  end
+
   test "shows an error when no file is chosen on submit", %{
     conn: conn,
     user: user,

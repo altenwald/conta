@@ -4,6 +4,7 @@ defmodule ContaWeb.ReconciliationLive.Upload do
   alias Conta.Automator
   alias Conta.Ledger
   alias Conta.Reconciliation.CsvImport
+  alias Conta.Reconciliation.ExcelImport
   alias ContaWeb.CsvImportMessages
 
   @impl true
@@ -15,7 +16,7 @@ defmodule ContaWeb.ReconciliationLive.Upload do
      |> assign(:asset_accounts, Ledger.list_accounts(:assets))
      |> assign(:error, nil)
      |> assign(:imported_count, nil)
-     |> allow_upload(:statement, accept: ~w(.csv), max_entries: 1)}
+     |> allow_upload(:statement, accept: ~w(.csv .xlsx .xls), max_entries: 1)}
   end
 
   @impl true
@@ -33,11 +34,11 @@ defmodule ContaWeb.ReconciliationLive.Upload do
         %{"importer_name" => importer_name, "asset_account_name" => asset_account_name},
         socket
       ) do
-    with [csv] <-
-           consume_uploaded_entries(socket, :statement, fn %{path: path}, _entry ->
-             {:ok, File.read!(path)}
+    with [{filename, content}] <-
+           consume_uploaded_entries(socket, :statement, fn %{path: path}, entry ->
+             {:ok, {entry.client_name, File.read!(path)}}
            end),
-         {:ok, rows} <- CsvImport.parse(csv),
+         {:ok, rows} <- parse_statement(filename, content),
          account_name = String.split(asset_account_name, "."),
          :ok <- Automator.run_importer(importer_name, %{"movements" => rows}, account_name) do
       {:noreply,
@@ -47,6 +48,16 @@ defmodule ContaWeb.ReconciliationLive.Upload do
        |> put_flash(:info, gettext("Bank statement imported successfully"))}
     else
       reason -> {:noreply, assign(socket, :error, CsvImportMessages.error_message(reason))}
+    end
+  end
+
+  defp parse_statement(filename, content) do
+    ext = filename |> Path.extname() |> String.downcase()
+
+    if ext in [".xlsx", ".xls"] do
+      ExcelImport.parse(content)
+    else
+      CsvImport.parse(content)
     end
   end
 end

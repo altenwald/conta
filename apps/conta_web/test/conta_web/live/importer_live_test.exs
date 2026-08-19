@@ -217,5 +217,114 @@ defmodule ContaWeb.ImporterLiveTest do
       refute html =~ "Error"
       assert html =~ "count"
     end
+
+    test "test-runs an uploaded XLSX file through the importer script", %{conn: conn, user: user} do
+      conn = log_in_user(conn, user)
+      {:ok, form_live, _html} = live(conn, ~p"/automation/importers/new")
+
+      code = ~S"""
+      local descriptions = {}
+      for i, row in ipairs(movements) do
+        descriptions[i] = row.description
+      end
+      return {status = "ok", commands = {{type = "descriptions", data = {list = descriptions}}}}
+      """
+
+      form_live
+      |> form("#importer-form", set_importer: %{name: "parse xlsx", code: code})
+      |> render_change()
+
+      data = %{
+        "Sheet1" => [
+          %{"date" => "2026-07-01", "description" => "SPOTIFY", "amount" => "-9.99"},
+          %{"date" => "2026-07-02", "description" => "NETFLIX", "amount" => "-13.99"}
+        ]
+      }
+
+      {:ok, {_fn, binary}} = Conta.Automator.Excel.export(data, "test.xlsx")
+
+      file =
+        file_input(form_live, "#test-run-form", :statement, [
+          %{
+            name: "test.xlsx",
+            content: binary,
+            type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+          }
+        ])
+
+      render_upload(file, "test.xlsx")
+
+      html =
+        form_live
+        |> form("#test-run-form")
+        |> render_submit()
+
+      assert html =~ "SPOTIFY"
+      assert html =~ "NETFLIX"
+      assert render(form_live) =~ "SPOTIFY"
+
+      # Re-running without re-uploading uses the converted CSV in the textarea
+      rerun_html =
+        form_live
+        |> form("#test-run-form")
+        |> render_submit()
+
+      assert rerun_html =~ "SPOTIFY"
+      assert rerun_html =~ "NETFLIX"
+    end
+
+    test "test-runs an uploaded XLS file through the importer script", %{conn: conn, user: user} do
+      conn = log_in_user(conn, user)
+      {:ok, form_live, _html} = live(conn, ~p"/automation/importers/new")
+
+      code = ~S"""
+      local total = 0
+      for _, row in ipairs(movements) do
+        total = total + tonumber(row.amount)
+      end
+      return {status = "ok", commands = {{type = "total", data = {total = total}}}}
+      """
+
+      form_live
+      |> form("#importer-form", set_importer: %{name: "parse xls", code: code})
+      |> render_change()
+
+      xls_content = """
+      <html>
+        <body>
+          <table>
+            <tr><th>date</th><th>description</th><th>amount</th></tr>
+            <tr><td>2026-07-01</td><td>AMAZON</td><td>-4.99</td></tr>
+            <tr><td>2026-07-02</td><td>APPLE</td><td>-1.99</td></tr>
+          </table>
+        </body>
+      </html>
+      """
+
+      file =
+        file_input(form_live, "#test-run-form", :statement, [
+          %{name: "statement.xls", content: xls_content, type: "application/vnd.ms-excel"}
+        ])
+
+      render_upload(file, "statement.xls")
+
+      html =
+        form_live
+        |> form("#test-run-form")
+        |> render_submit()
+
+      assert html =~ "total"
+      assert html =~ "-6.98"
+      assert render(form_live) =~ "AMAZON"
+
+      # Second run without re-uploading
+      rerun_html =
+        form_live
+        |> form("#test-run-form")
+        |> render_submit()
+
+      assert rerun_html =~ "total"
+      assert rerun_html =~ "-6.98"
+    end
   end
 end

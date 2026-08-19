@@ -31,17 +31,27 @@
     <p class="text-sm opacity-70 mb-2">
       {gettext("Running here never dispatches real commands — it only shows what would be generated.")}
     </p>
-    <form phx-submit="test_run">
+    <form id="test-run-form" phx-change="validate_test" phx-submit="test_run">
       <div class="fieldset mb-2">
         <label for="test_params_movements">
-          <span class="label mb-1">{gettext("movements (CSV)")}</span>
+          <span class="label mb-1">{gettext("Movements (CSV or Excel)")}</span>
         </label>
-        <input
-          type="file"
-          accept=".csv"
-          id="movements-csv-file"
-          phx-hook="CsvFileInput"
-          data-target="test_params_movements"
+        <div
+          :for={entry <- @uploads.statement.entries}
+          class="flex items-center justify-between p-2 mb-2 border border-base-200 rounded"
+        >
+          <span class="text-sm">{entry.client_name}</span>
+          <button
+            type="button"
+            class="btn btn-ghost btn-xs btn-circle"
+            phx-click="cancel_upload"
+            phx-value-ref={entry.ref}
+          >
+            <.icon name="hero-x-mark" class="w-3 h-3" />
+          </button>
+        </div>
+        <.live_file_input
+          upload={@uploads.statement}
           class="file-input file-input-bordered w-full mb-2"
         />
         <textarea
@@ -49,9 +59,10 @@
           name="test_params[movements]"
           class="w-full textarea textarea-bordered font-mono text-sm"
           rows="6"
+          placeholder={gettext("Or paste CSV text directly...")}
         >{@test_movements}</textarea>
         <p class="text-sm opacity-70 mt-1">
-          {gettext("Comma-separated CSV, double quotes (\") to escape values containing commas or newlines.")}
+          {gettext("Upload a .csv, .xlsx, or .xls file, or paste comma-separated CSV text.")}
         </p>
       </div>
       <div class="flex flex-wrap items-center gap-2 mt-2">

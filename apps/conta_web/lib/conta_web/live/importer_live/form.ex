@@ -10,6 +10,7 @@ defmodule ContaWeb.ImporterLive.Form do
   alias Conta.Automator
   alias Conta.Command.SetImporter
   alias Conta.Reconciliation.CsvImport
+  alias Conta.Reconciliation.ExcelImport
   alias ContaWeb.CsvImportMessages
 
   @impl true
@@ -17,7 +18,8 @@ defmodule ContaWeb.ImporterLive.Form do
     {:ok,
      socket
      |> assign(:test_result, nil)
-     |> assign(:test_movements, "")}
+     |> assign(:test_movements, "")
+     |> allow_upload(:statement, accept: ~w(.csv .xlsx .xls), max_entries: 1)}
   end
 
   @impl true
@@ -54,6 +56,14 @@ defmodule ContaWeb.ImporterLive.Form do
     {:noreply, assign_form(socket, changeset)}
   end
 
+  def handle_event("validate_test", _params, socket) do
+    {:noreply, socket}
+  end
+
+  def handle_event("cancel_upload", %{"ref" => ref}, socket) do
+    {:noreply, cancel_upload(socket, :statement, ref)}
+  end
+
   def handle_event("save", %{"set_importer" => params}, socket) do
     changeset = SetImporter.changeset(socket.assigns.set_importer, force_constants(params))
 
@@ -69,14 +79,32 @@ defmodule ContaWeb.ImporterLive.Form do
     end
   end
 
+  # sobelow_skip ["Traversal.FileModule"]
   def handle_event("test_run", params, socket) do
     raw_test_params = Map.get(params, "test_params", %{})
     changeset = socket.assigns.form.source
     code = get_field(changeset, :code) || ""
     csv_text = raw_test_params["movements"] || ""
 
+    uploaded_files =
+      consume_uploaded_entries(socket, :statement, fn %{path: path}, entry ->
+        {:ok, {entry.client_name, File.read!(path)}}
+      end)
+
+    {parse_result, final_csv_text} =
+      case uploaded_files do
+        [{filename, content}] ->
+          case parse_statement(filename, content) do
+            {:ok, rows} = ok -> {ok, CsvImport.dump(rows)}
+            error -> {error, csv_text}
+          end
+
+        [] ->
+          {parse_movements_csv(csv_text), csv_text}
+      end
+
     result =
-      case parse_movements_csv(csv_text) do
+      case parse_result do
         {:ok, rows} -> Automator.test_run_importer(code, rows)
         error -> {:error, CsvImportMessages.error_message(error)}
       end
@@ -84,7 +112,17 @@ defmodule ContaWeb.ImporterLive.Form do
     {:noreply,
      socket
      |> assign(:test_result, format_test_result(result))
-     |> assign(:test_movements, csv_text)}
+     |> assign(:test_movements, final_csv_text)}
+  end
+
+  defp parse_statement(filename, content) do
+    ext = filename |> Path.extname() |> String.downcase()
+
+    if ext in [".xlsx", ".xls"] do
+      ExcelImport.parse(content)
+    else
+      CsvImport.parse(content)
+    end
   end
 
   # A blank test panel means "test against zero rows", not "no file was
