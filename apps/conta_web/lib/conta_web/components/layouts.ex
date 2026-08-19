@@ -21,6 +21,7 @@ defmodule ContaWeb.Layouts do
       <.flash
         id="client-error"
         kind={:error}
+        auto_close={false}
         title={gettext("We can't find the internet")}
         phx-disconnected={show(".phx-client-error #client-error")}
         phx-connected={hide("#client-error")}
@@ -35,6 +36,7 @@ defmodule ContaWeb.Layouts do
       <.flash
         id="server-error"
         kind={:error}
+        auto_close={false}
         title={gettext("Something went wrong!")}
         phx-disconnected={JS.remove_class("close", to: "#server-error")}
         phx-connected={JS.add_class("close", to: "#server-error")}

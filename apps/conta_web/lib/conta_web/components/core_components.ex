@@ -43,6 +43,8 @@ defmodule ContaWeb.CoreComponents do
   attr :flash, :map, default: %{}, doc: "the map of flash messages to display"
   attr :title, :string, default: nil
   attr :kind, :atom, values: [:info, :error], doc: "used for styling and flash lookup"
+  attr :auto_close, :boolean, default: true, doc: "whether the flash should auto close after inactivity"
+  attr :duration, :integer, default: 3000, doc: "the duration in milliseconds before auto close"
   attr :rest, :global, doc: "the arbitrary HTML attributes to add to the flash container"
 
   slot :inner_block, doc: "the optional inner block that renders the flash message"
@@ -54,6 +56,8 @@ defmodule ContaWeb.CoreComponents do
     <div
       :if={msg = render_slot(@inner_block) || Phoenix.Flash.get(@flash, @kind)}
       id={@id}
+      phx-hook={@auto_close && "FlashAutoClose"}
+      data-duration={@duration}
       phx-click={JS.push("lv:clear-flash", value: %{key: @kind}) |> hide("##{@id}")}
       role="alert"
       class="toast toast-top toast-end z-50"
