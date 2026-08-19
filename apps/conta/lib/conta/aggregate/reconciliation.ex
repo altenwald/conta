@@ -3,6 +3,7 @@ defmodule Conta.Aggregate.Reconciliation do
   alias Conta.Command.MarkMovementTransacted
   alias Conta.Command.RemoveMatchRule
   alias Conta.Command.RemoveMovement
+  alias Conta.Command.RematchMovements
   alias Conta.Command.ReorderMatchRules
   alias Conta.Command.SetMatchRule
   alias Conta.Command.UpdateMovement
@@ -22,7 +23,8 @@ defmodule Conta.Aggregate.Reconciliation do
           name: String.t(),
           conditions: list(),
           match_type: :all | :any,
-          account_name: [String.t()]
+          account_name: [String.t()],
+          concept: String.t() | nil
         }
 
   @type movement() :: map()
@@ -78,10 +80,13 @@ defmodule Conta.Aggregate.Reconciliation do
   def execute(%__MODULE__{match_rules: match_rules}, %ImportMovements{movements: movements}) do
     movements =
       Enum.map(movements, fn movement ->
+        {account_name, description} = evaluate_rules(match_rules, movement)
+
         movement
         |> Map.from_struct()
         |> Map.put(:id, Ecto.UUID.generate())
-        |> Map.put(:account_name, evaluate_rules(match_rules, movement))
+        |> Map.put(:account_name, account_name)
+        |> Map.put(:description, description)
         |> Map.put(:transacted, false)
       end)
 
@@ -117,23 +122,51 @@ defmodule Conta.Aggregate.Reconciliation do
             # from "didn't touch it" and is a no-op today — there's no sentinel yet
             # for a deliberate clear; that's a known gap, not a bug, until an
             # "unassign" UI action needs it.
-            account_name =
+            {account_name, description} =
               cond do
-                Map.has_key?(changes, "account_name") -> updated.account_name
+                Map.has_key?(changes, "account_name") -> {updated.account_name, updated.description}
                 is_nil(movement.account_name) -> evaluate_rules(match_rules, updated)
-                :else -> nil
+                :else -> {nil, updated.description}
               end
 
             %{
               id: id,
               on_date: updated.on_date,
-              description: updated.description,
+              description: description,
               amount: updated.amount,
               currency: updated.currency,
               account_name: account_name
             }
             |> MovementUpdated.changeset()
         end
+    end
+  end
+
+  def execute(%__MODULE__{movements: movements, match_rules: match_rules}, %RematchMovements{ids: ids}) do
+    events =
+      for id <- ids,
+          movement = Map.get(movements, id),
+          movement != nil,
+          not movement.transacted do
+        {account_name, description} = evaluate_rules(match_rules, movement)
+
+        if account_name != movement.account_name or description != movement.description do
+          %{
+            id: id,
+            on_date: movement.on_date,
+            description: description,
+            amount: movement.amount,
+            currency: movement.currency,
+            account_name: account_name
+          }
+          |> MovementUpdated.changeset()
+        end
+      end
+      |> Enum.reject(&is_nil/1)
+
+    case events do
+      [] -> :ok
+      _ -> events
     end
   end
 
@@ -193,64 +226,136 @@ defmodule Conta.Aggregate.Reconciliation do
     end
   end
 
-  defp evaluate_rules(match_rules, movement) do
-    Enum.find_value(match_rules, fn rule ->
-      if rule_matches?(rule, movement), do: rule.account_name
+  def evaluate_rules(match_rules, movement) do
+    Enum.find_value(match_rules, {nil, movement.description}, fn rule ->
+      if rule_matches?(rule, movement) do
+        {rule.account_name, transform_description(rule, movement.description)}
+      end
     end)
   end
 
-  defp rule_matches?(%{conditions: conditions, match_type: :all}, movement) do
+  defp transform_description(%{concept: concept} = rule, original_description)
+       when is_binary(concept) and concept != "" do
+    regex_condition =
+      Enum.find(rule.conditions, fn
+        %{field: :description, comparator: :regex, value: value} when is_binary(value) -> true
+        %{"field" => "description", "comparator" => "regex", "value" => value} when is_binary(value) -> true
+        _ -> false
+      end)
+
+    case regex_condition do
+      nil ->
+        concept
+
+      cond_map ->
+        val =
+          if is_map(cond_map) and Map.has_key?(cond_map, :value),
+            do: cond_map.value,
+            else: cond_map["value"]
+
+        case Regex.compile(val) do
+          {:ok, regex} ->
+            case Regex.run(regex, original_description || "") do
+              nil ->
+                concept
+
+              [full_match | captures] ->
+                captures
+                |> Enum.with_index(1)
+                |> Enum.reduce(concept, fn {cap, idx}, acc ->
+                  acc
+                  |> String.replace("\\#{idx}", cap)
+                  |> String.replace("$#{idx}", cap)
+                end)
+                |> String.replace("\\0", full_match)
+                |> String.replace("$0", full_match)
+            end
+
+          {:error, _} ->
+            concept
+        end
+    end
+  end
+
+  defp transform_description(_rule, original_description), do: original_description
+
+  defp rule_matches?(%{conditions: conditions, match_type: match_type}, movement)
+       when match_type in [:all, "all"] do
     Enum.all?(conditions, &condition_matches?(&1, movement))
   end
 
-  defp rule_matches?(%{conditions: conditions, match_type: :any}, movement) do
+  defp rule_matches?(%{conditions: conditions, match_type: match_type}, movement)
+       when match_type in [:any, "any"] do
     Enum.any?(conditions, &condition_matches?(&1, movement))
   end
 
-  defp condition_matches?(%{field: :description, comparator: :contains, value: value}, movement) do
-    String.contains?(movement.description || "", value)
+  defp condition_matches?(condition, movement) when is_map(condition) do
+    field = cond_val(condition, :field)
+    comp = cond_val(condition, :comparator)
+    value = cond_val(condition, :value)
+    value_to = cond_val(condition, :value_to)
+
+    match_field_comparator(field, comp, value, value_to, movement)
   end
 
-  defp condition_matches?(%{field: :description, comparator: :equals, value: value}, movement) do
-    (movement.description || "") == value
+  defp condition_matches?(_condition, _movement), do: false
+
+  defp cond_val(map, key) when is_atom(key) do
+    Map.get(map, key) || Map.get(map, Atom.to_string(key))
   end
 
-  defp condition_matches?(%{field: :description, comparator: :regex, value: value}, movement) do
-    case Regex.compile(value) do
+  defp match_field_comparator(field, comp, value, _value_to, movement)
+       when field in [:description, "description"] and comp in [:contains, "contains"] do
+    String.contains?(movement.description || "", to_string(value))
+  end
+
+  defp match_field_comparator(field, comp, value, _value_to, movement)
+       when field in [:description, "description"] and comp in [:equals, "equals"] do
+    (movement.description || "") == to_string(value)
+  end
+
+  defp match_field_comparator(field, comp, value, _value_to, movement)
+       when field in [:description, "description"] and comp in [:regex, "regex"] do
+    case Regex.compile(to_string(value)) do
       {:ok, regex} -> Regex.match?(regex, movement.description || "")
       {:error, _} -> false
     end
   end
 
-  defp condition_matches?(%{field: :amount, comparator: :equals, value: value}, movement) do
+  defp match_field_comparator(field, comp, value, _value_to, movement)
+       when field in [:amount, "amount"] and comp in [:equals, "equals"] do
     case parse_integer(value) do
       nil -> false
       parsed -> movement.amount == parsed
     end
   end
 
-  defp condition_matches?(%{field: :amount, comparator: :greater_than, value: value}, movement) do
+  defp match_field_comparator(field, comp, value, _value_to, movement)
+       when field in [:amount, "amount"] and comp in [:greater_than, "greater_than"] do
     case parse_integer(value) do
       nil -> false
       parsed -> movement.amount > parsed
     end
   end
 
-  defp condition_matches?(%{field: :amount, comparator: :less_than, value: value}, movement) do
+  defp match_field_comparator(field, comp, value, _value_to, movement)
+       when field in [:amount, "amount"] and comp in [:less_than, "less_than"] do
     case parse_integer(value) do
       nil -> false
       parsed -> movement.amount < parsed
     end
   end
 
-  defp condition_matches?(%{field: :on_date, comparator: :equals, value: value}, movement) do
+  defp match_field_comparator(field, comp, value, _value_to, movement)
+       when field in [:on_date, "on_date"] and comp in [:equals, "equals"] do
     case parse_date(value) do
       nil -> false
       parsed -> movement.on_date == parsed
     end
   end
 
-  defp condition_matches?(%{field: :on_date, comparator: :between, value: from, value_to: to}, movement) do
+  defp match_field_comparator(field, comp, from, to, movement)
+       when field in [:on_date, "on_date"] and comp in [:between, "between"] do
     from = parse_date(from)
     to = parse_date(to)
 
@@ -258,14 +363,25 @@ defmodule Conta.Aggregate.Reconciliation do
       Date.compare(movement.on_date, to) != :gt
   end
 
-  defp condition_matches?(_condition, _movement), do: false
+  defp match_field_comparator(_field, _comp, _val, _val_to, _movement), do: false
 
   defp parse_integer(value) when is_integer(value), do: value
 
   defp parse_integer(value) when is_binary(value) do
-    case Integer.parse(value) do
-      {integer, ""} -> integer
-      _ -> nil
+    cleaned = String.trim(value)
+
+    cond do
+      String.contains?(cleaned, ".") or String.contains?(cleaned, ",") ->
+        case Float.parse(String.replace(cleaned, ",", ".")) do
+          {f, ""} -> round(f * 100)
+          _ -> nil
+        end
+
+      match?({_, ""}, Integer.parse(cleaned)) ->
+        String.to_integer(cleaned)
+
+      true ->
+        nil
     end
   end
 
@@ -294,7 +410,8 @@ defmodule Conta.Aggregate.Reconciliation do
       name: event.name,
       conditions: Enum.map(event.conditions, &Map.from_struct/1),
       match_type: event.match_type,
-      account_name: event.account_name
+      account_name: event.account_name,
+      concept: event.concept
     }
 
     {match_rules, found?} =

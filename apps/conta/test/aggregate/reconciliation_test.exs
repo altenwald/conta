@@ -18,6 +18,7 @@ defmodule Conta.Aggregate.ReconciliationTest do
   alias Conta.Event.MovementUpdated
 
   alias Conta.Command.MarkMovementTransacted
+  alias Conta.Command.RematchMovements
   alias Conta.Command.RemoveMovement
   alias Conta.Event.MovementRemoved
   alias Conta.Event.MovementTransacted
@@ -157,6 +158,66 @@ defmodule Conta.Aggregate.ReconciliationTest do
       reconciliation = Reconciliation.apply(reconciliation, event)
       assert map_size(reconciliation.movements) == 1
       assert [{_id, %{account_name: ["Expenses", "Subscriptions"]}}] = Map.to_list(reconciliation.movements)
+    end
+
+    test "a movement matching a rule with static concept gets its description transformed" do
+      rule = %{
+        id: Ecto.UUID.generate(),
+        name: "Repsol",
+        concept: "Combustible",
+        conditions: [%{field: :description, comparator: :contains, value: "REPSOL", value_to: nil}],
+        match_type: :all,
+        account_name: ["Expenses", "Fuel"]
+      }
+
+      reconciliation = %Reconciliation{match_rules: [rule]}
+
+      command = %ImportMovements{
+        movements: [
+          %ImportMovements.Movement{
+            on_date: ~D[2026-07-01],
+            description: "ESTACION SERV REPSOL 4294 MADRID",
+            amount: -6500,
+            currency: :EUR,
+            asset_account_name: ["Assets", "Bank"]
+          }
+        ]
+      }
+
+      event = Reconciliation.execute(reconciliation, command)
+      assert %MovementsImported{movements: [movement]} = event
+      assert movement.account_name == ["Expenses", "Fuel"]
+      assert movement.description == "Combustible"
+    end
+
+    test "a movement matching a regex rule with concept capture substitution gets transformed" do
+      rule = %{
+        id: Ecto.UUID.generate(),
+        name: "Facturas",
+        concept: "Factura \\1 de Proveedor",
+        conditions: [%{field: :description, comparator: :regex, value: "FACTURA\\s+(\\d+)", value_to: nil}],
+        match_type: :all,
+        account_name: ["Expenses", "Providers"]
+      }
+
+      reconciliation = %Reconciliation{match_rules: [rule]}
+
+      command = %ImportMovements{
+        movements: [
+          %ImportMovements.Movement{
+            on_date: ~D[2026-07-01],
+            description: "PAGO FACTURA 20260718 SERVICIOS",
+            amount: -12000,
+            currency: :EUR,
+            asset_account_name: ["Assets", "Bank"]
+          }
+        ]
+      }
+
+      event = Reconciliation.execute(reconciliation, command)
+      assert %MovementsImported{movements: [movement]} = event
+      assert movement.account_name == ["Expenses", "Providers"]
+      assert movement.description == "Factura 20260718 de Proveedor"
     end
 
     test "a movement matching no rule gets account_name nil", %{reconciliation: reconciliation} do
@@ -669,6 +730,76 @@ defmodule Conta.Aggregate.ReconciliationTest do
     test "marking an unknown movement as transacted returns an error", %{reconciliation: reconciliation} do
       assert {:error, %{id: ["not found"]}} =
                Reconciliation.execute(reconciliation, %MarkMovementTransacted{id: Ecto.UUID.generate()})
+    end
+  end
+
+  describe "rematch movements" do
+    setup do
+      rule = %{
+        id: Ecto.UUID.generate(),
+        name: "Spotify",
+        conditions: [%{field: :description, comparator: :contains, value: "SPOTIFY", value_to: nil}],
+        match_type: :all,
+        account_name: ["Expenses", "Entertainment"],
+        concept: "Subscription: Spotify"
+      }
+
+      movement1 = %{
+        id: Ecto.UUID.generate(),
+        on_date: ~D[2026-07-01],
+        description: "SPOTIFY PREMIUM",
+        amount: -999,
+        currency: :EUR,
+        asset_account_name: ["Assets", "Bank"],
+        account_name: nil,
+        source: "bank x",
+        transacted: false
+      }
+
+      movement2 = %{
+        id: Ecto.UUID.generate(),
+        on_date: ~D[2026-07-02],
+        description: "UNMATCHED MOVEMENT",
+        amount: -2000,
+        currency: :EUR,
+        asset_account_name: ["Assets", "Bank"],
+        account_name: nil,
+        source: "bank x",
+        transacted: false
+      }
+
+      %{
+        reconciliation: %Reconciliation{
+          match_rules: [rule],
+          movements: %{movement1.id => movement1, movement2.id => movement2}
+        },
+        movement1: movement1,
+        movement2: movement2,
+        rule: rule
+      }
+    end
+
+    test "re-evaluates rules and emits MovementUpdated for matching movements", %{
+      reconciliation: reconciliation,
+      movement1: movement1,
+      movement2: movement2
+    } do
+      command = %RematchMovements{ids: [movement1.id, movement2.id]}
+
+      assert [
+               %MovementUpdated{
+                 id: id,
+                 account_name: ["Expenses", "Entertainment"],
+                 description: "Subscription: Spotify"
+               }
+             ] = Reconciliation.execute(reconciliation, command)
+
+      assert id == movement1.id
+    end
+
+    test "returns :ok when no movements change", %{reconciliation: reconciliation, movement2: movement2} do
+      command = %RematchMovements{ids: [movement2.id]}
+      assert :ok = Reconciliation.execute(reconciliation, command)
     end
   end
 end

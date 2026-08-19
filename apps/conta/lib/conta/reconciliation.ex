@@ -8,6 +8,7 @@ defmodule Conta.Reconciliation do
   import Conta.Commanded.Application, only: [dispatch: 1]
 
   alias Conta.Command.MarkMovementTransacted
+  alias Conta.Command.RematchMovements
   alias Conta.Command.RemoveMovement
   alias Conta.Command.SetAccountTransaction
   alias Conta.Command.SetMatchRule
@@ -15,6 +16,25 @@ defmodule Conta.Reconciliation do
   alias Conta.Projector.Reconciliation.MatchRule
   alias Conta.Projector.Reconciliation.Movement
   alias Conta.Repo
+
+  @doc """
+  Re-evaluates match rules against the given list of movement IDs.
+  """
+  def rematch_movements(ids) when is_list(ids) do
+    dispatch(%RematchMovements{ids: ids})
+  end
+
+  @doc """
+  Re-evaluates match rules against a single movement ID.
+  """
+  def rematch_movement(id) when is_binary(id) do
+    rematch_movements([id])
+  end
+
+  @doc """
+  Evaluates match rules against a movement map/struct.
+  """
+  defdelegate evaluate_rules(match_rules, movement), to: Conta.Aggregate.Reconciliation
 
   def list_match_rules do
     from(r in MatchRule, order_by: r.position)
@@ -58,7 +78,8 @@ defmodule Conta.Reconciliation do
           }
         end,
       match_type: rule.match_type,
-      account_name: rule.account_name
+      account_name: rule.account_name,
+      concept: rule.concept
     }
   end
 

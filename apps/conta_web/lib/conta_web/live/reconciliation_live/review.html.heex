@@ -5,21 +5,41 @@
   </.breadcrumbs>
 
   <% {top, bottom} = Enum.split_with(@movements, & &1.account_name) %>
+  <% selected_top =
+    MapSet.filter(@selected, fn id -> Enum.any?(top, &(&1.id == id and not &1.transacted)) end) %>
+  <% selected_bottom = MapSet.filter(@selected, fn id -> Enum.any?(bottom, &(&1.id == id)) end) %>
 
-  <div class="card bg-base-100 shadow-xl border border-base-200 mt-6">
+  <div id="movements-with-account" class="card bg-base-100 shadow-xl border border-base-200 mt-6">
     <div class="card-body p-0">
       <div class="p-4 flex flex-wrap justify-between items-center gap-2 border-b border-base-200">
         <h1 class="text-lg font-semibold">{gettext("Movements with an account")}</h1>
         <div class="flex flex-wrap items-center gap-2">
-          <span class="text-sm opacity-70">{gettext("%{count} selected", count: MapSet.size(@selected))}</span>
+          <span class="text-sm opacity-70">
+            {gettext("%{count} selected", count: MapSet.size(selected_top))}
+          </span>
           <div class="join">
-            <button type="button" class="btn btn-sm btn-outline join-item" phx-click="select_all">
+            <button
+              type="button"
+              class="btn btn-sm join-item"
+              phx-click="select_all"
+              phx-value-scope="with_account"
+            >
               {gettext("Select all")}
             </button>
-            <button type="button" class="btn btn-sm btn-outline join-item" phx-click="deselect_all">
+            <button
+              type="button"
+              class="btn btn-sm join-item"
+              phx-click="deselect_all"
+              phx-value-scope="with_account"
+            >
               {gettext("Deselect all")}
             </button>
-            <button type="button" class="btn btn-sm btn-outline join-item" phx-click="invert_selection">
+            <button
+              type="button"
+              class="btn btn-sm join-item"
+              phx-click="invert_selection"
+              phx-value-scope="with_account"
+            >
               {gettext("Invert selection")}
             </button>
           </div>
@@ -27,8 +47,8 @@
             type="button"
             class="btn btn-primary"
             phx-click="confirm"
-            phx-value-ids={Enum.join(@selected, ",")}
-            disabled={Enum.empty?(@selected)}
+            phx-value-ids={Enum.join(selected_top, ",")}
+            disabled={Enum.empty?(selected_top)}
           >
             <.icon name="hero-check-circle" class="w-5 h-5 mr-2" />
             <span>{gettext("Confirm")}</span>
@@ -37,8 +57,8 @@
             type="button"
             class="btn btn-error"
             phx-click="remove_selected"
-            phx-value-ids={Enum.join(@selected, ",")}
-            disabled={Enum.empty?(@selected)}
+            phx-value-ids={Enum.join(selected_top, ",")}
+            disabled={Enum.empty?(selected_top)}
             data-confirm={gettext("Are you sure?")}
           >
             <.icon name="hero-trash" class="w-5 h-5 mr-2" />
@@ -101,10 +121,12 @@
                   id={movement.id}
                   field="amount"
                   type="number"
-                  step="1"
-                  value={movement.amount}
+                  step="0.01"
+                  value={format_amount(movement.amount)}
                 />
-                <span :if={movement.transacted}>{movement.amount}</span>
+                <span :if={movement.transacted} class="font-mono">
+                  {Money.new(movement.amount, movement.currency || :EUR)}
+                </span>
               </td>
               <td>
                 <.account_select
@@ -139,15 +161,68 @@
     </div>
   </div>
 
-  <div class="card bg-base-100 shadow-xl border border-base-200 mt-6">
+  <div id="movements-without-account" class="card bg-base-100 shadow-xl border border-base-200 mt-6">
     <div class="card-body p-0">
-      <div class="p-4 flex justify-between items-center border-b border-base-200">
+      <div class="p-4 flex flex-wrap justify-between items-center gap-2 border-b border-base-200">
         <h1 class="text-lg font-semibold">{gettext("Movements without an account")}</h1>
+        <div class="flex flex-wrap items-center gap-2">
+          <span class="text-sm opacity-70">
+            {gettext("%{count} selected", count: MapSet.size(selected_bottom))}
+          </span>
+          <div class="join">
+            <button
+              type="button"
+              class="btn btn-sm join-item"
+              phx-click="select_all"
+              phx-value-scope="without_account"
+            >
+              {gettext("Select all")}
+            </button>
+            <button
+              type="button"
+              class="btn btn-sm join-item"
+              phx-click="deselect_all"
+              phx-value-scope="without_account"
+            >
+              {gettext("Deselect all")}
+            </button>
+            <button
+              type="button"
+              class="btn btn-sm join-item"
+              phx-click="invert_selection"
+              phx-value-scope="without_account"
+            >
+              {gettext("Invert selection")}
+            </button>
+          </div>
+          <button
+            type="button"
+            class="btn btn-secondary"
+            phx-click="rematch_selected"
+            phx-value-ids={Enum.join(selected_bottom, ",")}
+            disabled={Enum.empty?(selected_bottom)}
+          >
+            <.icon name="hero-arrow-path" class="w-5 h-5 mr-2" />
+            <span>{gettext("Re-evaluate rules")}</span>
+          </button>
+          <button
+            type="button"
+            class="btn btn-error"
+            phx-click="remove_selected"
+            phx-value-ids={Enum.join(selected_bottom, ",")}
+            disabled={Enum.empty?(selected_bottom)}
+            data-confirm={gettext("Are you sure?")}
+          >
+            <.icon name="hero-trash" class="w-5 h-5 mr-2" />
+            <span>{gettext("Delete")}</span>
+          </button>
+        </div>
       </div>
       <div class="overflow-x-auto">
         <table class="table table-zebra">
           <thead>
             <tr>
+              <th class="w-0"></th>
               <th>{gettext("Date")}</th>
               <th>{gettext("Description")}</th>
               <th>{gettext("Amount")}</th>
@@ -160,6 +235,15 @@
           <tbody>
             <tr :for={movement <- bottom} id={"movement-#{movement.id}"}>
               <td>
+                <input
+                  type="checkbox"
+                  class="checkbox checkbox-sm"
+                  checked={MapSet.member?(@selected, movement.id)}
+                  phx-click="toggle_select"
+                  phx-value-id={movement.id}
+                />
+              </td>
+              <td>
                 <.editable
                   id={movement.id}
                   field="on_date"
@@ -171,21 +255,41 @@
                 <.editable id={movement.id} field="description" value={movement.description} />
               </td>
               <td>
-                <.editable id={movement.id} field="amount" type="number" step="1" value={movement.amount} />
+                <.editable
+                  id={movement.id}
+                  field="amount"
+                  type="number"
+                  step="0.01"
+                  value={format_amount(movement.amount)}
+                />
               </td>
               <td>
                 <.account_select id={movement.id} value={nil} accounts={@accounts} />
               </td>
               <td>
-                <button
-                  type="button"
-                  phx-click="remove"
-                  phx-value-id={movement.id}
-                  class="btn btn-error btn-outline btn-sm"
-                  data-confirm={gettext("Are you sure?")}
-                >
-                  {gettext("Delete")}
-                </button>
+                <div class="flex items-center gap-1">
+                  <button
+                    type="button"
+                    phx-click="rematch"
+                    phx-value-id={movement.id}
+                    class="btn btn-ghost btn-sm btn-circle"
+                    title={gettext("Re-evaluate match rules")}
+                  >
+                    <.icon name="hero-arrow-path" class="w-4 h-4" />
+                  </button>
+                  <button
+                    type="button"
+                    phx-click="remove"
+                    phx-value-id={movement.id}
+                    class="btn btn-error btn-outline btn-sm"
+                    data-confirm={gettext("Are you sure?")}
+                  >
+                    {gettext("Delete")}
+                  </button>
+                </div>
+                <p :if={@errors[movement.id]} class="text-error text-xs mt-1">
+                  {format_error(@errors[movement.id])}
+                </p>
               </td>
             </tr>
           </tbody>

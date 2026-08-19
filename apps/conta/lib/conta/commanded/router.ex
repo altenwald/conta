@@ -18,6 +18,7 @@ defmodule Conta.Commanded.Router do
   alias Conta.Command.RemoveMatchRule
   alias Conta.Command.RemoveMovement
   alias Conta.Command.RemoveShortcut
+  alias Conta.Command.RematchMovements
   alias Conta.Command.ReorderMatchRules
   alias Conta.Command.SetAccount
   alias Conta.Command.SetAccountTransaction
@@ -73,6 +74,7 @@ defmodule Conta.Commanded.Router do
 
   dispatch(ImportMovements, to: Reconciliation)
   dispatch(MarkMovementTransacted, to: Reconciliation)
+  dispatch(RematchMovements, to: Reconciliation)
   dispatch(RemoveMatchRule, to: Reconciliation)
   dispatch(RemoveMovement, to: Reconciliation)
   dispatch(ReorderMatchRules, to: Reconciliation)

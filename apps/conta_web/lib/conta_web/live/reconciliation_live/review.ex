@@ -9,6 +9,7 @@ defmodule ContaWeb.ReconciliationLive.Review do
   alias Conta.Ledger
   alias Conta.Projector.Reconciliation.Movement
   alias Conta.Reconciliation
+  alias Money
 
   # The exact set of fields the template's `<.editable>` component ever submits
   # through the `update_field` event. Kept as an allowlist so a forged/unexpected
@@ -38,18 +39,24 @@ defmodule ContaWeb.ReconciliationLive.Review do
     {:noreply, assign(socket, :selected, selected)}
   end
 
-  def handle_event("select_all", _params, socket) do
-    selected = MapSet.new(selectable_ids(socket.assigns.movements))
+  def handle_event("select_all", params, socket) do
+    ids = selectable_ids(socket.assigns.movements, params["scope"])
+    selected = MapSet.union(socket.assigns.selected, MapSet.new(ids))
     {:noreply, assign(socket, :selected, selected)}
   end
 
-  def handle_event("deselect_all", _params, socket) do
-    {:noreply, assign(socket, :selected, MapSet.new())}
+  def handle_event("deselect_all", params, socket) do
+    ids = selectable_ids(socket.assigns.movements, params["scope"])
+    selected = MapSet.difference(socket.assigns.selected, MapSet.new(ids))
+    {:noreply, assign(socket, :selected, selected)}
   end
 
-  def handle_event("invert_selection", _params, socket) do
-    selectable = MapSet.new(selectable_ids(socket.assigns.movements))
-    selected = MapSet.symmetric_difference(selectable, socket.assigns.selected)
+  def handle_event("invert_selection", params, socket) do
+    scope_set = MapSet.new(selectable_ids(socket.assigns.movements, params["scope"]))
+    selected_in_scope = MapSet.intersection(socket.assigns.selected, scope_set)
+    inverted_in_scope = MapSet.difference(scope_set, selected_in_scope)
+    selected_outside = MapSet.difference(socket.assigns.selected, scope_set)
+    selected = MapSet.union(selected_outside, inverted_in_scope)
     {:noreply, assign(socket, :selected, selected)}
   end
 
@@ -107,6 +114,11 @@ defmodule ContaWeb.ReconciliationLive.Review do
     {:noreply, socket}
   end
 
+  def handle_event("update_field", %{"id" => id, "field" => "amount", "value" => value}, socket) do
+    amount = parse_amount(value)
+    perform_update(socket, id, %{"amount" => amount})
+  end
+
   def handle_event("update_field", %{"id" => id, "field" => field, "value" => value}, socket)
       when field in @editable_fields do
     perform_update(socket, id, %{field => value})
@@ -114,6 +126,37 @@ defmodule ContaWeb.ReconciliationLive.Review do
 
   def handle_event("update_field", _params, socket) do
     {:noreply, socket}
+  end
+
+  def handle_event("rematch", %{"id" => id}, socket) do
+    case Reconciliation.rematch_movement(id) do
+      :ok ->
+        {:noreply,
+         socket
+         |> apply_local_rematch([id])
+         |> put_flash(:info, gettext("Match rules re-evaluated successfully"))}
+
+      {:error, reason} ->
+        Logger.error("cannot rematch movement #{id}: #{inspect(reason)}")
+        {:noreply, put_error(socket, id, reason)}
+    end
+  end
+
+  def handle_event("rematch_selected", %{"ids" => ids_param}, socket) do
+    ids = String.split(ids_param, ",", trim: true)
+
+    case Reconciliation.rematch_movements(ids) do
+      :ok ->
+        {:noreply,
+         socket
+         |> apply_local_rematch(ids)
+         |> assign(:selected, MapSet.difference(socket.assigns.selected, MapSet.new(ids)))
+         |> put_flash(:info, gettext("Match rules re-evaluated successfully"))}
+
+      {:error, reason} ->
+        Logger.error("cannot rematch movements #{inspect(ids)}: #{inspect(reason)}")
+        {:noreply, put_flash(socket, :error, gettext("Some movements could not be re-evaluated"))}
+    end
   end
 
   def handle_event("remove", %{"id" => id}, socket) do
@@ -159,8 +202,16 @@ defmodule ContaWeb.ReconciliationLive.Review do
   # review.html.heex) - transacted rows and accountless rows don't get one, so
   # "select all"/"invert selection" must match that same set or they'd select
   # ids with no checkbox to represent them.
-  defp selectable_ids(movements) do
+  defp selectable_ids(movements, "with_account") do
     for movement <- movements, movement.account_name, not movement.transacted, do: movement.id
+  end
+
+  defp selectable_ids(movements, "without_account") do
+    for movement <- movements, is_nil(movement.account_name), not movement.transacted, do: movement.id
+  end
+
+  defp selectable_ids(movements, _other) do
+    for movement <- movements, not movement.transacted, do: movement.id
   end
 
   # `Reconciliation.confirm_movement/1` documents a residual risk: `SetAccountTransaction`
@@ -226,6 +277,27 @@ defmodule ContaWeb.ReconciliationLive.Review do
     |> assign(:errors, Map.delete(socket.assigns.errors, id))
   end
 
+  defp apply_local_rematch(socket, ids) do
+    match_rules = Reconciliation.list_match_rules()
+    id_set = MapSet.new(ids)
+
+    movements =
+      Enum.map(socket.assigns.movements, fn
+        %{id: id} = movement ->
+          if MapSet.member?(id_set, id) and not movement.transacted do
+            {account_name, description} = Reconciliation.evaluate_rules(match_rules, movement)
+            %{movement | account_name: account_name, description: description}
+          else
+            movement
+          end
+
+        movement ->
+          movement
+      end)
+
+    assign(socket, :movements, movements)
+  end
+
   defp cast_movement(movement, changes) do
     movement
     |> Movement.changeset(changes)
@@ -246,6 +318,31 @@ defmodule ContaWeb.ReconciliationLive.Review do
   defp put_error(socket, id, reason) do
     assign(socket, :errors, Map.put(socket.assigns.errors, id, reason))
   end
+
+  defp parse_amount(value) when is_integer(value), do: value
+
+  defp parse_amount(value) when is_binary(value) do
+    cleaned = value |> String.trim() |> String.replace(",", ".")
+
+    case Float.parse(cleaned) do
+      {float_val, ""} ->
+        round(float_val * 100)
+
+      _ ->
+        case Integer.parse(cleaned) do
+          {int_val, ""} -> int_val
+          _ -> value
+        end
+    end
+  end
+
+  defp parse_amount(other), do: other
+
+  defp format_amount(amount) when is_integer(amount) do
+    :erlang.float_to_binary(amount / 100.0, decimals: 2)
+  end
+
+  defp format_amount(amount), do: to_string(amount)
 
   defp account_options do
     for account <- Ledger.list_accounts(), do: Enum.join(account.name, ".")

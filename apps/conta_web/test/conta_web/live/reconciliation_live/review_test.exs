@@ -21,7 +21,7 @@ defmodule ContaWeb.ReconciliationLive.ReviewTest do
   end
 
   describe "Review" do
-    test "a movement with an account appears in the top block with a checkbox; one without, in the bottom block without a checkbox",
+    test "movements with and without an account appear in their respective blocks with checkboxes",
          %{conn: conn, user: user} do
       expense = create_expense_account()
       with_account = import_movement() |> assign_account(expense)
@@ -31,7 +31,7 @@ defmodule ContaWeb.ReconciliationLive.ReviewTest do
       {:ok, view, _html} = live(conn, ~p"/ledger/reconciliation")
 
       assert has_element?(view, "#movement-#{with_account.id} input[type=checkbox]")
-      refute has_element?(view, "#movement-#{without_account.id} input[type=checkbox]")
+      assert has_element?(view, "#movement-#{without_account.id} input[type=checkbox]")
     end
 
     test "assigning an account to a bottom-block movement moves it to the top block after the next render",
@@ -41,8 +41,6 @@ defmodule ContaWeb.ReconciliationLive.ReviewTest do
 
       conn = log_in_user(conn, user)
       {:ok, view, _html} = live(conn, ~p"/ledger/reconciliation")
-
-      refute has_element?(view, "#movement-#{movement.id} input[type=checkbox]")
 
       view
       |> form("#account-form-#{movement.id}", %{"value" => Enum.join(expense, ".")})
@@ -166,13 +164,13 @@ defmodule ContaWeb.ReconciliationLive.ReviewTest do
       conn = log_in_user(conn, user)
       {:ok, view, _html} = live(conn, ~p"/ledger/reconciliation")
 
-      html = view |> element("button", "Select all") |> render_click()
+      html = view |> element("#movements-with-account button", "Select all") |> render_click()
       assert html =~ "2 selected"
       assert view |> element("#movement-#{with_account_a.id} input[type=checkbox]") |> render() =~ "checked"
       assert view |> element("#movement-#{with_account_b.id} input[type=checkbox]") |> render() =~ "checked"
-      refute has_element?(view, "#movement-#{without_account.id} input[type=checkbox]")
+      refute view |> element("#movement-#{without_account.id} input[type=checkbox]") |> render() =~ "checked"
 
-      html = view |> element("button", "Deselect all") |> render_click()
+      html = view |> element("#movements-with-account button", "Deselect all") |> render_click()
       assert html =~ "0 selected"
       refute view |> element("#movement-#{with_account_a.id} input[type=checkbox]") |> render() =~ "checked"
     end
@@ -187,7 +185,7 @@ defmodule ContaWeb.ReconciliationLive.ReviewTest do
 
       view |> element("#movement-#{a.id} input[type=checkbox]") |> render_click()
 
-      html = view |> element("button", "Invert selection") |> render_click()
+      html = view |> element("#movements-with-account button", "Invert selection") |> render_click()
       assert html =~ "1 selected"
       refute view |> element("#movement-#{a.id} input[type=checkbox]") |> render() =~ "checked"
       assert view |> element("#movement-#{b.id} input[type=checkbox]") |> render() =~ "checked"
@@ -201,14 +199,49 @@ defmodule ContaWeb.ReconciliationLive.ReviewTest do
       conn = log_in_user(conn, user)
       {:ok, view, _html} = live(conn, ~p"/ledger/reconciliation")
 
-      view |> element("button", "Select all") |> render_click()
-      view |> element("button[phx-click=remove_selected]") |> render_click()
+      view |> element("#movements-with-account button", "Select all") |> render_click()
+      view |> element("#movements-with-account button[phx-click=remove_selected]") |> render_click()
 
       refute has_element?(view, "#movement-#{a.id}")
       refute has_element?(view, "#movement-#{b.id}")
 
       assert eventually(fn -> is_nil(Repo.get(Movement, a.id)) end)
       assert eventually(fn -> is_nil(Repo.get(Movement, b.id)) end)
+    end
+
+    test "select all, deselect all, invert selection, and batch delete in the movements without account block",
+         %{conn: conn, user: user} do
+      unassigned_a = import_movement()
+      unassigned_b = import_movement()
+      expense = create_expense_account()
+      assigned = import_movement() |> assign_account(expense)
+
+      conn = log_in_user(conn, user)
+      {:ok, view, _html} = live(conn, ~p"/ledger/reconciliation")
+
+      # Select all in without-account block selects both unassigned movements but NOT the assigned one
+      html = view |> element("#movements-without-account button", "Select all") |> render_click()
+      assert html =~ "2 selected"
+      assert view |> element("#movement-#{unassigned_a.id} input[type=checkbox]") |> render() =~ "checked"
+      assert view |> element("#movement-#{unassigned_b.id} input[type=checkbox]") |> render() =~ "checked"
+      refute view |> element("#movement-#{assigned.id} input[type=checkbox]") |> render() =~ "checked"
+
+      # Invert selection in without-account block unchecks both
+      view |> element("#movements-without-account button", "Invert selection") |> render_click()
+      refute view |> element("#movement-#{unassigned_a.id} input[type=checkbox]") |> render() =~ "checked"
+      refute view |> element("#movement-#{unassigned_b.id} input[type=checkbox]") |> render() =~ "checked"
+
+      # Select single item and batch delete in without-account block
+      view |> element("#movement-#{unassigned_a.id} input[type=checkbox]") |> render_click()
+      view |> element("#movements-without-account button[phx-click=remove_selected]") |> render_click()
+
+      refute has_element?(view, "#movement-#{unassigned_a.id}")
+      assert has_element?(view, "#movement-#{unassigned_b.id}")
+      assert has_element?(view, "#movement-#{assigned.id}")
+
+      assert eventually(fn -> is_nil(Repo.get(Movement, unassigned_a.id)) end)
+      assert Repo.get(Movement, unassigned_b.id)
+      assert Repo.get(Movement, assigned.id)
     end
 
     test "editing the description of a normal row dispatches update_movement and reflects the change locally",
@@ -226,6 +259,131 @@ defmodule ContaWeb.ReconciliationLive.ReviewTest do
 
       assert eventually(fn -> Repo.get(Movement, movement.id).description == "corrected description" end)
     end
+
+    test "formats movement amount as 2-decimal currency and converts user decimal inputs to integer cents",
+         %{conn: conn, user: user} do
+      # amount: -1000
+      movement = import_movement()
+
+      conn = log_in_user(conn, user)
+      {:ok, view, _html} = live(conn, ~p"/ledger/reconciliation")
+
+      assert view |> element("#amount-form-#{movement.id} input") |> render() =~ "value=\"-10.00\""
+
+      view
+      |> form("#amount-form-#{movement.id}", %{"value" => "-25.50"})
+      |> render_change()
+
+      assert view |> element("#amount-form-#{movement.id} input") |> render() =~ "value=\"-25.50\""
+      assert eventually(fn -> Repo.get(Movement, movement.id).amount == -2550 end)
+    end
+
+    test "single-row rematch button re-evaluates match rules for that movement", %{conn: conn, user: user} do
+      expense = create_expense_account()
+      desc = "SPOTIFY_#{System.unique_integer([:positive])}"
+
+      movement = import_movement_with_description(desc)
+      assert is_nil(movement.account_name)
+
+      # Create match rule AFTER importing the movement
+      :ok =
+        dispatch(%Conta.Command.SetMatchRule{
+          name: "Spotify Rule",
+          conditions: [
+            %Conta.Command.SetMatchRule.Condition{field: :description, comparator: :contains, value: desc}
+          ],
+          match_type: :all,
+          account_name: expense,
+          concept: "Subscription: Spotify"
+        })
+
+      conn = log_in_user(conn, user)
+      {:ok, view, _html} = live(conn, ~p"/ledger/reconciliation")
+
+      assert has_element?(view, "#movements-without-account #movement-#{movement.id}")
+
+      view
+      |> element("#movement-#{movement.id} button[phx-click=rematch]")
+      |> render_click()
+
+      assert eventually(fn ->
+               case Repo.get(Movement, movement.id) do
+                 %{account_name: ^expense, description: "Subscription: Spotify"} -> true
+                 _ -> false
+               end
+             end)
+
+      assert has_element?(view, "#movements-with-account #movement-#{movement.id}")
+    end
+
+    test "batch rematch button in toolbar re-evaluates match rules for selected movements",
+         %{conn: conn, user: user} do
+      expense = create_expense_account()
+      desc = "NETFLIX_#{System.unique_integer([:positive])}"
+
+      m1 = import_movement_with_description(desc)
+      m2 = import_movement_with_description(desc)
+
+      assert is_nil(m1.account_name)
+      assert is_nil(m2.account_name)
+
+      # Create match rule AFTER importing movements
+      :ok =
+        dispatch(%Conta.Command.SetMatchRule{
+          name: "Netflix Rule",
+          conditions: [
+            %Conta.Command.SetMatchRule.Condition{field: :description, comparator: :contains, value: desc}
+          ],
+          match_type: :all,
+          account_name: expense,
+          concept: "Subscription: Netflix"
+        })
+
+      conn = log_in_user(conn, user)
+      {:ok, view, _html} = live(conn, ~p"/ledger/reconciliation")
+
+      assert has_element?(view, "#movements-without-account #movement-#{m1.id}")
+      assert has_element?(view, "#movements-without-account #movement-#{m2.id}")
+
+      view |> element("#movements-without-account button", "Select all") |> render_click()
+      view |> element("#movements-without-account button[phx-click=rematch_selected]") |> render_click()
+
+      assert eventually(fn ->
+               Repo.get(Movement, m1.id).account_name == expense and
+                 Repo.get(Movement, m2.id).account_name == expense
+             end)
+
+      assert has_element?(view, "#movements-with-account #movement-#{m1.id}")
+      assert has_element?(view, "#movements-with-account #movement-#{m2.id}")
+    end
+  end
+
+  defp import_movement_with_description(description) do
+    bank_name = ["Bank #{System.unique_integer([:positive])}"]
+
+    :ok = dispatch(%SetAccount{name: bank_name, type: :assets, currency: :EUR, ledger: "default"})
+
+    :ok =
+      dispatch(%ImportMovements{
+        movements: [
+          %ImportMovements.Movement{
+            on_date: ~D[2026-07-01],
+            description: description,
+            amount: -1000,
+            currency: :EUR,
+            asset_account_name: bank_name
+          }
+        ]
+      })
+
+    event =
+      wait_for_event(Conta.Commanded.Application, MovementsImported, fn event ->
+        Enum.any?(event.movements, &(&1.asset_account_name == bank_name))
+      end)
+
+    %{id: id} = Enum.find(event.data.movements, &(&1.asset_account_name == bank_name))
+
+    eventually(fn -> Repo.get(Movement, id) end)
   end
 
   defp import_movement do
