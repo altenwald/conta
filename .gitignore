@@ -28,3 +28,7 @@ erl_crash.dump
 
 # Git worktrees used for isolated feature work
 /.worktrees/
+
+.superpowers/
+.agents/
+*.html

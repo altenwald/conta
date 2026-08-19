@@ -135,7 +135,10 @@ defmodule ContaWeb.ShortcutLiveTest do
       assert html =~ "foo"
     end
 
-    test "table params use a plain free-text Name field, not a table-sources dropdown", %{conn: conn, user: user} do
+    test "table params use a plain free-text Name field, not a table-sources dropdown", %{
+      conn: conn,
+      user: user
+    } do
       # Unlike Filters, a Shortcut's :table param isn't a reference to one of
       # the app's registered TableSources - it's arbitrary JSON tabular data
       # the caller provides for the script to transform. The param editor
@@ -148,7 +151,9 @@ defmodule ContaWeb.ShortcutLiveTest do
 
       html =
         form_live
-        |> form("#shortcut-form", set_shortcut: %{params: %{"0" => %{"name" => "any_name", "type" => "table"}}})
+        |> form("#shortcut-form",
+          set_shortcut: %{params: %{"0" => %{"name" => "any_name", "type" => "table"}}}
+        )
         |> render_change()
 
       refute html =~ ~s(<option value="expenses">Expenses</option>)
@@ -174,7 +179,11 @@ defmodule ContaWeb.ShortcutLiveTest do
 
       form_live
       |> form("#shortcut-form",
-        set_shortcut: %{name: "sum rows", code: code, params: %{"0" => %{"name" => "rows", "type" => "table"}}}
+        set_shortcut: %{
+          name: "sum rows",
+          code: code,
+          params: %{"0" => %{"name" => "rows", "type" => "table"}}
+        }
       )
       |> render_change()
 

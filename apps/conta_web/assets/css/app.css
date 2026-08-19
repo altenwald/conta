@@ -192,3 +192,18 @@ tr.simple-invoice td {
 .invoice-comments {
   min-height: 150px;
 }
+
+/* In dark mode, lighten buttons on hover instead of darkening them */
+@media (hover: hover) {
+  :where([data-theme="dark"]) .btn:hover:not(:disabled, [disabled], .btn-disabled, .btn-primary, .btn-secondary, .btn-accent, .btn-info, .btn-success, .btn-warning, .btn-error) {
+    --btn-bg: color-mix(in oklab, var(--btn-color, var(--color-base-200)), #fff 12%);
+    --btn-border: color-mix(in oklab, var(--btn-border, var(--color-base-300)), #fff 15%);
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :where(:root:not([data-theme])) .btn:hover:not(:disabled, [disabled], .btn-disabled, .btn-primary, .btn-secondary, .btn-accent, .btn-info, .btn-success, .btn-warning, .btn-error) {
+      --btn-bg: color-mix(in oklab, var(--btn-color, var(--color-base-200)), #fff 12%);
+      --btn-border: color-mix(in oklab, var(--btn-border, var(--color-base-300)), #fff 15%);
+    }
+  }
+}

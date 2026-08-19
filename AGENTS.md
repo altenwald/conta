@@ -20,6 +20,15 @@ business logic there and keeping `conta_web`/`conta_bot` as thin adapters.
 - Use the already included `:req` (`Req`) library for HTTP requests (declared in `apps/conta`),
   **avoid** `:httpoison`, `:tesla`, and `:httpc`.
 
+## Superpowers workflow
+
+All non-trivial features, refactorings, and architectural changes must adhere to the Superpowers structured development workflow:
+- **Specs**: Document designs and technical decisions in `docs/superpowers/specs/YYYY-MM-DD-<slug>-design.md`.
+- **Plans**: Create implementation plans with atomic tasks and `- [ ]` checkboxes in `docs/superpowers/plans/YYYY-MM-DD-<slug>.md`.
+- **Brainstorming**: Store HTML mockups and flow diagrams in `.superpowers/brainstorm/<session-id>/`.
+- **Execution**: Apply strict TDD (write failing test -> verify failure -> implement -> verify pass) and keep plan progress checkboxes updated.
+- **Verification**: Run `mix test` and `mix check` upon completing tasks.
+
 ### Phoenix v1.8 guidelines
 
 - This app configures the layout centrally: `live_view` sets `layout: {ContaWeb.Layouts, :app}` and

@@ -53,7 +53,10 @@ defmodule Conta.Commanded.RouterTest do
     # connection tears down (see the identical rationale in
     # upload_test.exs/matches_test.exs).
     assert eventually(fn -> Enum.any?(Conta.Ledger.list_accounts(), &(&1.name == account_name)) end)
-    assert eventually(fn -> Enum.any?(Conta.Reconciliation.list_movements(), &(&1.description == "router test")) end)
+
+    assert eventually(fn ->
+             Enum.any?(Conta.Reconciliation.list_movements(), &(&1.description == "router test"))
+           end)
   end
 
   defp eventually(fun, attempts \\ 100)
