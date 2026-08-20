@@ -10,6 +10,8 @@ And now, maybe the information you could find here, what I used to create it:
 - Erlang/OTP, BEAM (27)
 - Phoenix Framework (1.8)
 - Commanded (1.4)
+- [Plotto](https://hex.pm/packages/plotto) — Pure Elixir charting library (SVG and PNG) for dashboard and financial reports, with zero NIFs or external dependencies.
+- [Press](https://hex.pm/packages/press) — Pure Elixir, dependency-free HTML+CSS to PDF engine for invoice export, without requiring headless Chrome or Chromium.
 
 We could say we built the system based on CQRS/ES.
 
