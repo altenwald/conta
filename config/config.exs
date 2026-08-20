@@ -108,7 +108,7 @@ config :logger, :console,
 # Use Jason for JSON parsing in Phoenix
 config :phoenix, :json_library, Jason
 
-config :ex_gram, adapter: ExGram.Adapter.Req
+config :ex_gram, adapter: ContaBot.Adapter.Req
 
 config :ex_gram, json_engine: Jason
 
