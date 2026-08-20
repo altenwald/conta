@@ -5,7 +5,7 @@ defmodule Conta.Umbrella.MixProject do
     [
       name: :conta,
       apps_path: "apps",
-      version: "0.3.0",
+      version: "0.3.1",
       start_permanent: Mix.env() == :prod,
       deps: deps(),
       aliases: aliases(),
