@@ -67,15 +67,13 @@ defmodule ContaBot.Action.Graph do
   end
 
   def handle({:callback, "patrimony " <> currency}, context) do
-    graph =
+    chart =
       currency
       |> get_currency()
-      |> Conta.Stats.graph_patrimony()
-      |> to_string()
+      |> Conta.Stats.chart_patrimony()
 
-    case Resvg.svg_string_to_png_buffer(graph, resources_dir: "/tmp") do
+    case Plotto.to_png(chart) do
       {:ok, image} ->
-        image = IO.iodata_to_binary(image)
         ExGram.send_photo(get_chat_id(context), {:file_content, image, "patrimony.png"})
         delete(context, context.update.callback_query.message)
 
@@ -86,15 +84,13 @@ defmodule ContaBot.Action.Graph do
   end
 
   def handle({:callback, "outcome " <> currency}, context) do
-    graph =
+    chart =
       currency
       |> get_currency()
-      |> Conta.Stats.graph_outcome()
-      |> to_string()
+      |> Conta.Stats.chart_outcome()
 
-    case Resvg.svg_string_to_png_buffer(graph, resources_dir: "/tmp") do
+    case Plotto.to_png(chart) do
       {:ok, image} ->
-        image = IO.iodata_to_binary(image)
         ExGram.send_photo(get_chat_id(context), {:file_content, image, "outcome.png"})
         delete(context, context.update.callback_query.message)
 
@@ -105,15 +101,13 @@ defmodule ContaBot.Action.Graph do
   end
 
   def handle({:callback, "income " <> currency}, context) do
-    graph =
+    chart =
       currency
       |> get_currency()
-      |> Conta.Stats.graph_income()
-      |> to_string()
+      |> Conta.Stats.chart_income()
 
-    case Resvg.svg_string_to_png_buffer(graph, resources_dir: "/tmp") do
+    case Plotto.to_png(chart) do
       {:ok, image} ->
-        image = IO.iodata_to_binary(image)
         ExGram.send_photo(get_chat_id(context), {:file_content, image, "income.png"})
         delete(context, context.update.callback_query.message)
 
@@ -124,15 +118,13 @@ defmodule ContaBot.Action.Graph do
   end
 
   def handle({:callback, "pnl " <> currency}, context) do
-    graph =
+    chart =
       currency
       |> get_currency()
-      |> Conta.Stats.graph_pnl(6)
-      |> to_string()
+      |> Conta.Stats.chart_pnl(6)
 
-    case Resvg.svg_string_to_png_buffer(graph, resources_dir: "/tmp") do
+    case Plotto.to_png(chart) do
       {:ok, image} ->
-        image = IO.iodata_to_binary(image)
         ExGram.send_photo(get_chat_id(context), {:file_content, image, "pnl.png"})
         delete(context, context.update.callback_query.message)
 

@@ -1,16 +1,16 @@
 defmodule Conta.Stats do
+  @moduledoc """
+  The Stats context: listing and generating charts for patrimony, profits/losses,
+  income, and outcome across currencies and time periods using Plotto.
+  """
+
   import Ecto.Query, only: [from: 2]
 
   alias Conta.Projector.Stats.Income
   alias Conta.Projector.Stats.Outcome
   alias Conta.Projector.Stats.Patrimony
   alias Conta.Projector.Stats.ProfitsLoses
-
   alias Conta.Repo
-
-  alias Contex.BarChart
-  alias Contex.Dataset
-  alias Contex.Plot
 
   def list_patrimony(currency, limit \\ 6)
 
@@ -43,25 +43,25 @@ defmodule Conta.Stats do
     }
   end
 
+  def chart_patrimony(currency) when is_atom(currency) do
+    items =
+      case list_patrimony(currency, 12) |> Enum.reverse() do
+        [] ->
+          [%{label: to_date(get_months(1)), value: 0.0}]
+
+        list ->
+          Enum.map(list, fn p ->
+            %{label: to_date(p), value: to_float(p.balance)}
+          end)
+      end
+
+    Plotto.BarChart.new!([%{name: "Patrimony", data: items}], width: 640, height: 480)
+  end
+
   def graph_patrimony(currency) when is_atom(currency) do
-    data = list_patrimony(currency, 12) |> Enum.reverse()
-    headers = Enum.map(data, &to_date/1)
-
-    options = [
-      type: :stacked,
-      data_labels: true,
-      orientation: :vertical,
-      colour_palette: :default
-    ]
-
-    data
-    |> Enum.map(&[to_date(&1), Decimal.to_float(Money.to_decimal(&1.balance))])
-    |> Dataset.new(headers)
-    |> Plot.new(BarChart, 640, 480, options)
-    |> Plot.titles("", "")
-    |> Plot.axis_labels("", "")
-    |> Plot.plot_options(%{legend_setting: :none})
-    |> Plot.to_xml()
+    currency
+    |> chart_patrimony()
+    |> Plotto.to_svg!()
   end
 
   defp to_date({month, year}) do
@@ -167,84 +167,113 @@ defmodule Conta.Stats do
     end
   end
 
-  def graph_pnl(currency, months) when is_atom(currency) do
-    data = list_pnl(months, currency)
-    headers = ["Profits", "Losses", "Balance"]
+  def chart_pnl(currency, months) when is_atom(currency) do
+    pnl_list = list_pnl(months, currency) |> Enum.reverse()
 
-    options = [
-      mapping: %{
-        category_col: "Months",
-        value_cols: headers
-      },
-      type: :grouped,
-      data_labels: true,
-      orientation: :vertical,
-      colour_palette: :default
+    pnl_list =
+      case pnl_list do
+        [] ->
+          [
+            %{
+              month: Date.utc_today().month,
+              year: Date.utc_today().year,
+              profits: Money.new(0, currency),
+              loses: Money.new(0, currency),
+              balance: Money.new(0, currency)
+            }
+          ]
+
+        list ->
+          list
+      end
+
+    profits_data =
+      Enum.map(pnl_list, fn pnl ->
+        %{label: to_date({pnl.month, pnl.year}), value: to_float(pnl.profits)}
+      end)
+
+    losses_data =
+      Enum.map(pnl_list, fn pnl ->
+        %{label: to_date({pnl.month, pnl.year}), value: to_float(pnl.loses)}
+      end)
+
+    balance_data =
+      Enum.map(pnl_list, fn pnl ->
+        %{label: to_date({pnl.month, pnl.year}), value: to_float(pnl.balance)}
+      end)
+
+    series = [
+      %{name: "Profits", data: profits_data},
+      %{name: "Losses", data: losses_data},
+      %{name: "Balance", data: balance_data}
     ]
 
-    data
-    |> Enum.map(fn pnl ->
-      date = to_date({pnl.month, pnl.year})
-      profits = Decimal.to_float(Money.to_decimal(pnl.profits))
-      loses = Decimal.to_float(Money.to_decimal(pnl.loses))
-      balance = Decimal.to_float(Money.to_decimal(pnl.balance))
-      [date, profits, loses, balance]
-    end)
-    |> Enum.reverse()
-    |> Dataset.new(["Months" | headers])
-    |> Plot.new(BarChart, 640, 480, options)
-    |> Plot.titles("", "")
-    |> Plot.axis_labels("", "")
-    |> Plot.plot_options(%{legend_setting: :legend_top})
-    |> Plot.to_xml()
+    Plotto.BarChart.new!(series, mode: :grouped, legend: :top_right, width: 640, height: 480)
+  end
+
+  def graph_pnl(currency, months) when is_atom(currency) do
+    currency
+    |> chart_pnl(months)
+    |> Plotto.to_svg!()
+  end
+
+  def chart_outcome(currency, groups \\ 4, months \\ 12) when is_atom(currency) do
+    data = list_outcome(groups, months, currency)
+    chart_by(Outcome, data, currency, groups, months)
   end
 
   def graph_outcome(currency, groups \\ 4, months \\ 12) when is_atom(currency) do
-    data = list_outcome(groups, months, currency)
-    graph_by(Outcome, data, currency, groups, months)
+    currency
+    |> chart_outcome(groups, months)
+    |> Plotto.to_svg!()
+  end
+
+  def chart_income(currency, groups \\ 4, months \\ 12) when is_atom(currency) do
+    data = list_income(groups, months, currency)
+    chart_by(Income, data, currency, groups, months)
   end
 
   def graph_income(currency, groups \\ 4, months \\ 12) when is_atom(currency) do
-    data = list_income(groups, months, currency)
-    graph_by(Income, data, currency, groups, months)
+    currency
+    |> chart_income(groups, months)
+    |> Plotto.to_svg!()
   end
 
-  defp graph_by(table, data, currency, groups, months) when is_atom(currency) do
+  defp chart_by(table, data, _currency, groups, months) do
     headers = top_accounts(table, groups, months) ++ ["Others"]
 
-    options = [
-      mapping: %{
-        category_col: "Months",
-        value_cols: headers
-      },
-      type: :stacked,
-      data_labels: true,
-      orientation: :vertical,
-      colour_palette: :default
-    ]
+    dates =
+      data
+      |> Enum.map(fn {date, _name, _balance} -> date end)
+      |> Enum.uniq()
+      |> Enum.sort()
 
-    data
-    |> Enum.group_by(
-      fn {date, _name, _balance} -> date end,
-      fn {_date, name, balance} -> {name, to_float(balance)} end
-    )
-    |> Enum.map(fn {date, values} ->
-      [date | process_values(values, headers)]
-    end)
-    |> Dataset.new(["Months" | headers])
-    |> Plot.new(BarChart, 640, 480, options)
-    |> Plot.titles("", "")
-    |> Plot.axis_labels("", "")
-    |> Plot.plot_options(%{legend_setting: :legend_top})
-    |> Plot.to_xml()
-  end
+    dates =
+      if dates == [] do
+        [to_date(get_months(1))]
+      else
+        dates
+      end
 
-  defp process_values(values, headers) do
-    values = Map.new(values)
+    grouped =
+      Enum.group_by(
+        data,
+        fn {date, _name, _balance} -> date end,
+        fn {_date, name, balance} -> {name, to_float(balance)} end
+      )
 
-    Enum.map(headers, fn account_name ->
-      values[account_name] || 0
-    end)
+    series =
+      Enum.map(headers, fn account_name ->
+        series_data =
+          Enum.map(dates, fn date ->
+            date_values = Map.new(Map.get(grouped, date, []))
+            %{label: date, value: Map.get(date_values, account_name, 0.0)}
+          end)
+
+        %{name: account_name, data: series_data}
+      end)
+
+    Plotto.BarChart.new!(series, mode: :stacked, legend: :top_right, width: 640, height: 480)
   end
 
   defp to_float(money) do
