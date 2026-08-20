@@ -87,9 +87,6 @@ defmodule ContaWeb.Router do
     end
 
     scope "/ledger/", Ledger do
-      # TODO
-      # resources "/accounts", Account, only: [:index, :show, :create, :update, :delete]
-
       post "/accounts/transaction", Entry, :create
 
       scope "/accounts/:account_name/" do

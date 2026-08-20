@@ -154,23 +154,18 @@ defmodule ContaWeb.ShortcutLive.Form do
 
   defp cast_test_params(params_defs, raw_test_params) do
     Map.new(params_defs, fn param ->
-      raw_value = raw_test_params[param.name]
-
-      value =
-        case param.type do
-          :table ->
-            case Jason.decode(raw_value || "") do
-              {:ok, decoded} -> decoded
-              {:error, _} -> raw_value
-            end
-
-          _ ->
-            raw_value
-        end
-
-      {param.name, value}
+      {param.name, cast_param_value(param.type, raw_test_params[param.name])}
     end)
   end
+
+  defp cast_param_value(:table, raw_value) do
+    case Jason.decode(raw_value || "") do
+      {:ok, decoded} -> decoded
+      {:error, _} -> raw_value
+    end
+  end
+
+  defp cast_param_value(_type, raw_value), do: raw_value
 
   defp format_test_result({:ok, result}), do: {:ok, Jason.encode!(result, pretty: true)}
   defp format_test_result({:error, reason}) when is_binary(reason), do: {:error, reason}

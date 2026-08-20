@@ -547,13 +547,14 @@ defmodule ContaWeb.AppComponents do
   attr :input_class, :string, default: ""
   attr :button_class, :string, default: "is-info"
   attr :label, :string
+  attr :id, :string, default: "search-form"
   attr :name, :string, default: "search"
   attr :value, :string
   attr :debounce, :integer, default: 1_000
 
   def search(assigns) do
     ~H"""
-    <form role="search" phx-change="search">
+    <form id={@id} role="search" phx-change="search">
       <div class="join w-full">
         <input
           class={["input input-bordered join-item w-full", @input_class]}

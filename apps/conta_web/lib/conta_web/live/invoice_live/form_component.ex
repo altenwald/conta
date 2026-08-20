@@ -142,9 +142,7 @@ defmodule ContaWeb.InvoiceLive.FormComponent do
   end
 
   defp list_countries do
-    #  TODO priorise most used contries first
     for country <- Countries.all() do
-      #  TODO add i18n (see :countries_i18n)
       {country.name, country.alpha2}
     end
   end

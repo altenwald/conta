@@ -114,20 +114,8 @@ defmodule Conta.Aggregate.Reconciliation do
             {:error, errors}
 
           {:ok, updated} ->
-            # `nil` here means "no change to account_name" (see `apply/2` below), not
-            # "unassign" — when the movement already has an account_name and the edit
-            # doesn't touch it directly, we leave it untouched rather than re-stamping
-            # the current value into the event. Note this also means an explicit
-            # `changes: %{"account_name" => nil}` ("unassign") is indistinguishable
-            # from "didn't touch it" and is a no-op today — there's no sentinel yet
-            # for a deliberate clear; that's a known gap, not a bug, until an
-            # "unassign" UI action needs it.
             {account_name, description} =
-              cond do
-                Map.has_key?(changes, "account_name") -> {updated.account_name, updated.description}
-                is_nil(movement.account_name) -> evaluate_rules(match_rules, updated)
-                :else -> {nil, updated.description}
-              end
+              resolve_updated_account_and_description(changes, movement, updated, match_rules)
 
             %{
               id: id,
@@ -190,6 +178,19 @@ defmodule Conta.Aggregate.Reconciliation do
     end
   end
 
+  defp resolve_updated_account_and_description(changes, _movement, updated, _match_rules)
+       when is_map_key(changes, "account_name") do
+    {updated.account_name, updated.description}
+  end
+
+  defp resolve_updated_account_and_description(_changes, %{account_name: nil}, updated, match_rules) do
+    evaluate_rules(match_rules, updated)
+  end
+
+  defp resolve_updated_account_and_description(_changes, _movement, updated, _match_rules) do
+    {nil, updated.description}
+  end
+
   # Returns `{:ok, movement}` with the parsed changes merged in, or
   # `{:error, %{field => [reason]}}` the moment a *provided, non-nil* value fails
   # to cast. We deliberately reject the whole update rather than falling back to
@@ -201,9 +202,8 @@ defmodule Conta.Aggregate.Reconciliation do
     with {:ok, movement} <- put_cast(movement, :on_date, changes["on_date"], &parse_date/1),
          {:ok, movement} <- put_raw(movement, :description, changes["description"]),
          {:ok, movement} <- put_cast(movement, :amount, changes["amount"], &parse_integer/1),
-         {:ok, movement} <- put_cast(movement, :currency, changes["currency"], &parse_currency/1),
-         {:ok, movement} <- put_raw(movement, :account_name, changes["account_name"]) do
-      {:ok, movement}
+         {:ok, movement} <- put_cast(movement, :currency, changes["currency"], &parse_currency/1) do
+      put_raw(movement, :account_name, changes["account_name"])
     end
   end
 
@@ -219,12 +219,19 @@ defmodule Conta.Aggregate.Reconciliation do
     end
   end
 
-  defp parse_currency(value) do
-    case Money.Ecto.Currency.Type.cast(value) do
-      {:ok, currency} -> currency
-      :error -> nil
+  defp parse_currency(value) when is_atom(value) do
+    if Conta.MoneyHelpers.is_currency(value), do: value, else: nil
+  end
+
+  defp parse_currency(value) when is_binary(value) do
+    if Conta.MoneyHelpers.is_currency(value) do
+      String.to_existing_atom(value)
+    else
+      nil
     end
   end
+
+  defp parse_currency(_), do: nil
 
   def evaluate_rules(match_rules, movement) do
     Enum.find_value(match_rules, {nil, movement.description}, fn rule ->
@@ -236,48 +243,47 @@ defmodule Conta.Aggregate.Reconciliation do
 
   defp transform_description(%{concept: concept} = rule, original_description)
        when is_binary(concept) and concept != "" do
-    regex_condition =
-      Enum.find(rule.conditions, fn
-        %{field: :description, comparator: :regex, value: value} when is_binary(value) -> true
-        %{"field" => "description", "comparator" => "regex", "value" => value} when is_binary(value) -> true
-        _ -> false
-      end)
-
-    case regex_condition do
-      nil ->
-        concept
-
-      cond_map ->
-        val =
-          if is_map(cond_map) and Map.has_key?(cond_map, :value),
-            do: cond_map.value,
-            else: cond_map["value"]
-
-        case Regex.compile(val) do
-          {:ok, regex} ->
-            case Regex.run(regex, original_description || "") do
-              nil ->
-                concept
-
-              [full_match | captures] ->
-                captures
-                |> Enum.with_index(1)
-                |> Enum.reduce(concept, fn {cap, idx}, acc ->
-                  acc
-                  |> String.replace("\\#{idx}", cap)
-                  |> String.replace("$#{idx}", cap)
-                end)
-                |> String.replace("\\0", full_match)
-                |> String.replace("$0", full_match)
-            end
-
-          {:error, _} ->
-            concept
-        end
+    case find_description_regex_pattern(rule.conditions) do
+      nil -> concept
+      pattern -> apply_description_pattern(concept, pattern, original_description)
     end
   end
 
   defp transform_description(_rule, original_description), do: original_description
+
+  defp find_description_regex_pattern(conditions) do
+    Enum.find_value(conditions, fn
+      %{field: :description, comparator: :regex, value: value} when is_binary(value) -> value
+      %{"field" => "description", "comparator" => "regex", "value" => value} when is_binary(value) -> value
+      _ -> nil
+    end)
+  end
+
+  defp apply_description_pattern(concept, pattern, original_description) do
+    case Regex.compile(pattern) do
+      {:ok, regex} -> apply_compiled_regex(concept, regex, original_description)
+      {:error, _} -> concept
+    end
+  end
+
+  defp apply_compiled_regex(concept, regex, original_description) do
+    case Regex.run(regex, original_description || "") do
+      nil -> concept
+      [full_match | captures] -> substitute_regex_captures(concept, full_match, captures)
+    end
+  end
+
+  defp substitute_regex_captures(concept, full_match, captures) do
+    captures
+    |> Enum.with_index(1)
+    |> Enum.reduce(concept, fn {cap, idx}, acc ->
+      acc
+      |> String.replace("\\#{idx}", cap)
+      |> String.replace("$#{idx}", cap)
+    end)
+    |> String.replace("\\0", full_match)
+    |> String.replace("$0", full_match)
+  end
 
   defp rule_matches?(%{conditions: conditions, match_type: match_type}, movement)
        when match_type in [:all, "all"] do

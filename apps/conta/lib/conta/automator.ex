@@ -342,22 +342,26 @@ defmodule Conta.Automator do
   end
 
   def run_importer(_automator, %Importer{} = importer, params, asset_account_name) do
-    with {:ok, %{"status" => "ok", "commands" => commands}} when is_list(commands) <- run(importer, params) do
-      movements =
-        for %{"type" => "movement", "data" => data} <- commands do
-          Map.merge(data, %{"asset_account_name" => asset_account_name, "source" => importer.name})
+    case run(importer, params) do
+      {:ok, %{"status" => "ok", "commands" => commands}} when is_list(commands) ->
+        movements =
+          for %{"type" => "movement", "data" => data} <- commands do
+            Map.merge(data, %{"asset_account_name" => asset_account_name, "source" => importer.name})
+          end
+
+        %{"movements" => movements}
+        |> ImportMovements.changeset()
+        |> Conta.EctoHelpers.get_result()
+        |> case do
+          %ImportMovements{} = command -> dispatch(command)
+          {:error, _} = error -> error
         end
 
-      %{"movements" => movements}
-      |> ImportMovements.changeset()
-      |> Conta.EctoHelpers.get_result()
-      |> case do
-        %ImportMovements{} = command -> dispatch(command)
-        {:error, _} = error -> error
-      end
-    else
-      {:error, _} = error -> error
-      {:ok, return} -> {:error, {:invalid_code_return, return}}
+      {:error, _} = error ->
+        error
+
+      {:ok, return} ->
+        {:error, {:invalid_code_return, return}}
     end
   end
 

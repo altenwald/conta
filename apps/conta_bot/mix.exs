@@ -24,9 +24,7 @@ defmodule ContaBot.MixProject do
 
   defp deps do
     [
-      {:ex_gram, "~> 0.50"},
-      {:tesla, "~> 1.8"},
-      {:finch, "~> 0.17"},
+      {:ex_gram, "~> 0.69"},
       {:jason, "~> 1.4"},
       {:gen_state_machine, "~> 3.0"},
       {:countries, "~> 1.6"},

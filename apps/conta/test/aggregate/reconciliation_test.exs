@@ -207,7 +207,7 @@ defmodule Conta.Aggregate.ReconciliationTest do
           %ImportMovements.Movement{
             on_date: ~D[2026-07-01],
             description: "PAGO FACTURA 20260718 SERVICIOS",
-            amount: -12000,
+            amount: -12_000,
             currency: :EUR,
             asset_account_name: ["Assets", "Bank"]
           }

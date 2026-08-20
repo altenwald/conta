@@ -42,7 +42,6 @@ defmodule ContaWeb.ContactLive.FormComponent do
   end
 
   defp list_countries do
-    #  TODO frequent countries?
     Countries.all()
     |> Enum.map(&{&1.name, &1.alpha2})
     |> Enum.sort()

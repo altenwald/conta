@@ -11,7 +11,7 @@ defmodule Conta.Event.MovementUpdated do
     field :on_date, :date
     field :description, :string
     field :amount, :integer
-    field :currency, Money.Ecto.Currency.Type
+    field(:currency, Money.Ecto.Currency.Type) :: atom()
     field :account_name, {:array, :string}
   end
 

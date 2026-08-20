@@ -7,7 +7,7 @@ defmodule Conta.Automator.Lua do
   defp process_data({:ok, [], _state}), do: :no_return
 
   defp process_data({:error, errors, _warnings}) when is_list(errors) do
-    message = errors |> Enum.map(&format_compile_error/1) |> Enum.join("; ")
+    message = Enum.map_join(errors, "; ", &format_compile_error/1)
     {:error, message}
   end
 

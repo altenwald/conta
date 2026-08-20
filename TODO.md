@@ -72,3 +72,21 @@ before real ids are used to identify individual rows (e.g. when implementing
 removal of a specific condition instead of by index), review whether the
 embed needs `primary_key: false` or whether `get_set_match_rule/1` should
 assign an explicit `:id` per condition.
+
+## Bot: Support for complex transactions and account-type aware amounts
+
+In `apps/conta_bot/lib/conta_bot/action/transaction.ex`:
+- **Account-type aware signs**: When duplicating simple transactions (`dup_<id>`), the amount is currently computed as `Money.subtract(entry1.debit, entry1.credit)`. The sign should take into account the account type (e.g. credit/debit nature for assets vs expenses vs liabilities).
+- **Complex transactions**: Transactions with more than 2 entries currently return `"we've still not support for complex transactions"`. Add conversational flow to duplicate or edit multi-split transactions in Telegram.
+- **Multi-currency transactions**: `transaction_create` currently rejects transactions involving multiple currencies with `"Cannot still create transaction multi-currency"`. Add support for exchange rates / multi-currency entries in bot transactions.
+
+## Web: Country selection ordering and internationalization (i18n)
+
+In `apps/conta_web/lib/conta_web/live/contact_live/form_component.ex` and `apps/conta_web/lib/conta_web/live/invoice_live/form_component.ex`:
+- **Prioritize frequent countries**: Place commonly used countries (e.g. Spain / user's home country) at the top of the dropdown before the alphabetical list.
+- **Localized country names**: Use `:countries_i18n` to translate country names according to the current user locale (`Gettext.get_locale/1`).
+
+## Web: REST API for `/ledger/accounts`
+
+In `apps/conta_web/lib/conta_web/router.ex`:
+- Add JSON controller endpoints for `resources "/accounts", Account, only: [:index, :show, :create, :update, :delete]` under the `/ledger/` API scope.

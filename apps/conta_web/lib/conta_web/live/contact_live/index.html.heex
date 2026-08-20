@@ -7,7 +7,7 @@
   <div class="card bg-base-100 shadow-xl border border-base-200 mt-6">
     <div class="card-body p-0">
       <div class="p-4 flex justify-between items-center border-b border-base-200">
-        <form phx-change="filters" class="flex-grow max-w-xs">
+        <form id="contacts-filter-form" phx-change="filters" class="flex-grow max-w-xs">
           <%!-- Filter inputs can go here if needed in the future --%>
         </form>
         <.link patch={~p"/directories/contacts/new"} class="btn btn-primary">

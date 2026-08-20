@@ -1,6 +1,9 @@
 {
   "name": "conta_web_assets",
   "private": true,
+  "scripts": {
+    "test": "exit 0"
+  },
   "dependencies": {
     "monaco-editor": "^0.52.0"
   }

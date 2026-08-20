@@ -80,8 +80,7 @@ defmodule Conta.Reconciliation.ExcelImport do
     |> Map.new(fn {[_, si_content], index} ->
       text =
         Regex.scan(~r/<t\b[^>]*>(.*?)<\/t>/s, si_content)
-        |> Enum.map(fn [_, t] -> unescape_xml(t) end)
-        |> Enum.join("")
+        |> Enum.map_join("", fn [_, t] -> unescape_xml(t) end)
 
       {index, text}
     end)
@@ -98,72 +97,75 @@ defmodule Conta.Reconciliation.ExcelImport do
   end
 
   defp parse_row_cells(row_content, shared_strings) do
-    cell_matches = Regex.scan(~r/<c\b([^>]*)>(.*?)<\/c>/s, row_content)
+    Regex.scan(~r/<c\b([^>]*)>(.*?)<\/c>/s, row_content)
+    |> Enum.reduce(%{}, fn match, acc -> parse_cell_match(match, shared_strings, acc) end)
+    |> build_row_from_cells_map()
+  end
 
-    cells_map =
-      Enum.reduce(cell_matches, %{}, fn [_, attrs, body], acc ->
-        ref =
-          case Regex.run(~r/r="([A-Z]+[0-9]+)"/, attrs) do
-            [_, r] -> r
-            _ -> nil
-          end
+  defp parse_cell_match([_, attrs, body], shared_strings, acc) do
+    case extract_cell_ref(attrs) do
+      nil ->
+        acc
 
-        type =
-          case Regex.run(~r/t="([a-z]+)"/, attrs) do
-            [_, t] -> t
-            _ -> "n"
-          end
-
-        if ref do
-          col_letters = Regex.replace(~r/[0-9]/, ref, "")
-          col_idx = col_to_index(col_letters)
-
-          v_val =
-            case Regex.run(~r/<v\b[^>]*>(.*?)<\/v>/s, body) do
-              [_, v] -> v
-              _ -> nil
-            end
-
-          t_val =
-            case Regex.run(~r/<t\b[^>]*>(.*?)<\/t>/s, body) do
-              [_, t] -> t
-              _ -> nil
-            end
-
-          value =
-            cond do
-              type == "s" and v_val ->
-                idx = String.to_integer(String.trim(v_val))
-                Map.get(shared_strings, idx, "")
-
-              type == "inlineStr" and t_val ->
-                unescape_xml(t_val)
-
-              type == "b" and v_val ->
-                if String.trim(v_val) == "1", do: "true", else: "false"
-
-              v_val ->
-                format_num(unescape_xml(String.trim(v_val)))
-
-              t_val ->
-                unescape_xml(String.trim(t_val))
-
-              true ->
-                ""
-            end
-
-          Map.put(acc, col_idx, value)
-        else
-          acc
-        end
-      end)
-
-    if map_size(cells_map) == 0 do
-      []
-    else
-      max_col = Enum.max(Map.keys(cells_map))
-      Enum.map(1..max_col, fn idx -> Map.get(cells_map, idx, "") end)
+      ref ->
+        col_idx = col_to_index(Regex.replace(~r/[0-9]/, ref, ""))
+        type = extract_cell_type(attrs)
+        v_val = extract_tag_value(body, ~r/<v\b[^>]*>(.*?)<\/v>/s)
+        t_val = extract_tag_value(body, ~r/<t\b[^>]*>(.*?)<\/t>/s)
+        value = extract_cell_value(type, v_val, t_val, shared_strings)
+        Map.put(acc, col_idx, value)
     end
+  end
+
+  defp extract_cell_ref(attrs) do
+    case Regex.run(~r/r="([A-Z]+[0-9]+)"/, attrs) do
+      [_, r] -> r
+      _ -> nil
+    end
+  end
+
+  defp extract_cell_type(attrs) do
+    case Regex.run(~r/t="([a-z]+)"/, attrs) do
+      [_, t] -> t
+      _ -> "n"
+    end
+  end
+
+  defp extract_tag_value(body, regex) do
+    case Regex.run(regex, body) do
+      [_, val] -> val
+      _ -> nil
+    end
+  end
+
+  defp extract_cell_value("s", v_val, _t_val, shared_strings) when is_binary(v_val) do
+    idx = String.to_integer(String.trim(v_val))
+    Map.get(shared_strings, idx, "")
+  end
+
+  defp extract_cell_value("inlineStr", _v_val, t_val, _shared_strings) when is_binary(t_val) do
+    unescape_xml(t_val)
+  end
+
+  defp extract_cell_value("b", v_val, _t_val, _shared_strings) when is_binary(v_val) do
+    if String.trim(v_val) == "1", do: "true", else: "false"
+  end
+
+  defp extract_cell_value(_type, v_val, _t_val, _shared_strings) when is_binary(v_val) do
+    format_num(unescape_xml(String.trim(v_val)))
+  end
+
+  defp extract_cell_value(_type, _v_val, t_val, _shared_strings) when is_binary(t_val) do
+    unescape_xml(String.trim(t_val))
+  end
+
+  defp extract_cell_value(_type, _v_val, _t_val, _shared_strings), do: ""
+
+  defp build_row_from_cells_map(cells_map) when map_size(cells_map) == 0, do: []
+
+  defp build_row_from_cells_map(cells_map) do
+    max_col = Enum.max(Map.keys(cells_map))
+    Enum.map(1..max_col, fn idx -> Map.get(cells_map, idx, "") end)
   end
 
   defp col_to_index(col_str) do
@@ -232,57 +234,67 @@ defmodule Conta.Reconciliation.ExcelImport do
   end
 
   defp extract_ole2_stream(binary, target_names) do
-    with <<@ole2_magic, _clsid::binary-size(16), _minor_ver::little-16, _major_ver::little-16,
-           _byte_order::little-16, sector_shift::little-16, _mini_sector_shift::little-16,
-           _reserved::binary-size(6), _num_dir_sectors::little-32, _num_fat_sectors::little-32,
-           first_dir_sector::little-32, _txn_sig::little-32, _mini_stream_cutoff::little-32,
-           _first_mini_fat_sector::little-32, _num_mini_fat_sectors::little-32,
-           _first_difat_sector::little-32, _num_difat_sectors::little-32, difat_initial::binary-size(436),
-           rest_of_file::binary>> <- binary do
-      sector_size = 1 <<< sector_shift
+    case binary do
+      <<@ole2_magic, _clsid::binary-size(16), _minor_ver::little-16, _major_ver::little-16,
+        _byte_order::little-16, sector_shift::little-16, _mini_sector_shift::little-16,
+        _reserved::binary-size(6), _num_dir_sectors::little-32, _num_fat_sectors::little-32,
+        first_dir_sector::little-32, _txn_sig::little-32, _mini_stream_cutoff::little-32,
+        _first_mini_fat_sector::little-32, _num_mini_fat_sectors::little-32, _first_difat_sector::little-32,
+        _num_difat_sectors::little-32, difat_initial::binary-size(436), rest_of_file::binary>> ->
+        sector_size = 1 <<< sector_shift
 
-      # Read FAT sector IDs from initial DIFAT array
-      fat_sector_ids =
-        for <<sec_id::little-32 <- difat_initial>>, sec_id != 0xFFFFFFFE and sec_id != 0xFFFFFFFF, do: sec_id
+        # Read FAT sector IDs from initial DIFAT array
+        fat_sector_ids =
+          for <<sec_id::little-32 <- difat_initial>>, sec_id != 0xFFFFFFFE and sec_id != 0xFFFFFFFF,
+            do: sec_id
 
-      # Extract all sectors
-      sectors =
-        rest_of_file
-        |> chunk_binary(sector_size)
+        # Extract all sectors
+        sectors =
+          rest_of_file
+          |> chunk_binary(sector_size)
 
-      # Build FAT table
-      fat_table =
-        fat_sector_ids
-        |> Enum.map_join("", fn id -> Enum.at(sectors, id, "") end)
-        |> for_fat_entries()
+        # Build FAT table
+        fat_table =
+          fat_sector_ids
+          |> collect_sectors(sectors)
+          |> for_fat_entries()
 
-      # Traverse Directory chain
-      dir_chain = get_sector_chain(first_dir_sector, fat_table)
-      dir_binary = Enum.map_join(dir_chain, "", fn id -> Enum.at(sectors, id, "") end)
+        # Traverse Directory chain
+        dir_chain = get_sector_chain(first_dir_sector, fat_table)
+        dir_binary = collect_sectors(dir_chain, sectors)
 
-      # Parse 128-byte directory entries
-      dir_entries =
-        for <<entry::binary-size(128) <- dir_binary>> do
-          parse_dir_entry(entry)
-        end
+        # Parse 128-byte directory entries
+        dir_entries =
+          for <<entry::binary-size(128) <- dir_binary>> do
+            parse_dir_entry(entry)
+          end
 
-      case Enum.find(dir_entries, fn e -> e.name in target_names end) do
-        nil ->
-          {:error, :stream_not_found}
+        find_target_stream(dir_entries, target_names, fat_table, sectors, sector_size)
 
-        target_entry ->
-          stream_chain = get_sector_chain(target_entry.start_sector, fat_table)
-
-          stream_binary =
-            stream_chain
-            |> Enum.map_join("", fn id -> Enum.at(sectors, id, "") end)
-            |> binary_part(0, min(target_entry.size, length(stream_chain) * sector_size))
-
-          {:ok, stream_binary}
-      end
-    else
-      _ -> {:error, :invalid_ole2}
+      _ ->
+        {:error, :invalid_ole2}
     end
+  end
+
+  defp find_target_stream(dir_entries, target_names, fat_table, sectors, sector_size) do
+    case Enum.find(dir_entries, fn e -> e.name in target_names end) do
+      nil ->
+        {:error, :stream_not_found}
+
+      target_entry ->
+        stream_chain = get_sector_chain(target_entry.start_sector, fat_table)
+
+        stream_binary =
+          stream_chain
+          |> collect_sectors(sectors)
+          |> binary_part(0, min(target_entry.size, length(stream_chain) * sector_size))
+
+        {:ok, stream_binary}
+    end
+  end
+
+  defp collect_sectors(chain, sectors) do
+    Enum.map_join(chain, "", fn id -> Enum.at(sectors, id, "") end)
   end
 
   defp parse_dir_entry(
@@ -296,7 +308,6 @@ defmodule Conta.Reconciliation.ExcelImport do
 
     name =
       case :unicode.characters_to_binary(name_bytes, {:utf16, :little}, :utf8) do
-        {:ok, s} -> s
         s when is_binary(s) -> s
         _ -> ""
       end
@@ -359,16 +370,18 @@ defmodule Conta.Reconciliation.ExcelImport do
         rows_map
         |> Map.keys()
         |> Enum.sort()
-        |> Enum.map(fn row_idx ->
-          cols = Map.new(Map.get(rows_map, row_idx, []))
-          max_col = if map_size(cols) == 0, do: 0, else: Enum.max(Map.keys(cols))
-          Enum.map(0..max_col, fn c -> Map.get(cols, c, "") end)
-        end)
+        |> Enum.map(&build_biff8_row(rows_map, &1))
 
       detect_headers_and_build_rows(rows)
     end
   rescue
     _ -> {:error, :invalid_excel}
+  end
+
+  defp build_biff8_row(rows_map, row_idx) do
+    cols = Map.new(Map.get(rows_map, row_idx, []))
+    max_col = if map_size(cols) == 0, do: 0, else: Enum.max(Map.keys(cols))
+    Enum.map(0..max_col, fn c -> Map.get(cols, c, "") end)
   end
 
   defp read_biff8_records(<<>>, _sst, cells), do: {%{}, cells}
@@ -455,50 +468,49 @@ defmodule Conta.Reconciliation.ExcelImport do
         has_phonetic? = (flags &&& 0x04) != 0
 
         {rich_runs, phonetic_size, chunks2} =
-          cond do
-            has_rich_text? and has_phonetic? ->
-              case read_sst_bytes(6, chunks1) do
-                {:ok, <<r_runs::little-16, p_size::little-32>>, c} -> {r_runs, p_size, c}
-                _ -> {0, 0, chunks1}
-              end
+          parse_sst_rich_and_phonetic(has_rich_text?, has_phonetic?, chunks1)
 
-            has_rich_text? ->
-              case read_sst_bytes(2, chunks1) do
-                {:ok, <<r_runs::little-16>>, c} -> {r_runs, 0, c}
-                _ -> {0, 0, chunks1}
-              end
+        {:ok, str, chunks3} = read_sst_string_chars(char_len, is_unicode?, chunks2)
+        skip_bytes = rich_runs * 4 + phonetic_size
+        chunks4 = skip_sst_bytes(skip_bytes, chunks3)
 
-            has_phonetic? ->
-              case read_sst_bytes(4, chunks1) do
-                {:ok, <<p_size::little-32>>, c} -> {0, p_size, c}
-                _ -> {0, 0, chunks1}
-              end
-
-            true ->
-              {0, 0, chunks1}
-          end
-
-        case read_sst_string_chars(char_len, is_unicode?, chunks2) do
-          {:ok, str, chunks3} ->
-            skip_bytes = rich_runs * 4 + phonetic_size
-
-            chunks4 =
-              case read_sst_bytes(skip_bytes, chunks3) do
-                {:ok, _skipped, c} -> c
-                _ -> chunks3
-              end
-
-            parse_biff_sst_strings(chunks4, count, idx + 1, Map.put(acc, idx, str))
-
-          _ ->
-            acc
-        end
+        parse_biff_sst_strings(chunks4, count, idx + 1, Map.put(acc, idx, str))
 
       _ ->
         acc
     end
   rescue
     _ -> acc
+  end
+
+  defp parse_sst_rich_and_phonetic(true, true, chunks1) do
+    case read_sst_bytes(6, chunks1) do
+      {:ok, <<r_runs::little-16, p_size::little-32>>, c} -> {r_runs, p_size, c}
+      _ -> {0, 0, chunks1}
+    end
+  end
+
+  defp parse_sst_rich_and_phonetic(true, false, chunks1) do
+    case read_sst_bytes(2, chunks1) do
+      {:ok, <<r_runs::little-16>>, c} -> {r_runs, 0, c}
+      _ -> {0, 0, chunks1}
+    end
+  end
+
+  defp parse_sst_rich_and_phonetic(false, true, chunks1) do
+    case read_sst_bytes(4, chunks1) do
+      {:ok, <<p_size::little-32>>, c} -> {0, p_size, c}
+      _ -> {0, 0, chunks1}
+    end
+  end
+
+  defp parse_sst_rich_and_phonetic(false, false, chunks1), do: {0, 0, chunks1}
+
+  defp skip_sst_bytes(skip_bytes, chunks) do
+    case read_sst_bytes(skip_bytes, chunks) do
+      {:ok, _skipped, c} -> c
+      _ -> chunks
+    end
   end
 
   defp read_sst_bytes(0, chunks), do: {:ok, <<>>, chunks}
@@ -549,13 +561,10 @@ defmodule Conta.Reconciliation.ExcelImport do
         [<<continue_flag::8, next_data::binary>> | more_chunks] ->
           new_unicode? = (continue_flag &&& 0x01) != 0
 
-          case read_sst_string_chars(remaining_chars, new_unicode?, [next_data | more_chunks]) do
-            {:ok, str2, final_chunks} ->
-              {:ok, str1 <> str2, final_chunks}
+          {:ok, str2, final_chunks} =
+            read_sst_string_chars(remaining_chars, new_unicode?, [next_data | more_chunks])
 
-            _ ->
-              {:ok, str1, []}
-          end
+          {:ok, str1 <> str2, final_chunks}
 
         _ ->
           {:ok, str1, []}
@@ -568,25 +577,29 @@ defmodule Conta.Reconciliation.ExcelImport do
 
   defp decode_biff_raw_bytes(bytes, true) do
     case :unicode.characters_to_binary(bytes, {:utf16, :little}, :utf8) do
-      {:ok, s} -> s
       s when is_binary(s) -> s
       _ -> ""
     end
   end
 
   defp decode_biff_raw_bytes(bytes, false) do
-    :unicode.characters_to_binary(bytes, :latin1, :utf8) || ""
+    case :unicode.characters_to_binary(bytes, :latin1, :utf8) do
+      s when is_binary(s) -> s
+      _ -> ""
+    end
   end
 
   defp decode_biff_string(bytes, _len, flags) do
     if (flags &&& 0x01) != 0 do
       case :unicode.characters_to_binary(bytes, {:utf16, :little}, :utf8) do
-        {:ok, s} -> s
         s when is_binary(s) -> s
         _ -> ""
       end
     else
-      :unicode.characters_to_binary(bytes, :latin1, :utf8) || ""
+      case :unicode.characters_to_binary(bytes, :latin1, :utf8) do
+        s when is_binary(s) -> s
+        _ -> ""
+      end
     end
   end
 
@@ -645,8 +658,6 @@ defmodule Conta.Reconciliation.ExcelImport do
     end
   end
 
-  defp format_num(num), do: to_string(num)
-
   # --- Helpers ---
 
   defp detect_headers_and_build_rows(rows) do
@@ -674,19 +685,28 @@ defmodule Conta.Reconciliation.ExcelImport do
 
         parsed_rows =
           data_rows
-          |> Enum.reject(fn row ->
-            Enum.all?(row, fn v -> is_nil(v) or String.trim(to_string(v)) == "" end)
-          end)
-          |> Enum.map(fn row ->
-            headers
-            |> Enum.zip(row ++ List.duplicate("", max(0, length(headers) - length(row))))
-            |> Enum.reject(fn {k, _v} -> k == "" end)
-            |> Map.new(fn {k, v} -> {k, if(is_binary(v), do: String.trim(v), else: to_string(v))} end)
-          end)
+          |> Enum.reject(&empty_row?/1)
+          |> Enum.map(&build_row_map(headers, &1))
 
         {:ok, parsed_rows}
     end
   end
+
+  defp empty_row?(row) do
+    Enum.all?(row, fn v -> is_nil(v) or String.trim(to_string(v)) == "" end)
+  end
+
+  defp build_row_map(headers, row) do
+    padding = List.duplicate("", max(0, length(headers) - length(row)))
+
+    headers
+    |> Enum.zip(row ++ padding)
+    |> Enum.reject(fn {k, _v} -> k == "" end)
+    |> Map.new(fn {k, v} -> {k, trim_or_to_string(v)} end)
+  end
+
+  defp trim_or_to_string(v) when is_binary(v), do: String.trim(v)
+  defp trim_or_to_string(v), do: to_string(v)
 
   defp unescape_xml(string) do
     string

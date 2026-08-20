@@ -8,8 +8,6 @@ defmodule ContaBot.Application do
       {Registry, keys: :unique, name: ContaBot.Action.Transaction.Registry},
       # Start DynamicSupervisor for transactions
       {DynamicSupervisor, strategy: :one_for_one, name: ContaBot.Action.Transaction.Workers},
-      # Start the Finch HTTP client for sending emails
-      {Finch, name: ContaBot.Finch},
       ExGram,
       {ContaBot.Action, method: :polling, token: get_token()}
     ]

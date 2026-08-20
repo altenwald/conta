@@ -11,7 +11,7 @@ defmodule Conta.Command.ImportMovements do
       field :on_date, :date
       field :description, :string
       field :amount, :integer
-      field :currency, Money.Ecto.Currency.Type
+      field(:currency, Money.Ecto.Currency.Type) :: atom()
       field :asset_account_name, {:array, :string}
       field :source, :string
     end

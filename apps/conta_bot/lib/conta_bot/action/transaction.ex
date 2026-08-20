@@ -36,8 +36,6 @@ defmodule ContaBot.Action.Transaction do
       [entry1, entry2] ->
         chat_id = get_chat_id(context)
         if Worker.exists?(chat_id), do: Worker.stop(chat_id)
-        # TODO based on the account type it could be credit for positive or
-        # negative values of amount.
         amount = Money.subtract(entry1.debit, entry1.credit) |> Money.to_decimal()
         {:ok, _pid} = Worker.start(chat_id)
         {:ok, _} = Worker.call(chat_id, {:callback, Enum.join(entry1.account_name, ".")})
@@ -52,7 +50,6 @@ defmodule ContaBot.Action.Transaction do
         answer(context, "not found transaction #{transaction_id}")
 
       _ ->
-        # TODO support for complex transactions
         answer(context, "we've still not support for complex transactions")
     end
   end
@@ -303,7 +300,6 @@ defmodule ContaBot.Action.Transaction do
       {:error, _} ->
         {:error, "Account doesn't exist"}
 
-      ##  TODO
       {:currency, false} ->
         {:error, "Cannot still create transaction multi-currency"}
     end

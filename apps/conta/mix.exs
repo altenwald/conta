@@ -181,21 +181,21 @@ defmodule Conta.MixProject do
       {:commanded, "~> 1.4"},
       {:jason, "~> 1.4"},
       {:commanded_eventstore_adapter, "~> 1.4"},
-      {:ecto_sql, "~> 3.11"},
+      {:ecto_sql, "~> 3.14"},
       {:postgrex, ">= 0.0.0"},
       {:typed_ecto_schema, "~> 0.4"},
       {:money, "~> 1.12"},
       {:dns_cluster, "~> 0.1"},
       {:phoenix_pubsub, "~> 2.1"},
-      {:req, "~> 0.5"},
+      {:req, "~> 0.6.1"},
       {:swoosh, "~> 1.14"},
       {:finch, "~> 0.17"},
-      {:plotto, "~> 0.1.0"},
+      {:plotto, "~> 0.2"},
       {:luerl, "~> 1.1"},
       {:elixlsx, "~> 0.6"},
       {:nimble_csv, "~> 1.2"},
       {:ex_machina, "~> 2.7", only: :test},
-      {:doctor, "~> 0.21", only: [:dev, :test], runtime: false}
+      {:doctor, ">= 0.0.0", only: [:dev, :test], runtime: false}
     ]
   end
 

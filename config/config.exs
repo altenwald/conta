@@ -108,9 +108,7 @@ config :logger, :console,
 # Use Jason for JSON parsing in Phoenix
 config :phoenix, :json_library, Jason
 
-config :tesla, adapter: {Tesla.Adapter.Finch, name: ContaBot.Finch}
-
-config :ex_gram, adapter: ExGram.Adapter.Tesla
+config :ex_gram, adapter: ExGram.Adapter.Req
 
 config :ex_gram, json_engine: Jason
 
