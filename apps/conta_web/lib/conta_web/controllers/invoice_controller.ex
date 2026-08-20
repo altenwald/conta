@@ -44,13 +44,7 @@ defmodule ContaWeb.InvoiceController do
       |> HtmlSafe.to_iodata()
       |> to_string()
 
-    # Web fonts (the app's own @import and any custom ones in the template's
-    # CSS) load asynchronously and aren't guaranteed to finish before the DOM
-    # "load" event chromic_pdf waits for, so without this the PDF can get
-    # snapshotted with the fallback font instead of the configured one.
-    # `document.fonts.ready` is a Promise that resolves once font loading has
-    # settled; chromic_pdf's `evaluate` option waits for it before printing.
-    ChromicPDF.print_to_pdf({:html, html}, evaluate: %{expression: "document.fonts.ready"})
+    Press.render(html)
   end
 
   def download(conn, %{"id" => id}) do
@@ -65,7 +59,7 @@ defmodule ContaWeb.InvoiceController do
       "content-disposition",
       "attachment; filename=#{invoice.invoice_number}.pdf"
     )
-    |> send_resp(200, Base.decode64!(pdf))
+    |> send_resp(200, pdf)
   end
 
   defp maybe_disposition(conn, nil), do: conn

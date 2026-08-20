@@ -56,7 +56,7 @@ defmodule ContaWeb.MixProject do
       {:countries_i18n, "~> 0.0", only: :dev},
       {:countries, "~> 1.6"},
       {:bandit, "~> 1.7"},
-      {:chromic_pdf, "~> 1.15"},
+      {:press, "~> 0.1.0"},
       {:doctor, ">= 0.0.0", only: [:dev, :test], runtime: false},
       {:sobelow, ">= 0.0.0", only: [:dev, :test], runtime: false}
     ]

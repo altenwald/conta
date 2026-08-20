@@ -50,8 +50,7 @@ defmodule ContaBot.Action.Invoice do
   def handle({:init, <<"i", year::binary-size(4), id::binary-size(5)>>}, context) do
     invoice = Book.get_invoice!(String.to_integer(year), String.to_integer(id))
     template = Book.get_template_by_name!(invoice.company.nif, invoice.template)
-    {:ok, encoded_pdf} = InvoiceController.to_pdf(invoice, template)
-    pdf = Base.decode64!(encoded_pdf)
+    {:ok, pdf} = InvoiceController.to_pdf(invoice, template)
     filename = "#{invoice.invoice_number}.pdf"
     ExGram.send_document(get_chat_id(context), {:file_content, pdf, filename})
   end

@@ -107,11 +107,10 @@ html {
 }
 
 /* Self-hosted (not @import'd) so it works with no outbound internet access -
-   needed for chromic_pdf's headless Chrome to render invoice PDFs correctly
-   in restricted/offline environments, and sidesteps Tailwind v4 always
-   emitting its own @layer rules before any custom @import regardless of
-   source order (which silently invalidated the previous Google Fonts
-   @import - it must be the very first rule in a stylesheet).
+   needed for offline/embedded PDF invoice rendering, and sidesteps
+   Tailwind v4 always emitting its own @layer rules before any custom @import
+   regardless of source order (which silently invalidated the previous
+   Google Fonts @import - it must be the very first rule in a stylesheet).
    Source: Noto Sans Mono Regular 400, latin subset, from Google Fonts.
    Committed at apps/conta_web/assets/vendor/fonts/NotoSansMono-Regular.woff2 -
    regenerate the base64 below with: base64 -i NotoSansMono-Regular.woff2 */
