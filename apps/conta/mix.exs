@@ -46,7 +46,7 @@ defmodule Conta.MixProject do
         Conta.Commanded.Application,
         Conta.Commanded.Router,
         Conta.Commanded.Serializer,
-        # Stats graphs — depend on Contex + real projection data
+        # Stats graphs — depend on Plotto + real projection data
         Conta.Stats,
         Conta.Projector.Stats,
         Conta.Projector.Stats.Account,
@@ -190,9 +190,7 @@ defmodule Conta.MixProject do
       {:req, "~> 0.5"},
       {:swoosh, "~> 1.14"},
       {:finch, "~> 0.17"},
-      # https://github.com/mindok/contex/pull/93
-      {:contex, "~> 0.5", github: "manuel-rubio/contex"},
-      {:resvg, "~> 0.3"},
+      {:plotto, "~> 0.1.0"},
       {:luerl, "~> 1.1"},
       {:elixlsx, "~> 0.6"},
       {:nimble_csv, "~> 1.2"},
