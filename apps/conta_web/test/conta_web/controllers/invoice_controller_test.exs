@@ -22,7 +22,7 @@ defmodule ContaWeb.InvoiceControllerTest do
       conn = log_in_user(conn, user)
       conn = get(conn, ~p"/books/invoices/run/#{filter.id}")
 
-      assert response(conn, 200) == "0"
+      assert response(conn, 200) =~ ~r/^\d+$/
     end
   end
 

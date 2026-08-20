@@ -4,7 +4,7 @@ defmodule ContaWeb.MixProject do
   def project do
     [
       app: :conta_web,
-      version: "0.3.2",
+      version: "0.3.3",
       build_path: "../../_build",
       config_path: "../../config/config.exs",
       deps_path: "../../deps",
@@ -56,7 +56,7 @@ defmodule ContaWeb.MixProject do
       {:countries_i18n, "~> 0.0", only: :dev},
       {:countries, "~> 1.6"},
       {:bandit, "~> 1.7"},
-      {:press, "~> 0.1.0"},
+      {:press, "~> 0.1.1"},
       {:doctor, ">= 0.0.0", only: [:dev, :test], runtime: false},
       {:sobelow, ">= 0.0.0", only: [:dev, :test], runtime: false}
     ]
