@@ -23,16 +23,21 @@ defmodule ContaWeb.AutomatorComponents do
 
   def monaco_editor(assigns) do
     ~H"""
-    <div class="fieldset mb-2 flex flex-col flex-1 min-h-0">
+    <div
+      id={"#{@field.id}-fieldset"}
+      class="fieldset mb-2 flex flex-col flex-1 min-h-[420px] h-full"
+      phx-update="ignore"
+    >
       <span class="label mb-1">{gettext("Code (Lua)")}</span>
-      <div
-        id={"#{@field.id}-editor"}
-        phx-hook="MonacoEditor"
-        phx-update="ignore"
-        data-target={@field.id}
-        data-value={@field.value}
-        style={"flex: 1; min-height: #{@height}; border: 1px solid oklch(var(--bc)/0.2);"}
-      >
+      <div class="relative flex-1 w-full min-h-[420px] overflow-hidden rounded-md border border-base-content/20 bg-base-100">
+        <div
+          id={"#{@field.id}-editor"}
+          class="absolute inset-0 w-full h-full"
+          phx-hook="MonacoEditor"
+          data-target={@field.id}
+          data-value={@field.value}
+        >
+        </div>
       </div>
       <textarea
         class="hidden"

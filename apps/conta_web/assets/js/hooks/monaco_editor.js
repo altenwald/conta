@@ -3,7 +3,9 @@ const MonacoEditor = {
     const monaco = window.MonacoEditorLib;
 
     if (!monaco) {
-      console.error("MonacoEditor hook: window.MonacoEditorLib is not available (monaco_bundle.js failed to load or hasn't loaded yet)");
+      console.error(
+        "MonacoEditor hook: window.MonacoEditorLib is not available (monaco_bundle.js failed to load or hasn't loaded yet)"
+      );
       return;
     }
 
@@ -16,10 +18,6 @@ const MonacoEditor = {
     }
 
     const initialValue = this.el.dataset.value || "";
-    // The app only ships two daisyUI themes ("light"/"dark", see assets/css/app.css),
-    // toggled explicitly by the user and reflected on <html data-theme="...">
-    // (see root.html.heex). Prefer that explicit choice over the OS setting, which
-    // only applies when the user hasn't picked a theme (no data-theme attribute).
     const dataTheme = document.documentElement.getAttribute("data-theme");
     const isDark = dataTheme
       ? dataTheme === "dark"
@@ -31,37 +29,82 @@ const MonacoEditor = {
       theme: isDark ? "vs-dark" : "vs",
       automaticLayout: true,
       minimap: { enabled: false },
+      scrollBeyondLastLine: true,
     });
 
-    // Sync to the hidden input only on blur, not on every keystroke. A
-    // native "input" event bubbling into the surrounding <form>'s
-    // phx-change="validate" would re-render the page while the editor
-    // still has focus. Even though the editor's own container is
-    // phx-update="ignore", that re-render of its siblings was enough to
-    // corrupt Monaco's internal selection/keyboard state on macOS Chrome:
-    // selecting text and pressing Delete/Backspace would silently stop
-    // working (sometimes for the rest of the page's lifetime). Clicking
-    // Save/Run always blurs the editor first, so the hidden input is
-    // never stale at submit time.
+    this.lastSyncedValue = initialValue;
+
+    // Keep hidden input value updated in real time so form submissions / test runs
+    // always see the exact current code even before blur.
+    this.editor.onDidChangeModelContent(() => {
+      if (this.hiddenInput) {
+        this.hiddenInput.value = this.editor.getValue();
+      }
+    });
+
+    // On blur, trigger LiveView validation only if the value actually changed
     this.editor.onDidBlurEditorWidget(() => {
-      this.hiddenInput.value = this.editor.getValue();
-      this.hiddenInput.dispatchEvent(new Event("input", { bubbles: true }));
+      const currentValue = this.editor.getValue();
+      if (this.hiddenInput && currentValue !== this.lastSyncedValue) {
+        this.lastSyncedValue = currentValue;
+        this.hiddenInput.value = currentValue;
+        this.hiddenInput.dispatchEvent(new Event("input", { bubbles: true }));
+      }
     });
 
-    // Monaco's own keyboard-capture element is a real <textarea>, and every
-    // keystroke inside it fires native "input"/"change" events that bubble
-    // by default - straight past this ignored container into the form,
-    // triggering phx-change="validate" on every keystroke regardless of the
-    // blur-only sync above. That is the actual trigger for the corruption
-    // described above: it was never fully fixed, just made less frequent.
-    // Stop those native events at the container boundary; our own
-    // synthetic dispatch above targets the hidden input, which lives
-    // outside this container, so it is unaffected.
+    // Ensure focus is properly claimed on click / mousedown
+    this.el.addEventListener("mousedown", () => {
+      this.editor.focus();
+    });
+    this.el.addEventListener("click", () => {
+      this.editor.focus();
+    });
+
+    // Re-assert focus after LiveView morphdom patches if Monaco was focused
+    this.onPhxUpdate = () => {
+      if (this.editor?.hasTextFocus()) {
+        this.editor.focus();
+      }
+    };
+    document.addEventListener("phx:update", this.onPhxUpdate);
+
+    // Stop ONLY keystroke input and change events from bubbling into LiveView's
+    // form phx-change="validate". Allow all focus and selection events to bubble
+    // so Monaco's internal document listeners operate normally.
     this.el.addEventListener("input", (e) => e.stopPropagation());
     this.el.addEventListener("change", (e) => e.stopPropagation());
+
+    // Explicit ResizeObserver to immediately update Monaco's layout when the
+    // surrounding grid or card size changes (e.g. typing in Description, adding parameters).
+    this.resizeObserver = new ResizeObserver(() => {
+      window.requestAnimationFrame(() => {
+        if (this.editor && this.el) {
+          this.editor.layout();
+        }
+      });
+    });
+    this.resizeObserver.observe(this.el);
+
+    // Initial layout pass
+    window.requestAnimationFrame(() => {
+      this.editor?.layout();
+    });
+  },
+
+  updated() {
+    this.hiddenInput = document.getElementById(this.el.dataset.target);
+
+    // Immediate layout refresh on LiveView DOM update
+    window.requestAnimationFrame(() => {
+      this.editor?.layout();
+    });
   },
 
   destroyed() {
+    if (this.onPhxUpdate) {
+      document.removeEventListener("phx:update", this.onPhxUpdate);
+    }
+    this.resizeObserver?.disconnect();
     this.editor?.dispose();
   },
 };
