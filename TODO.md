@@ -90,3 +90,61 @@ In `apps/conta_web/lib/conta_web/live/contact_live/form_component.ex` and `apps/
 
 In `apps/conta_web/lib/conta_web/router.ex`:
 - Add JSON controller endpoints for `resources "/accounts", Account, only: [:index, :show, :create, :update, :delete]` under the `/ledger/` API scope.
+
+## Automators: result validation after a successful script run
+
+A Lua script can finish without error (`Automator.Lua.run/2` returns `{:ok,
+result}`) and still produce a `result` that doesn't match what the rest of
+the pipeline expects - e.g. a `commands` entry missing `type = "movement"`,
+using a misspelled type, or missing the `data` table. Today this is handled
+inconsistently, and mostly silently, across the three automator kinds:
+
+- **Importer** (`apps/conta/lib/conta/automator.ex:344-366`,
+  `run_importer/4`): the list comprehension
+  `for %{"type" => "movement", "data" => data} <- commands do ... end`
+  silently drops any command that doesn't match that shape. If a script
+  returns 10 commands and 2 have a typo'd `type` or no `data` key, the
+  import just creates 8 movements - no error, no count, no log entry
+  pointing at the 2 that were skipped. The implicit contract (illustrated by
+  `@importer_code_skeleton`) is one input row -> one `"movement"` command,
+  so a silent drop is a silent data-loss bug from the user's point of view.
+- **Shortcut** (`process_result/2`, same file, lines 395-433): the opposite
+  failure mode. `process_result/2` only has clauses for
+  `%{"type" => "transaction", ...}` and `%{"type" => "invoice", ...}`; a
+  command with any other `type` has no matching clause, so
+  `Enum.reduce_while(commands, :ok, &process_result/2)` raises an
+  unstructured `FunctionClauseError` instead of returning a clean
+  validation error.
+- **Filter** (`run_filter/3`): no structural check at all, which is
+  arguably fine since filter output is free-form (just JSON-encoded or
+  exported to Excel), not commands to dispatch.
+- **Test-run path** (`test_run_importer/2`, used by the "test run" panel in
+  `apps/conta_web/lib/conta_web/live/importer_live/form.ex`): does return
+  the raw, unfiltered `commands` list, so a careful user testing a script
+  by hand could in principle spot a malformed entry in the pretty-printed
+  JSON - but there's no automatic count/shape check surfaced (e.g. "8 of 10
+  rows produced a valid movement"), so it's easy to miss.
+
+Proposed direction: add a validation pass, shared across importer/shortcut/
+filter rather than duplicated per kind (e.g. a `Conta.Automator.Validate`
+module), that runs right after a script succeeds and before its commands
+are dispatched or silently filtered:
+
+- Validate each command's shape against the contract for that automator
+  kind (`type` in the allowed set, `data` present as a map), reusing the
+  downstream changesets (`SetAccountTransaction.changeset/1`,
+  `SetInvoice.changeset/1`, `ImportMovements.changeset/1`) where possible
+  instead of re-implementing field-level checks.
+  - Turn `run_importer/4`'s silent drop into an explicit
+    `{:error, {:invalid_commands, [...]}}` (or similar) listing which
+    entries failed and why, instead of quietly filtering them out of
+    `movements`.
+  - Give `process_result/2` a catch-all clause that returns a proper error
+    tuple instead of crashing with `FunctionClauseError`.
+- For importers specifically, consider checking that the number of
+  produced `"movement"` commands matches the number of input rows (or that
+  any discrepancy is explicit/intentional), since 1-row-in -> 1-movement-out
+  is the expectation the skeleton script itself illustrates.
+- Surface the same validation in the test-run panels (importer/shortcut/
+  filter forms) so script authors see "N of M rows/commands were valid"
+  instead of having to eyeball the raw JSON.
