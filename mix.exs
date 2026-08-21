@@ -5,7 +5,7 @@ defmodule Conta.Umbrella.MixProject do
     [
       name: :conta,
       apps_path: "apps",
-      version: "0.3.4",
+      version: "0.3.5",
       start_permanent: Mix.env() == :prod,
       deps: deps(),
       aliases: aliases(),
@@ -18,7 +18,7 @@ defmodule Conta.Umbrella.MixProject do
 
   defp deps do
     [
-      {:observer_cli, "~> 1.6"},
+      {:observer_cli, ">= 0.0.0"},
       {:dialyxir, "~> 1.1", only: [:dev, :test], runtime: false},
       {:ex_doc, "~> 0.24", only: [:dev, :test], runtime: false},
       {:credo, ">= 0.0.0", only: [:dev, :test], runtime: false},

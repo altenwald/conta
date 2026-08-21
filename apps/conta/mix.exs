@@ -4,7 +4,7 @@ defmodule Conta.MixProject do
   def project do
     [
       app: :conta,
-      version: "0.3.4",
+      version: "0.3.5",
       build_path: "../../_build",
       config_path: "../../config/config.exs",
       deps_path: "../../deps",
@@ -187,7 +187,7 @@ defmodule Conta.MixProject do
       {:money, "~> 1.12"},
       {:dns_cluster, "~> 0.1"},
       {:phoenix_pubsub, "~> 2.1"},
-      {:req, "~> 0.6.1"},
+      {:req, "~> 0.7.3"},
       {:swoosh, "~> 1.14"},
       {:finch, "~> 0.17"},
       {:plotto, "~> 0.2"},

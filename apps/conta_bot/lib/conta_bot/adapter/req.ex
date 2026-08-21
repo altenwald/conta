@@ -33,7 +33,7 @@ defmodule ContaBot.Adapter.Req do
 
     req =
       if req.options[:plug] do
-        %{req | adapter: &Req.Steps.run_plug/1}
+        %{req | adapter: Req.Plug}
       else
         req
       end
