@@ -33,6 +33,26 @@ defmodule ContaWeb.Api.Book.Invoice do
     end
   end
 
+  # sobelow_skip ["XSS.SendResp"]
+  def download(conn, %{"id" => id}) do
+    with invoice when invoice != nil <- Book.get_invoice(id),
+         template = Book.get_template_by_name!(invoice.company.nif, invoice.template),
+         {:ok, pdf} <- ContaWeb.InvoiceController.to_pdf(invoice, template) do
+      conn
+      |> put_resp_content_type("application/pdf")
+      |> put_resp_header(
+        "content-disposition",
+        "attachment; filename=#{invoice.invoice_number}.pdf"
+      )
+      |> send_resp(200, pdf)
+    else
+      nil ->
+        conn
+        |> put_status(:not_found)
+        |> json(%{"errors" => %{"id" => "invoice not found"}})
+    end
+  end
+
   def delete(conn, %{"id" => id}) do
     with invoice when invoice != nil <- Book.get_invoice(id),
          :ok <- dispatch(Book.get_remove_invoice(invoice)) do

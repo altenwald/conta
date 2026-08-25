@@ -191,5 +191,22 @@ defmodule Conta.BookTest do
     test "list_templates/1 returns empty for unknown nif" do
       assert [] = Book.list_templates("NONEXISTENT")
     end
+
+    test "get_template_by_name/2 returns template or nil" do
+      _template =
+        Conta.Repo.insert!(%Conta.Projector.Book.Template{
+          id: Ecto.UUID.generate(),
+          nif: "A55666777",
+          name: "test_tpl",
+          css: "h1 { color: red; }",
+          logo: nil,
+          logo_mime_type: nil
+        })
+
+      assert %Conta.Projector.Book.Template{name: "test_tpl"} =
+               Book.get_template_by_name("A55666777", "test_tpl")
+
+      assert nil == Book.get_template_by_name("A55666777", "nonexistent")
+    end
   end
 end

@@ -82,8 +82,8 @@ defmodule ContaWeb.Router do
 
     scope "/books/", Book do
       resources "/invoices", Invoice, only: [:index, :show, :create, :update, :delete]
+      get "/invoices/:id/download", Invoice, :download
       get "/clients/:client_id/invoices", Invoice, :index
-      get "/contacts/:client_id/invoices", Invoice, :index
       resources "/expenses", Expense, only: [:index, :show, :create, :update, :delete]
       get "/expenses/:id/download/:attachment_id", Expense, :download
     end

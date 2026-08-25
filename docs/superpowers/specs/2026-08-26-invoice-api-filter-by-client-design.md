@@ -6,9 +6,10 @@
 
 ## Overview
 
-Add the capability to filter invoices by client in the JSON API (`ContaWeb.Api.Book.Invoice`). The client can be specified either via a query parameter `client_id` (or `client` / `client_nif`) in `GET /api/v1/books/invoices` or via convenient routes `GET /api/v1/books/clients/:client_id/invoices` and `GET /api/v1/books/contacts/:client_id/invoices`.
+Add the capability to filter invoices by client in the JSON API (`ContaWeb.Api.Book.Invoice`). The client can be specified either via a query parameter `client_id` (or `client` / `client_nif`) in `GET /api/v1/books/invoices` or via convenient nested route `GET /api/v1/books/clients/:client_id/invoices`.
 
 ## Requirements
+
 
 1. **Client Identification**:
    - `client_id` can be a Contact UUID (primary key in `directories_contacts`). In this case, `Conta.Directory.get_contact/1` resolves the contact's `nif`.
@@ -27,7 +28,7 @@ Add the capability to filter invoices by client in the JSON API (`ContaWeb.Api.B
 3. **Routing**:
    - `GET /api/v1/books/invoices?client_id=...`
    - `GET /api/v1/books/clients/:client_id/invoices`
-   - `GET /api/v1/books/contacts/:client_id/invoices`
+
 
 4. **Testing**:
    - Unit tests for `Conta.Book` client filtering.

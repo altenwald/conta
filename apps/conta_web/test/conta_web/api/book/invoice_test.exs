@@ -74,20 +74,6 @@ defmodule ContaWeb.Api.Book.InvoiceTest do
       assert hd(invoices)["invoice_number"] == "2026-00001"
     end
 
-    test "filters invoices via nested /contacts/:client_id/invoices route", %{authed_conn: conn} do
-      contact = Conta.DirectoryFixtures.insert(:contact, %{nif: "B77777777"})
-      client1 = %{invoice_client_factory() | nif: "B77777777"}
-      client2 = %{invoice_client_factory() | nif: "B88888888"}
-
-      insert(:invoice, %{invoice_number: "2026-00001", client: client1})
-      insert(:invoice, %{invoice_number: "2026-00002", client: client2})
-
-      conn = get(conn, ~p"/api/v1/books/contacts/#{contact.id}/invoices")
-      assert invoices = json_response(conn, 200)
-      assert length(invoices) == 1
-      assert hd(invoices)["invoice_number"] == "2026-00001"
-    end
-
     test "combines client filter with term and year", %{authed_conn: conn} do
       client = %{invoice_client_factory() | nif: "B11111111"}
 
@@ -114,6 +100,48 @@ defmodule ContaWeb.Api.Book.InvoiceTest do
 
       conn = get(conn, ~p"/api/v1/books/invoices?client_id=NONEXISTENT")
       assert json_response(conn, 200) == []
+    end
+  end
+
+  describe "GET /api/v1/books/invoices/:id/download" do
+    test "requires API token", %{conn: conn} do
+      conn = get(conn, ~p"/api/v1/books/invoices/#{Ecto.UUID.generate()}/download")
+      assert response(conn, 401) =~ "No access for you"
+    end
+
+    test "returns 404 when invoice does not exist", %{authed_conn: conn} do
+      conn = get(conn, ~p"/api/v1/books/invoices/#{Ecto.UUID.generate()}/download")
+      assert %{"errors" => %{"id" => "invoice not found"}} = json_response(conn, 404)
+    end
+
+    test "downloads invoice as PDF", %{authed_conn: conn} do
+      invoice =
+        insert(:invoice, %{
+          invoice_number: "2026-00001",
+          company: %{invoice_company_factory() | nif: "A55666777"},
+          template: "default"
+        })
+
+      Conta.Repo.insert!(%Conta.Projector.Book.Template{
+        id: Ecto.UUID.generate(),
+        nif: "A55666777",
+        name: "default",
+        css: "h1 { color: blue; }",
+        logo: nil,
+        logo_mime_type: nil
+      })
+
+      conn = get(conn, ~p"/api/v1/books/invoices/#{invoice.id}/download")
+
+      assert response_content_type(conn, :pdf)
+
+      assert get_resp_header(conn, "content-disposition") == [
+               "attachment; filename=2026-00001.pdf"
+             ]
+
+      pdf = response(conn, 200)
+      assert String.starts_with?(pdf, "%PDF-1.4")
+      assert String.ends_with?(pdf, "%%EOF")
     end
   end
 end

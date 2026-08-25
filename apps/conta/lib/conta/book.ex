@@ -203,6 +203,20 @@ defmodule Conta.Book do
     |> Repo.all()
   end
 
+  def get_template_by_name(nif \\ nil, name)
+
+  def get_template_by_name(nil, name) do
+    get_template_by_name(Application.get_env(:conta, :default_company_nif), name)
+  end
+
+  def get_template_by_name(nif, nil) do
+    get_template_by_name(nif, Application.get_env(:conta, :default_template))
+  end
+
+  def get_template_by_name(nif, name) do
+    Repo.get_by(Template, name: name, nif: nif)
+  end
+
   def get_template_by_name!(nif \\ nil, name)
 
   def get_template_by_name!(nil, name) do
