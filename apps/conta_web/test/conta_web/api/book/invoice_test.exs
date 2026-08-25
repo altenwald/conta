@@ -7,6 +7,16 @@ defmodule ContaWeb.Api.Book.InvoiceTest do
   alias Conta.AccountsFixtures
 
   setup %{conn: conn} do
+    :ok =
+      Conta.Commanded.Application.dispatch(%Conta.Command.SetCompany{
+        nif: "A55666777",
+        name: "Great Company SA",
+        address: "My Full Address",
+        postcode: "28000",
+        city: "Madrid",
+        country: "ES"
+      })
+
     user = AccountsFixtures.insert(:user) |> AccountsFixtures.confirm_user()
     token = Accounts.create_user_api_token(user)
 
@@ -142,6 +152,33 @@ defmodule ContaWeb.Api.Book.InvoiceTest do
       pdf = response(conn, 200)
       assert String.starts_with?(pdf, "%PDF-1.4")
       assert String.ends_with?(pdf, "%%EOF")
+    end
+  end
+
+  describe "GET /api/v1/books/invoices/:id" do
+    test "shows invoice when exists", %{authed_conn: conn} do
+      invoice = insert(:invoice, %{invoice_number: "2026-00001"})
+      conn = get(conn, ~p"/api/v1/books/invoices/#{invoice.id}")
+      assert %{"invoice_number" => "2026-00001"} = json_response(conn, 200)
+    end
+
+    test "returns 404 when invoice does not exist", %{authed_conn: conn} do
+      conn = get(conn, ~p"/api/v1/books/invoices/#{Ecto.UUID.generate()}")
+      assert %{"errors" => %{"id" => "invoice not found"}} = json_response(conn, 404)
+    end
+  end
+
+  describe "POST /api/v1/books/invoices" do
+    test "returns 400 when params are invalid", %{authed_conn: conn} do
+      conn = post(conn, ~p"/api/v1/books/invoices", %{})
+      assert %{"errors" => _} = json_response(conn, 400)
+    end
+  end
+
+  describe "DELETE /api/v1/books/invoices/:id" do
+    test "returns 404 when invoice does not exist", %{authed_conn: conn} do
+      conn = delete(conn, ~p"/api/v1/books/invoices/#{Ecto.UUID.generate()}")
+      assert %{"errors" => %{"id" => "invoice not found"}} = json_response(conn, 404)
     end
   end
 end

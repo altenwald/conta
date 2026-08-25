@@ -9,6 +9,10 @@ defmodule ContaWeb.Api.Book.InvoiceJSON do
     Enum.map(invoices, &data/1)
   end
 
+  def show(%{invoice: invoice}) do
+    data(invoice)
+  end
+
   defp data(invoice) do
     %{
       "invoice_number" => invoice.invoice_number,

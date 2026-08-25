@@ -28,9 +28,11 @@ defmodule ContaBot.MixProject do
       {:jason, "~> 1.4"},
       {:gen_state_machine, "~> 3.0"},
       {:countries, "~> 1.6"},
+      {:plug, "~> 1.0"},
       {:conta, in_umbrella: true},
       {:conta_web, in_umbrella: true},
       {:doctor, ">= 0.0.0", only: [:dev, :test], runtime: false}
     ]
+
   end
 end

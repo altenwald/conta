@@ -187,7 +187,9 @@ defmodule Conta.MixProject do
       {:money, "~> 1.12"},
       {:dns_cluster, "~> 0.1"},
       {:phoenix_pubsub, "~> 2.1"},
+      {:plug, "~> 1.0"},
       {:req, "~> 0.7.3"},
+
       {:swoosh, "~> 1.14"},
       {:finch, "~> 0.17"},
       {:plotto, "~> 0.3"},

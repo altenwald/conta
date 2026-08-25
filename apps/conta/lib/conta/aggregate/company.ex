@@ -255,7 +255,7 @@ defmodule Conta.Aggregate.Company do
   def execute(%__MODULE__{invoice_numbers: invoice_numbers}, %RemoveInvoice{} = command) do
     year = command.invoice_date.year
 
-    if MapSet.member?(invoice_numbers[year], command.invoice_number) do
+    if MapSet.member?(invoice_numbers[year] || MapSet.new(), command.invoice_number) do
       command
       |> Map.from_struct()
       |> InvoiceRemoved.changeset()
