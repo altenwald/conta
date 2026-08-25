@@ -21,6 +21,28 @@ defmodule Conta.BookTest do
       assert [] = Book.list_invoices(1, 2)
     end
 
+    test "list_invoices/3 filters by client NIF" do
+      client1 = %{invoice_client_factory() | nif: "B11111111"}
+      client2 = %{invoice_client_factory() | nif: "B22222222"}
+      insert(:invoice, %{invoice_number: "2023-00001", client: client1})
+      insert(:invoice, %{invoice_number: "2023-00002", client: client2})
+
+      assert [inv] = Book.list_invoices(:infinity, 0, "B11111111")
+      assert inv.invoice_number == "2023-00001"
+      assert [] = Book.list_invoices(:infinity, 0, "B99999999")
+    end
+
+    test "list_invoices/3 filters by contact UUID" do
+      contact = Conta.DirectoryFixtures.insert(:contact, %{nif: "B33333333"})
+      client = %{invoice_client_factory() | nif: "B33333333"}
+      insert(:invoice, %{invoice_number: "2023-00001", client: client})
+
+      insert(:invoice, %{invoice_number: "2023-00002", client: %{invoice_client_factory() | nif: "B44444444"}})
+
+      assert [inv] = Book.list_invoices(:infinity, 0, contact.id)
+      assert inv.invoice_number == "2023-00001"
+    end
+
     test "list_invoices_by_term_and_year/2 filters by year" do
       insert(:invoice, %{invoice_date: ~D[2023-06-15], invoice_number: "2023-00001"})
       insert(:invoice, %{invoice_date: ~D[2022-06-15], invoice_number: "2022-00001"})
@@ -33,6 +55,28 @@ defmodule Conta.BookTest do
       insert(:invoice, %{invoice_date: ~D[2023-03-15], invoice_number: "2023-00001"})
       insert(:invoice, %{invoice_date: ~D[2023-07-15], invoice_number: "2023-00002"})
       result = Book.list_invoices_by_term_and_year("Q1", nil)
+      assert length(result) == 1
+      assert hd(result).invoice_number == "2023-00001"
+    end
+
+    test "list_invoices_by_term_and_year/3 filters by term, year, and client" do
+      client1 = %{invoice_client_factory() | nif: "B11111111"}
+      client2 = %{invoice_client_factory() | nif: "B22222222"}
+      insert(:invoice, %{invoice_date: ~D[2023-03-15], invoice_number: "2023-00001", client: client1})
+      insert(:invoice, %{invoice_date: ~D[2023-03-20], invoice_number: "2023-00002", client: client2})
+
+      result = Book.list_invoices_by_term_and_year("Q1", "2023", "B11111111")
+      assert length(result) == 1
+      assert hd(result).invoice_number == "2023-00001"
+    end
+
+    test "list_invoices_filtered/1 with client filter" do
+      client1 = %{invoice_client_factory() | nif: "B11111111"}
+      client2 = %{invoice_client_factory() | nif: "B22222222"}
+      insert(:invoice, %{invoice_number: "2023-00001", client: client1})
+      insert(:invoice, %{invoice_number: "2023-00002", client: client2})
+
+      result = Book.list_invoices_filtered(client: "B11111111")
       assert length(result) == 1
       assert hd(result).invoice_number == "2023-00001"
     end

@@ -10,14 +10,16 @@ defmodule ContaWeb.Api.Book.Invoice do
   @invoices_per_page "5"
 
   def index(conn, %{"term" => term, "year" => year} = params) do
-    invoices = Book.list_invoices_by_term_and_year(term, year)
+    client_id = params["client_id"] || params["client"]
+    invoices = Book.list_invoices_by_term_and_year(term, year, client_id)
     render(conn, invoices: invoices, extended: params["extended"] == "true")
   end
 
   def index(conn, params) do
     page = String.to_integer(params["page"] || "1") - 1
     invoices_per_page = String.to_integer(params["page-size"] || @invoices_per_page)
-    invoices = Book.list_invoices(invoices_per_page, page * invoices_per_page)
+    client_id = params["client_id"] || params["client"]
+    invoices = Book.list_invoices(invoices_per_page, page * invoices_per_page, client_id)
     render(conn, invoices: invoices, extended: params["extended"] == "true")
   end
 

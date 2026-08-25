@@ -14,6 +14,19 @@ defmodule Conta.BookFixtures do
     }
   end
 
+  def invoice_client_factory do
+    %Conta.Projector.Book.Invoice.Client{
+      name: "Acme Corp",
+      nif: "B11222333",
+      address: "Industrial Road 1",
+      postcode: "28001",
+      city: "Madrid",
+      state: "Madrid",
+      country: "ES",
+      intracommunity: false
+    }
+  end
+
   def invoice_company_factory do
     %Conta.Projector.Book.Invoice.Company{
       id: Ecto.UUID.generate(),

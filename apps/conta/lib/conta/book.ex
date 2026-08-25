@@ -44,10 +44,32 @@ defmodule Conta.Book do
     from(i in query, where: fragment("EXTRACT(YEAR FROM ?)", i.invoice_date) == ^year)
   end
 
-  def list_invoices_by_term_and_year(term, year) do
+  defp by_client(query, nil), do: query
+  defp by_client(query, ""), do: query
+
+  defp by_client(query, client_id) when is_binary(client_id) do
+    nif =
+      case Ecto.UUID.cast(client_id) do
+        {:ok, uuid} ->
+          case Conta.Directory.get_contact(uuid) do
+            %Conta.Projector.Directory.Contact{nif: nif} when is_binary(nif) and nif != "" -> nif
+            _ -> client_id
+          end
+
+        :error ->
+          client_id
+      end
+
+    from(i in query,
+      where: fragment("?->>'nif' = ? OR ?->>'id' = ?", i.client, ^nif, i.client, ^client_id)
+    )
+  end
+
+  def list_invoices_by_term_and_year(term, year, client \\ nil) do
     from(i in Invoice, order_by: [desc: :invoice_number])
     |> by_term(term)
     |> by_year(year)
+    |> filter(client, &by_client/2)
     |> Repo.all()
   end
 
@@ -73,6 +95,7 @@ defmodule Conta.Book do
     |> filter(filters[:term], &by_term/2)
     |> filter(filters[:year], &by_year/2)
     |> filter(filters[:status], &by_status/2)
+    |> filter(filters[:client] || filters[:client_id], &by_client/2)
     |> apply_limit(limit)
     |> Repo.all()
   end
@@ -130,8 +153,9 @@ defmodule Conta.Book do
     from(e in query, limit: ^limit, offset: ^offset)
   end
 
-  def list_invoices(limit \\ :infinity, offset \\ 0) do
+  def list_invoices(limit \\ :infinity, offset \\ 0, client \\ nil) do
     list_invoices_query(limit, offset)
+    |> filter(client, &by_client/2)
     |> Repo.all()
   end
 
