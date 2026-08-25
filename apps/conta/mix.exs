@@ -183,8 +183,9 @@ defmodule Conta.MixProject do
       {:commanded_eventstore_adapter, "~> 1.4"},
       {:ecto_sql, "~> 3.14"},
       {:postgrex, ">= 0.0.0"},
-      {:typed_ecto_schema, "~> 0.4"},
+      {:typed_ecto_schema, "~> 0.5"},
       {:money, "~> 1.12"},
+
       {:dns_cluster, "~> 0.1"},
       {:phoenix_pubsub, "~> 2.1"},
       {:plug, "~> 1.0"},
