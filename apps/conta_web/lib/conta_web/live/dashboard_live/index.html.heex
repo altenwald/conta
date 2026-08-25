@@ -3,7 +3,20 @@
     <:breadcrumb label={gettext("Dashboard")} href={~p"/"} />
   </.breadcrumbs>
 
-  <div class="grid grid-cols-12 gap-6 mt-6">
+  <div id="dashboard-charts" phx-hook="ChartTooltip" class="grid grid-cols-12 gap-6 mt-6">
+    <div class="col-span-12">
+      <div class="card bg-base-100 shadow-xl border border-base-200">
+        <div class="bg-base-200 px-4 py-3 border-b border-base-300 rounded-t-2xl">
+          <h2 class="card-title text-base m-0">
+            {gettext("Banks")}
+          </h2>
+        </div>
+        <div class="card-body p-6 chart-container">
+          <% # sobelow_skip ["XSS.Raw"] %>
+          {raw(Conta.Stats.graph_banks(@currency))}
+        </div>
+      </div>
+    </div>
     <div class="col-span-12 lg:col-span-6">
       <div class="card bg-base-100 shadow-xl border border-base-200">
         <div class="bg-base-200 px-4 py-3 border-b border-base-300 rounded-t-2xl">
@@ -11,8 +24,9 @@
             {gettext("Outcome")}
           </h2>
         </div>
-        <div class="card-body p-6">
-          <img src={~p"/dashboard/outcome/#{@currency}"} alt="Outcome chart" />
+        <div class="card-body p-6 chart-container">
+          <% # sobelow_skip ["XSS.Raw"] %>
+          {raw(Conta.Stats.graph_outcome(@currency))}
         </div>
       </div>
     </div>
@@ -23,8 +37,9 @@
             {gettext("Income")}
           </h2>
         </div>
-        <div class="card-body p-6">
-          <img src={~p"/dashboard/income/#{@currency}"} alt="Income chart" />
+        <div class="card-body p-6 chart-container">
+          <% # sobelow_skip ["XSS.Raw"] %>
+          {raw(Conta.Stats.graph_income(@currency))}
         </div>
       </div>
     </div>
@@ -35,8 +50,9 @@
             {gettext("Profits and Loses")}
           </h2>
         </div>
-        <div class="card-body p-6">
-          <img src={~p"/dashboard/pnl/#{@currency}"} alt="PnL chart" />
+        <div class="card-body p-6 chart-container">
+          <% # sobelow_skip ["XSS.Raw"] %>
+          {raw(Conta.Stats.graph_pnl(@currency, 6))}
         </div>
       </div>
     </div>
@@ -48,8 +64,9 @@
             {raw(gettext("Patrimony"))}
           </h2>
         </div>
-        <div class="card-body p-6">
-          <img src={~p"/dashboard/patrimony/#{@currency}"} alt="Patrimony chart" />
+        <div class="card-body p-6 chart-container">
+          <% # sobelow_skip ["XSS.Raw"] %>
+          {raw(Conta.Stats.graph_patrimony(@currency))}
         </div>
       </div>
     </div>

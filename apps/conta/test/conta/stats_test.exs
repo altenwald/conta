@@ -1,5 +1,6 @@
 defmodule Conta.StatsTest do
   use Conta.DataCase, async: true
+  import Conta.LedgerFixtures
 
   alias Conta.Stats
 
@@ -30,6 +31,79 @@ defmodule Conta.StatsTest do
 
     test "graph_outcome/3 generates SVG without error" do
       svg = Stats.graph_outcome(:EUR, 4, 12)
+      assert is_binary(svg)
+      assert String.starts_with?(svg, "<svg")
+    end
+  end
+
+  describe "banks candlestick graphs" do
+    test "list_banks/2 returns 12 months with 0s when no bank accounts or entries exist" do
+      items = Stats.list_banks(:EUR, 12)
+      assert length(items) == 12
+
+      assert Enum.all?(items, fn item ->
+               Map.has_key?(item, :label) and
+                 item.open == 0.0 and item.high == 0.0 and item.low == 0.0 and item.close == 0.0
+             end)
+    end
+
+    test "list_banks/2 calculates OHLC metrics across bank accounts" do
+      _account = insert(:account, %{name: ~w[Assets Bank], type: :assets, currency: :EUR})
+
+      today = Date.utc_today()
+      this_month = Date.beginning_of_month(today)
+      prev_month = Date.beginning_of_month(Date.shift(today, month: -1))
+
+      # Prior entry in previous month
+      insert(:entry, %{
+        account_name: ~w[Assets Bank],
+        on_date: prev_month,
+        debit: 1_000_00,
+        credit: 0,
+        balance: 1_000_00
+      })
+
+      # Entry 1 in this month: +500 (balance becomes 1500)
+      insert(:entry, %{
+        account_name: ~w[Assets Bank],
+        on_date: this_month,
+        debit: 500_00,
+        credit: 0,
+        balance: 1_500_00
+      })
+
+      # Entry 2 in this month: -200 (balance becomes 1300)
+      insert(:entry, %{
+        account_name: ~w[Assets Bank],
+        on_date: this_month,
+        debit: 0,
+        credit: 200_00,
+        balance: 1_300_00
+      })
+
+      items = Stats.list_banks(:EUR, 2)
+      assert length(items) == 2
+
+      [prev_data, this_data] = items
+
+      assert prev_data.open == 0.0
+      assert prev_data.high == 1000.0
+      assert prev_data.low == 0.0
+      assert prev_data.close == 1000.0
+
+      assert this_data.open == 1000.0
+      assert this_data.high == 1500.0
+      assert this_data.low == 1000.0
+      assert this_data.close == 1300.0
+    end
+
+    test "chart_banks/2 creates Plotto.CandlestickChart struct" do
+      chart = Stats.chart_banks(:EUR, 12)
+      assert %Plotto.CandlestickChart{} = chart
+    end
+
+    test "graph_banks/2 generates SVG binary" do
+      svg = Stats.graph_banks(:EUR, 12)
       assert is_binary(svg)
       assert String.starts_with?(svg, "<svg")
     end

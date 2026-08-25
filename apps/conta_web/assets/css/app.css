@@ -206,3 +206,19 @@ tr.simple-invoice td {
     }
   }
 }
+
+/* Responsive SVG chart containers and dark theme adjustments */
+.chart-container svg {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+:where([data-theme="dark"]) .chart-container svg text {
+  fill: #E5E7EB !important;
+}
+
+:where([data-theme="dark"]) .chart-container svg line {
+  stroke: #4B5563 !important;
+}
+

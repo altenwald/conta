@@ -190,8 +190,9 @@ defmodule Conta.MixProject do
       {:req, "~> 0.7.3"},
       {:swoosh, "~> 1.14"},
       {:finch, "~> 0.17"},
-      {:plotto, "~> 0.2"},
+      {:plotto, "~> 0.3"},
       {:luerl, "~> 1.1"},
+
       {:elixlsx, "~> 0.6"},
       {:nimble_csv, "~> 1.2"},
       {:ex_machina, "~> 2.7", only: :test},

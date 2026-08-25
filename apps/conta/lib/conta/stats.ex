@@ -58,10 +58,11 @@ defmodule Conta.Stats do
     Plotto.BarChart.new!([%{name: "Patrimony", data: items}], width: 640, height: 480)
   end
 
-  def graph_patrimony(currency) when is_atom(currency) do
+  def graph_patrimony(currency, theme \\ :system) when is_atom(currency) do
     currency
     |> chart_patrimony()
     |> Plotto.to_svg!()
+    |> inject_theme_style(theme)
   end
 
   defp to_date({month, year}) do
@@ -211,10 +212,11 @@ defmodule Conta.Stats do
     Plotto.BarChart.new!(series, mode: :grouped, legend: :top_right, width: 640, height: 480)
   end
 
-  def graph_pnl(currency, months) when is_atom(currency) do
+  def graph_pnl(currency, months, theme \\ :system) when is_atom(currency) do
     currency
     |> chart_pnl(months)
     |> Plotto.to_svg!()
+    |> inject_theme_style(theme)
   end
 
   def chart_outcome(currency, groups \\ 4, months \\ 12) when is_atom(currency) do
@@ -222,10 +224,11 @@ defmodule Conta.Stats do
     chart_by(Outcome, data, currency, groups, months)
   end
 
-  def graph_outcome(currency, groups \\ 4, months \\ 12) when is_atom(currency) do
+  def graph_outcome(currency, groups \\ 4, months \\ 12, theme \\ :system) when is_atom(currency) do
     currency
     |> chart_outcome(groups, months)
     |> Plotto.to_svg!()
+    |> inject_theme_style(theme)
   end
 
   def chart_income(currency, groups \\ 4, months \\ 12) when is_atom(currency) do
@@ -233,10 +236,11 @@ defmodule Conta.Stats do
     chart_by(Income, data, currency, groups, months)
   end
 
-  def graph_income(currency, groups \\ 4, months \\ 12) when is_atom(currency) do
+  def graph_income(currency, groups \\ 4, months \\ 12, theme \\ :system) when is_atom(currency) do
     currency
     |> chart_income(groups, months)
     |> Plotto.to_svg!()
+    |> inject_theme_style(theme)
   end
 
   defp chart_by(table, data, _currency, groups, months) do
@@ -274,6 +278,156 @@ defmodule Conta.Stats do
       end)
 
     Plotto.BarChart.new!(series, mode: :stacked, legend: :top_right, width: 640, height: 480)
+  end
+
+  def list_banks(currency \\ :EUR, months \\ 12) when is_atom(currency) and is_integer(months) do
+    today = Date.utc_today()
+
+    month_dates =
+      (months - 1)..0
+      |> Enum.map(fn offset ->
+        Date.beginning_of_month(Date.shift(today, month: -offset))
+      end)
+
+    start_date = List.first(month_dates)
+    end_date = Date.end_of_month(today)
+
+    if bank_accounts_exist?(currency) do
+      compute_banks_ohlc(month_dates, currency, start_date, end_date)
+    else
+      empty_banks_data(month_dates)
+    end
+  end
+
+  defp bank_accounts_exist?(currency) do
+    from(
+      a in Conta.Projector.Ledger.Account,
+      where: a.type == :assets and a.currency == ^currency,
+      where:
+        fragment("lower(?[1])", a.name) in ~w[bancos banco bank banks] or
+          fragment("lower(?[2])", a.name) in ~w[bancos banco bank banks]
+    )
+    |> Repo.exists?()
+  end
+
+  defp empty_banks_data(month_dates) do
+    Enum.map(month_dates, fn month_date ->
+      %{
+        label: to_date({month_date.month, month_date.year}),
+        open: 0.0,
+        high: 0.0,
+        low: 0.0,
+        close: 0.0
+      }
+    end)
+  end
+
+  defp compute_banks_ohlc(month_dates, currency, start_date, end_date) do
+    initial_balance = get_initial_bank_balance(currency, start_date)
+    entries_by_month = get_bank_entries_by_month(currency, start_date, end_date)
+
+    {ohlc_list, _final_balance} =
+      Enum.map_reduce(month_dates, initial_balance, fn month_date, running_bal ->
+        month_entries = Map.get(entries_by_month, month_date, [])
+        compute_month_ohlc(month_date, month_entries, running_bal)
+      end)
+
+    ohlc_list
+  end
+
+  defp get_initial_bank_balance(currency, start_date) do
+    from(
+      e in bank_entries_query(currency),
+      where: e.on_date < ^start_date,
+      select: %{debit: e.debit, credit: e.credit}
+    )
+    |> Repo.all()
+    |> Enum.reduce(Money.new(0, currency), fn e, acc ->
+      acc
+      |> Money.add(e.debit)
+      |> Money.subtract(e.credit)
+    end)
+  end
+
+  defp get_bank_entries_by_month(currency, start_date, end_date) do
+    from(
+      e in bank_entries_query(currency),
+      where: e.on_date >= ^start_date and e.on_date <= ^end_date,
+      order_by: [asc: e.on_date, asc: e.inserted_at],
+      select: %{on_date: e.on_date, debit: e.debit, credit: e.credit}
+    )
+    |> Repo.all()
+    |> Enum.group_by(fn e -> Date.beginning_of_month(e.on_date) end)
+  end
+
+  defp bank_entries_query(currency) do
+    from(
+      e in Conta.Projector.Ledger.Entry,
+      join: a in Conta.Projector.Ledger.Account,
+      on: e.account_name == a.name,
+      where: a.type == :assets and a.currency == ^currency,
+      where:
+        fragment("lower(?[1])", a.name) in ~w[bancos banco bank banks] or
+          fragment("lower(?[2])", a.name) in ~w[bancos banco bank banks]
+    )
+  end
+
+  defp compute_month_ohlc(month_date, month_entries, open_bal) do
+    {close_bal, high_bal, low_bal} =
+      Enum.reduce(month_entries, {open_bal, open_bal, open_bal}, &update_ohlc_step/2)
+
+    item = %{
+      label: to_date({month_date.month, month_date.year}),
+      open: to_float(open_bal),
+      high: to_float(high_bal),
+      low: to_float(low_bal),
+      close: to_float(close_bal)
+    }
+
+    {item, close_bal}
+  end
+
+  defp update_ohlc_step(entry, {curr, high, low}) do
+    next_curr =
+      curr
+      |> Money.add(entry.debit)
+      |> Money.subtract(entry.credit)
+
+    next_high = if Money.cmp(next_curr, high) == :gt, do: next_curr, else: high
+    next_low = if Money.cmp(next_curr, low) == :lt, do: next_curr, else: low
+
+    {next_curr, next_high, next_low}
+  end
+
+  def chart_banks(currency \\ :EUR, months \\ 12) when is_atom(currency) do
+    data = list_banks(currency, months)
+    Plotto.CandlestickChart.new!(data, width: 1200, height: 480)
+  end
+
+  def graph_banks(currency \\ :EUR, months \\ 12, theme \\ :system) when is_atom(currency) do
+    currency
+    |> chart_banks(months)
+    |> Plotto.to_svg!()
+    |> inject_theme_style(theme)
+  end
+
+  @doc """
+  Injects a `<style>` tag into the SVG root for light and dark theme adaptation.
+  """
+  def inject_theme_style(svg, theme \\ :system) do
+    style =
+      case theme do
+        :dark ->
+          "<style>text{fill:#E5E7EB;font-family:ui-sans-serif,system-ui,sans-serif;}line{stroke:#4B5563;}</style>"
+
+        :light ->
+          "<style>text{fill:#374151;font-family:ui-sans-serif,system-ui,sans-serif;}line{stroke:#D1D5DB;}</style>"
+
+        _ ->
+          "<style>text{fill:#374151;font-family:ui-sans-serif,system-ui,sans-serif;}line{stroke:#D1D5DB;}@media(prefers-color-scheme:dark){text{fill:#E5E7EB!important;}line{stroke:#4B5563!important;}}</style>"
+      end
+
+    String.replace(svg, ~r/<svg([^>]*)>/, "<svg\\1>#{style}", global: false)
   end
 
   defp to_float(money) do

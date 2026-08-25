@@ -5,6 +5,7 @@ defmodule ContaBot.Action.Graph do
   @impl ContaBot.Action
   def handle({:init, _command}, context) do
     options = [
+      {"Banks", "graph banks"},
       {"Patrimony", "graph patrimony"},
       {"Income", "graph income"},
       {"Outcome", "graph outcome"},
@@ -12,6 +13,19 @@ defmodule ContaBot.Action.Graph do
     ]
 
     answer_select(context, "What kind of graphic do you want to get?", options)
+  end
+
+  def handle({:callback, "banks"}, context) do
+    options =
+      for currency <- Conta.Ledger.list_used_currencies() do
+        name = Money.Currency.name(currency)
+        symbol = Money.Currency.symbol(currency)
+        {"#{name} (#{symbol})", "graph banks #{currency}"}
+      end
+
+    context
+    |> delete_callback()
+    |> answer_select("What banks currency do you want to see?", options)
   end
 
   def handle({:callback, "patrimony"}, context) do
@@ -64,6 +78,23 @@ defmodule ContaBot.Action.Graph do
     context
     |> delete_callback()
     |> answer_select("What profits & losses currency do you want to see?", options)
+  end
+
+  def handle({:callback, "banks " <> currency}, context) do
+    chart =
+      currency
+      |> get_currency()
+      |> Conta.Stats.chart_banks(12)
+
+    case Plotto.to_png(chart) do
+      {:ok, image} ->
+        ExGram.send_photo(get_chat_id(context), {:file_content, image, "banks.png"})
+        delete(context, context.update.callback_query.message)
+
+      {:error, reason} ->
+        Logger.error("trying to create image wrong! #{inspect(reason)}")
+        answer(context, "Error trying to create the image")
+    end
   end
 
   def handle({:callback, "patrimony " <> currency}, context) do
