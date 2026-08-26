@@ -23,6 +23,10 @@ defmodule Conta.Command.SetInvoice do
     field :comments, :string
     field :destination_country, :string
     field :payment_method, :string
+    field :is_credit_note, :boolean, default: false
+    field :origin_invoice_number, :string
+    field :origin_invoice_date, :date
+    field :origin_invoice_id, :binary_id
 
     embeds_many :details, Detail, on_replace: :delete do
       field :sku, :string
@@ -36,7 +40,7 @@ defmodule Conta.Command.SetInvoice do
   end
 
   @required_fields ~w[nif action invoice_date currency type subtotal_price tax_price total_price payment_method]a
-  @optional_fields ~w[name destination_country invoice_number paid_date client_nif template due_date comments]a
+  @optional_fields ~w[name destination_country invoice_number paid_date client_nif template due_date comments is_credit_note origin_invoice_number origin_invoice_date origin_invoice_id]a
 
   @doc false
   def changeset(model \\ %__MODULE__{}, params) do

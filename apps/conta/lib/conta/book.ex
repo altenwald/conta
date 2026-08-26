@@ -246,14 +246,85 @@ defmodule Conta.Book do
     do: get_remove_invoice(get_invoice!(id))
 
   def get_remove_invoice(%Invoice{} = invoice) do
-    [_year, invoice_number] = String.split(invoice.invoice_number, "-", parts: 2)
-    invoice_number = String.to_integer(invoice_number)
+    invoice_number =
+      invoice.invoice_number
+      |> String.split("-")
+      |> List.last()
+      |> String.to_integer()
 
     %RemoveInvoice{
       nif: invoice.company.nif,
       invoice_number: invoice_number,
       invoice_date: invoice.invoice_date
     }
+  end
+
+  def get_credit_note_by_origin_invoice_id(origin_id) do
+    from(i in Invoice, where: i.origin_invoice_id == ^origin_id and i.is_credit_note == true, limit: 1)
+    |> Repo.one()
+  end
+
+  def get_credit_note_by_origin_invoice_number(origin_number) do
+    from(i in Invoice,
+      where: i.origin_invoice_number == ^origin_number and i.is_credit_note == true,
+      limit: 1
+    )
+    |> Repo.one()
+  end
+
+  def create_credit_note_from_invoice(invoice_or_id, overrides \\ %{})
+
+  def create_credit_note_from_invoice(id, overrides) when is_binary(id) do
+    invoice = get_invoice!(id)
+    create_credit_note_from_invoice(invoice, overrides)
+  end
+
+  def create_credit_note_from_invoice(%Invoice{} = invoice, overrides) do
+    details =
+      for %Invoice.Detail{} = details <- invoice.details do
+        %SetInvoice.Detail{
+          sku: details.sku,
+          description: details.description,
+          tax: details.tax,
+          base_price: to_money(details.base_price) |> Money.to_decimal(),
+          units: details.units,
+          tax_price: to_money(details.tax_price) |> Money.to_decimal(),
+          total_price: to_money(details.total_price) |> Money.to_decimal()
+        }
+      end
+
+    today = Date.utc_today()
+
+    command = %SetInvoice{
+      action: :insert,
+      nif: invoice.company.nif,
+      name: invoice.name,
+      client_nif: if(invoice.client, do: invoice.client.nif),
+      destination_country: invoice.destination_country,
+      template: invoice.template,
+      invoice_date: Map.get(overrides, :invoice_date, today),
+      due_date: Map.get(overrides, :due_date, Date.add(today, @due_in_days)),
+      type: invoice.type,
+      subtotal_price: to_money(invoice.subtotal_price) |> Money.to_decimal(),
+      tax_price: to_money(invoice.tax_price) |> Money.to_decimal(),
+      total_price: to_money(invoice.total_price) |> Money.to_decimal(),
+      currency: to_string(invoice.currency),
+      comments: Map.get(overrides, :comments, invoice.comments),
+      payment_method: if(invoice.payment_method, do: invoice.payment_method.slug),
+      is_credit_note: true,
+      origin_invoice_number: invoice.invoice_number,
+      origin_invoice_date: invoice.invoice_date,
+      origin_invoice_id: invoice.id,
+      details: details
+    }
+
+    case Conta.Commanded.Application.dispatch(command) do
+      :ok ->
+        {:ok, command}
+
+      {:error, _reason} = error ->
+        error
+    end
   end
 
   def get_duplicate_expense(id) when is_binary(id),
@@ -300,7 +371,7 @@ defmodule Conta.Book do
       currency: invoice.currency,
       comments: invoice.comments,
       destination_country: invoice.destination_country,
-      payment_method: invoice.payment_method.slug,
+      payment_method: if(invoice.payment_method, do: invoice.payment_method.slug),
       details:
         for %Invoice.Detail{} = details <- invoice.details do
           %SetInvoice.Detail{
@@ -354,8 +425,11 @@ defmodule Conta.Book do
     do: get_set_invoice(get_invoice!(id))
 
   def get_set_invoice(%Invoice{} = invoice) do
-    [_year, invoice_number] = String.split(invoice.invoice_number, "-", parts: 2)
-    invoice_number = String.to_integer(invoice_number)
+    invoice_number =
+      invoice.invoice_number
+      |> String.split("-")
+      |> List.last()
+      |> String.to_integer()
 
     %SetInvoice{
       action: :update,
@@ -374,7 +448,11 @@ defmodule Conta.Book do
       currency: invoice.currency,
       comments: invoice.comments,
       destination_country: invoice.destination_country,
-      payment_method: invoice.payment_method.slug,
+      payment_method: if(invoice.payment_method, do: invoice.payment_method.slug),
+      is_credit_note: invoice.is_credit_note,
+      origin_invoice_number: invoice.origin_invoice_number,
+      origin_invoice_date: invoice.origin_invoice_date,
+      origin_invoice_id: invoice.origin_invoice_id,
       details:
         for %Invoice.Detail{} = details <- invoice.details do
           %SetInvoice.Detail{

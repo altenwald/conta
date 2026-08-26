@@ -9,7 +9,7 @@ defmodule Conta.Projector.Book.Invoice do
 
   @derive {Jason.Encoder,
            only:
-             ~w[id name invoice_number invoice_date template paid_date due_date type subtotal_price tax_price total_price currency comments destination_country client company payment_method details inserted_at updated_at]a}
+             ~w[id name invoice_number invoice_date template paid_date due_date type subtotal_price tax_price total_price currency comments destination_country is_credit_note origin_invoice_number origin_invoice_date origin_invoice_id client company payment_method details inserted_at updated_at]a}
   typed_schema "book_invoices" do
     field :name, :string
     field :template, :string, default: "default"
@@ -24,6 +24,10 @@ defmodule Conta.Projector.Book.Invoice do
     field :currency, Ecto.Enum, values: @currencies, default: :EUR
     field :comments, :string
     field :destination_country, :string
+    field :is_credit_note, :boolean, default: false
+    field :origin_invoice_number, :string
+    field :origin_invoice_date, :date
+    field :origin_invoice_id, :binary_id
 
     embeds_one :client, Client, on_replace: :delete do
       @derive {Jason.Encoder, only: ~w[name nif intracommunity address postcode city state country]a}
@@ -81,7 +85,7 @@ defmodule Conta.Projector.Book.Invoice do
   end
 
   @required_fields ~w[invoice_number invoice_date type subtotal_price tax_price total_price destination_country]a
-  @optional_fields ~w[name paid_date due_date comments template currency]a
+  @optional_fields ~w[name paid_date due_date comments template currency is_credit_note origin_invoice_number origin_invoice_date origin_invoice_id]a
 
   @doc false
   def changeset(model \\ %__MODULE__{}, params) do

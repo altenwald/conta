@@ -36,16 +36,21 @@ defmodule Conta.Projector.Book do
     |> Decimal.to_integer()
   end
 
-  defp to_invoice_number(date, number) when is_binary(date),
-    do: to_invoice_number(Date.from_iso8601!(date), number)
+  defp to_invoice_number(date, number, is_credit_note) when is_binary(date),
+    do: to_invoice_number(Date.from_iso8601!(date), number, is_credit_note)
 
-  defp to_invoice_number(date, number) when is_struct(date, Date),
-    do: to_invoice_number(date.year, number)
+  defp to_invoice_number(date, number, is_credit_note) when is_struct(date, Date),
+    do: to_invoice_number(date.year, number, is_credit_note)
 
-  defp to_invoice_number(year, number) when is_integer(number),
-    do: to_invoice_number(year, to_string(number))
+  defp to_invoice_number(year, number, is_credit_note) when is_integer(number),
+    do: to_invoice_number(year, to_string(number), is_credit_note)
 
-  defp to_invoice_number(year, number) when is_integer(year) and is_binary(number),
+  defp to_invoice_number(year, number, true) when is_integer(year) and is_binary(number) do
+    prefix = Application.get_env(:conta, :credit_note_prefix, "CN")
+    "#{prefix}-#{year}-#{String.pad_leading(number, 5, "0")}"
+  end
+
+  defp to_invoice_number(year, number, false) when is_integer(year) and is_binary(number),
     do: "#{year}-#{String.pad_leading(number, 5, "0")}"
 
   project(%ExpenseRemoved{} = expense_removed, _metadata, fn multi ->
@@ -59,13 +64,20 @@ defmodule Conta.Projector.Book do
   end)
 
   project(%InvoiceRemoved{} = invoice_removed, _metadata, fn multi ->
-    invoice_number = to_invoice_number(invoice_removed.invoice_date, invoice_removed.invoice_number)
-    invoice = Conta.Repo.get_by(Invoice, invoice_number: invoice_number)
+    invoice_number_std =
+      to_invoice_number(invoice_removed.invoice_date, invoice_removed.invoice_number, false)
+
+    invoice_number_cn = to_invoice_number(invoice_removed.invoice_date, invoice_removed.invoice_number, true)
+
+    invoice =
+      Conta.Repo.get_by(Invoice, invoice_number: invoice_number_std) ||
+        Conta.Repo.get_by(Invoice, invoice_number: invoice_number_cn)
+
     Ecto.Multi.delete(multi, :delete_invoice, invoice)
   end)
 
   project(%InvoiceSet{action: :insert} = invoice, _metadata, fn multi ->
-    invoice_number = to_invoice_number(invoice.invoice_date, invoice.invoice_number)
+    invoice_number = to_invoice_number(invoice.invoice_date, invoice.invoice_number, invoice.is_credit_note)
 
     changeset =
       invoice
@@ -108,7 +120,7 @@ defmodule Conta.Projector.Book do
   end)
 
   project(%InvoiceSet{action: :update} = invoice, _metadata, fn multi ->
-    invoice_number = to_invoice_number(invoice.invoice_date, invoice.invoice_number)
+    invoice_number = to_invoice_number(invoice.invoice_date, invoice.invoice_number, invoice.is_credit_note)
 
     params =
       invoice

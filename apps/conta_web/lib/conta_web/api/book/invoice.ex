@@ -53,6 +53,25 @@ defmodule ContaWeb.Api.Book.Invoice do
     end
   end
 
+  def create_credit_note(conn, %{"id" => id}) do
+    with invoice when invoice != nil <- Book.get_invoice(id),
+         {:ok, _command} <- Book.create_credit_note_from_invoice(invoice) do
+      conn
+      |> put_status(:created)
+      |> json(%{"status" => "ok"})
+    else
+      nil ->
+        conn
+        |> put_status(:not_found)
+        |> json(%{"errors" => %{"id" => "invoice not found"}})
+
+      {:error, reason} ->
+        conn
+        |> put_status(:unprocessable_entity)
+        |> json(%{"errors" => reason})
+    end
+  end
+
   def delete(conn, %{"id" => id}) do
     with invoice when invoice != nil <- Book.get_invoice(id),
          :ok <- dispatch(Book.get_remove_invoice(invoice)) do

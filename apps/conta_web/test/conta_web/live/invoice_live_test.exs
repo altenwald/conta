@@ -1,114 +1,116 @@
 defmodule ContaWeb.InvoiceLiveTest do
   use ContaWeb.ConnCase
 
+  import Conta.BookFixtures
   import Phoenix.LiveViewTest
 
-  @create_attrs %{}
-  @update_attrs %{}
-  @invalid_attrs %{}
+  alias Conta.AccountsFixtures
+  alias Conta.Book
+  alias Conta.Command.SetCompany
+  alias Conta.Command.SetPaymentMethod
+  alias Conta.Commanded.Application, as: CommandedApp
 
-  defp create_invoice(_) do
-    # invoice = invoice_fixture()
-    # %{invoice: invoice}
-    %{}
+  @company_nif "A55666777"
+
+  setup do
+    Application.put_env(:conta, :default_company_nif, @company_nif)
+
+    :ok =
+      CommandedApp.dispatch(%SetCompany{
+        nif: @company_nif,
+        name: "Great Company SA",
+        address: "My Full Address",
+        postcode: "28000",
+        city: "Madrid",
+        country: "ES"
+      })
+
+    :ok =
+      CommandedApp.dispatch(%SetPaymentMethod{
+        nif: @company_nif,
+        name: "Paypal Wallet",
+        slug: "paypal",
+        method: :gateway,
+        details: "myaccount@paypal.com"
+      })
+
+    user = AccountsFixtures.insert(:user) |> AccountsFixtures.confirm_user()
+    %{user: user}
   end
 
   describe "Index" do
-    setup [:create_invoice]
+    test "lists all invoices including credit notes", %{conn: conn, user: user} do
+      conn = log_in_user(conn, user)
+      original = insert(:invoice, %{invoice_number: "2026-00001", invoice_date: ~D[2026-08-20]})
 
-    @tag skip: :broken
-    test "lists all books_invoices", %{conn: conn} do
-      {:ok, _index_live, html} = live(conn, ~p"/books_invoices")
+      _credit_note =
+        insert(:invoice, %{
+          invoice_number: "CN-2026-00001",
+          invoice_date: ~D[2026-08-26],
+          is_credit_note: true,
+          origin_invoice_id: original.id,
+          origin_invoice_number: original.invoice_number,
+          origin_invoice_date: original.invoice_date
+        })
 
-      assert html =~ "Listing Books invoices"
+      {:ok, _index_live, html} = live(conn, ~p"/books/invoices")
+
+      assert html =~ "2026-00001"
+      assert html =~ "CN-2026-00001"
     end
 
-    @tag skip: :broken
-    test "saves new invoice", %{conn: conn} do
-      {:ok, index_live, _html} = live(conn, ~p"/books_invoices")
+    test "creates credit note from an invoice via LiveView action", %{conn: conn, user: user} do
+      Phoenix.PubSub.subscribe(Conta.PubSub, "event:invoice_set")
+      conn = log_in_user(conn, user)
+      invoice = insert(:invoice, %{invoice_number: "2026-00002", invoice_date: ~D[2026-08-20]})
 
-      assert index_live |> element("a", "New Invoice") |> render_click() =~
-               "New Invoice"
+      {:ok, index_live, html} = live(conn, ~p"/books/invoices")
+      assert html =~ "2026-00002"
 
-      assert_patch(index_live, ~p"/books_invoices/new")
+      # Click create credit note button
+      result =
+        index_live
+        |> element("#books_invoices-#{invoice.id} a[title='Create Credit Note']")
+        |> render_click()
 
-      assert index_live
-             |> form("#invoice-form", invoice: @invalid_attrs)
-             |> render_change() =~ "can&#39;t be blank"
+      assert result =~ "Credit note created successfully"
 
-      assert index_live
-             |> form("#invoice-form", invoice: @create_attrs)
-             |> render_submit()
-
-      assert_patch(index_live, ~p"/books_invoices")
+      assert_receive {:invoice_set, credit_note}, 1500
+      assert credit_note.is_credit_note == true
+      assert credit_note.origin_invoice_number == "2026-00002"
+      assert credit_note.invoice_number =~ "CN-2026-"
 
       html = render(index_live)
-      assert html =~ "Invoice created successfully"
+      assert html =~ credit_note.invoice_number
+
+      # Verify created in Book
+      persisted = Book.get_credit_note_by_origin_invoice_id(invoice.id)
+      assert persisted != nil
+      assert persisted.is_credit_note == true
+      assert persisted.origin_invoice_number == "2026-00002"
     end
 
-    @tag skip: :broken
-    test "updates invoice in listing", %{conn: conn, invoice: invoice} do
-      {:ok, index_live, _html} = live(conn, ~p"/books_invoices")
+    test "shows view credit note link when invoice already has a credit note", %{conn: conn, user: user} do
+      conn = log_in_user(conn, user)
+      original = insert(:invoice, %{invoice_number: "2026-00003", invoice_date: ~D[2026-08-20]})
 
-      assert index_live |> element("#books_invoices-#{invoice.id} a", "Edit") |> render_click() =~
-               "Edit Invoice"
+      credit_note =
+        insert(:invoice, %{
+          invoice_number: "CN-2026-00001",
+          invoice_date: ~D[2026-08-26],
+          is_credit_note: true,
+          origin_invoice_id: original.id,
+          origin_invoice_number: original.invoice_number,
+          origin_invoice_date: original.invoice_date
+        })
 
-      assert_patch(index_live, ~p"/books_invoices/#{invoice}/edit")
+      {:ok, index_live, html} = live(conn, ~p"/books/invoices")
+      assert html =~ "2026-00003"
 
-      assert index_live
-             |> form("#invoice-form", invoice: @invalid_attrs)
-             |> render_change() =~ "can&#39;t be blank"
-
-      assert index_live
-             |> form("#invoice-form", invoice: @update_attrs)
-             |> render_submit()
-
-      assert_patch(index_live, ~p"/books_invoices")
-
-      html = render(index_live)
-      assert html =~ "Invoice updated successfully"
-    end
-
-    @tag skip: :broken
-    test "deletes invoice in listing", %{conn: conn, invoice: invoice} do
-      {:ok, index_live, _html} = live(conn, ~p"/books_invoices")
-
-      assert index_live |> element("#books_invoices-#{invoice.id} a", "Delete") |> render_click()
-      refute has_element?(index_live, "#books_invoices-#{invoice.id}")
-    end
-  end
-
-  describe "Show" do
-    setup [:create_invoice]
-
-    @tag skip: :broken
-    test "displays invoice", %{conn: conn, invoice: invoice} do
-      {:ok, _show_live, html} = live(conn, ~p"/books_invoices/#{invoice}")
-
-      assert html =~ "Show Invoice"
-    end
-
-    @tag skip: :broken
-    test "updates invoice within modal", %{conn: conn, invoice: invoice} do
-      {:ok, show_live, _html} = live(conn, ~p"/books_invoices/#{invoice}")
-
-      assert show_live |> element("a", "Edit") |> render_click() =~
-               "Edit Invoice"
-
-      assert_patch(show_live, ~p"/books_invoices/#{invoice}/show/edit")
-
-      assert show_live
-             |> form("#invoice-form", invoice: @invalid_attrs)
-             |> render_change() =~ "can&#39;t be blank"
-
-      assert show_live
-             |> form("#invoice-form", invoice: @update_attrs)
-             |> render_submit()
-
-      assert_patch(show_live, ~p"/books_invoices/#{invoice}")
-
-      html = render(show_live)
-      assert html =~ "Invoice updated successfully"
+      assert has_element?(
+               index_live,
+               "#books_invoices-#{original.id} a[href='/books/invoices/#{credit_note.id}']"
+             )
     end
   end
 end

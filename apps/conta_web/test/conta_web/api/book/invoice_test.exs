@@ -1,5 +1,5 @@
 defmodule ContaWeb.Api.Book.InvoiceTest do
-  use ContaWeb.ConnCase
+  use ContaWeb.ConnCase, async: false
 
   import Conta.BookFixtures
 
@@ -15,6 +15,15 @@ defmodule ContaWeb.Api.Book.InvoiceTest do
         postcode: "28000",
         city: "Madrid",
         country: "ES"
+      })
+
+    :ok =
+      Conta.Commanded.Application.dispatch(%Conta.Command.SetPaymentMethod{
+        nif: "A55666777",
+        name: "PayPal",
+        slug: "paypal",
+        method: :gateway,
+        details: "myaccount@paypal.com"
       })
 
     user = AccountsFixtures.insert(:user) |> AccountsFixtures.confirm_user()
@@ -172,6 +181,28 @@ defmodule ContaWeb.Api.Book.InvoiceTest do
     test "returns 400 when params are invalid", %{authed_conn: conn} do
       conn = post(conn, ~p"/api/v1/books/invoices", %{})
       assert %{"errors" => _} = json_response(conn, 400)
+    end
+  end
+
+  describe "POST /api/v1/books/invoices/:id/credit_note" do
+    test "creates a credit note from an invoice", %{authed_conn: conn} do
+      Phoenix.PubSub.subscribe(Conta.PubSub, "event:invoice_set")
+
+      invoice =
+        insert(:invoice, %{
+          invoice_number: "2026-00001",
+          company: %{invoice_company_factory() | nif: "A55666777"}
+        })
+
+      conn = post(conn, ~p"/api/v1/books/invoices/#{invoice.id}/credit_note")
+      assert %{"status" => "ok"} = json_response(conn, 201)
+
+      assert_receive {:invoice_set, _credit_note}, 1500
+    end
+
+    test "returns 404 when invoice does not exist", %{authed_conn: conn} do
+      conn = post(conn, ~p"/api/v1/books/invoices/#{Ecto.UUID.generate()}/credit_note")
+      assert %{"errors" => %{"id" => "invoice not found"}} = json_response(conn, 404)
     end
   end
 

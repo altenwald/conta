@@ -23,7 +23,11 @@ defmodule ContaWeb.Api.Book.InvoiceJSON do
       "subtotal_price" => to_money(invoice.subtotal_price) |> Money.to_decimal(),
       "tax_price" => to_money(invoice.tax_price) |> Money.to_decimal(),
       "total_price" => to_money(invoice.total_price) |> Money.to_decimal(),
-      "currency" => invoice.currency
+      "currency" => invoice.currency,
+      "is_credit_note" => invoice.is_credit_note,
+      "origin_invoice_number" => invoice.origin_invoice_number,
+      "origin_invoice_date" => invoice.origin_invoice_date,
+      "origin_invoice_id" => invoice.origin_invoice_id
     }
   end
 end

@@ -43,6 +43,8 @@ defmodule Conta.BookFixtures do
   def invoice_payment_method_factory do
     %Conta.Projector.Book.Invoice.PaymentMethod{
       id: Ecto.UUID.generate(),
+      slug: "paypal",
+      name: "PayPal",
       method: :gateway,
       details: "myaccount@paypal.com"
     }

@@ -1,6 +1,7 @@
 import Config
 
 config :conta,
+  credit_note_prefix: "CN",
   event_store: [
     adapter: Commanded.EventStore.Adapters.EventStore,
     event_store: Conta.EventStore

@@ -172,6 +172,38 @@ defmodule Conta.BookTest do
       assert dup.action == :insert
       assert dup.invoice_date == Date.utc_today()
     end
+
+    test "get_credit_note_by_origin_invoice_id/1 and number" do
+      original = insert(:invoice, %{invoice_number: "2026-00005"})
+
+      credit_note =
+        insert(:invoice, %{
+          invoice_number: "CN-2026-00001",
+          is_credit_note: true,
+          origin_invoice_id: original.id,
+          origin_invoice_number: original.invoice_number,
+          origin_invoice_date: original.invoice_date
+        })
+
+      assert Book.get_credit_note_by_origin_invoice_id(original.id).id == credit_note.id
+      assert Book.get_credit_note_by_origin_invoice_number("2026-00005").id == credit_note.id
+      assert is_nil(Book.get_credit_note_by_origin_invoice_id(Ecto.UUID.generate()))
+    end
+
+    test "get_set_invoice/1 and get_remove_invoice/1 handle credit note prefix" do
+      credit_note =
+        insert(:invoice, %{
+          invoice_number: "CN-2026-00012",
+          is_credit_note: true
+        })
+
+      set_inv = Book.get_set_invoice(credit_note.id)
+      assert set_inv.invoice_number == 12
+      assert set_inv.is_credit_note == true
+
+      remove_inv = Book.get_remove_invoice(credit_note.id)
+      assert remove_inv.invoice_number == 12
+    end
   end
 
   describe "payment methods" do

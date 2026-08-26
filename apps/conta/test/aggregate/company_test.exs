@@ -1350,4 +1350,94 @@ defmodule Conta.Aggregate.CompanyTest do
              } == Conta.Aggregate.Company.apply(company, event)
     end
   end
+
+  describe "credit notes" do
+    test "auto-assigns separate sequential numbering for credit notes" do
+      company = %Conta.Aggregate.Company{
+        nif: "A55666777",
+        name: "Great Company SA",
+        address: "My Full Address",
+        postcode: "28000",
+        city: "Madrid",
+        state: "Madrid",
+        country: "ES",
+        invoice_numbers: %{2026 => MapSet.new([1, 2, 3])},
+        credit_note_numbers: %{2026 => MapSet.new([1])},
+        contacts: %{
+          "B123456789" => %Conta.Aggregate.Company.Contact{
+            nif: "B123456789",
+            name: "Client One",
+            address: "Street 1",
+            postcode: "28001",
+            city: "Madrid",
+            state: "Madrid",
+            country: "ES"
+          }
+        },
+        payment_methods: %{
+          "bank" => %Conta.Aggregate.Company.PaymentMethod{
+            name: "Bank Wire",
+            method: "bank",
+            details: "ES1234567890"
+          }
+        }
+      }
+
+      command = %Conta.Command.SetInvoice{
+        action: :insert,
+        nif: "A55666777",
+        client_nif: "B123456789",
+        invoice_date: ~D[2026-08-26],
+        type: :product,
+        subtotal_price: Decimal.new("100.00"),
+        tax_price: Decimal.new("21.00"),
+        total_price: Decimal.new("121.00"),
+        currency: "EUR",
+        payment_method: "bank",
+        is_credit_note: true,
+        origin_invoice_number: "2026-00003",
+        details: [
+          %Conta.Command.SetInvoice.Detail{
+            description: "Refund product",
+            tax: 21,
+            base_price: Decimal.new("100.00"),
+            units: 1,
+            tax_price: Decimal.new("21.00"),
+            total_price: Decimal.new("121.00")
+          }
+        ]
+      }
+
+      event = Conta.Aggregate.Company.execute(company, command)
+      assert event.invoice_number == 2
+      assert event.is_credit_note == true
+      assert event.origin_invoice_number == "2026-00003"
+
+      updated_company = Conta.Aggregate.Company.apply(company, event)
+      assert MapSet.member?(updated_company.credit_note_numbers[2026], 2)
+      # standard invoices count shouldn't have changed
+      assert updated_company.invoice_numbers[2026] == MapSet.new([1, 2, 3])
+    end
+
+    test "snapshot encoding and decoding preserves credit_note_numbers" do
+      company = %Conta.Aggregate.Company{
+        nif: "A55666777",
+        name: "Great Company SA",
+        address: "My Full Address",
+        postcode: "28000",
+        city: "Madrid",
+        state: "Madrid",
+        country: "ES",
+        invoice_numbers: %{2026 => MapSet.new([1, 2])},
+        credit_note_numbers: %{2026 => MapSet.new([1, 5, 8])}
+      }
+
+      encoded = Jason.encode!(company)
+      decoded = Jason.decode!(encoded)
+      restored = Conta.Aggregate.Company.changeset(decoded)
+
+      assert restored.credit_note_numbers == %{2026 => MapSet.new([1, 5, 8])}
+      assert restored.invoice_numbers == %{2026 => MapSet.new([1, 2])}
+    end
+  end
 end

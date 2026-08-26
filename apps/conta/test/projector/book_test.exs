@@ -302,6 +302,67 @@ defmodule Conta.Projector.BookTest do
                type: :service
              } = Repo.get_by!(Conta.Projector.Book.Invoice, invoice_number: "2023-00001")
     end
+
+    test "creates credit note with CN prefix and origin reference", metadata do
+      event =
+        %Conta.Event.InvoiceSet{
+          action: :insert,
+          invoice_number: 1,
+          invoice_date: ~D"2026-08-26",
+          type: :service,
+          subtotal_price: 100_00,
+          tax_price: 21_00,
+          total_price: 121_00,
+          destination_country: "ES",
+          is_credit_note: true,
+          origin_invoice_number: "2026-00001",
+          origin_invoice_date: ~D"2026-08-20",
+          payment_method: %Conta.Event.Common.PaymentMethod{
+            slug: "paypal",
+            name: "PayPal",
+            method: :gateway,
+            details: "myaccount@paypal.com"
+          },
+          client: %Conta.Event.InvoiceSet.Client{
+            name: "My client",
+            nif: "B123456789",
+            intracommunity: false,
+            address: "My client's address",
+            postcode: "14000",
+            city: "Cordoba",
+            state: "Cordoba",
+            country: "ES"
+          },
+          details: [
+            %Conta.Event.InvoiceSet.Detail{
+              description: "Consultancy refund",
+              tax: 21,
+              base_price: 100_00,
+              tax_price: 21_00,
+              total_price: 121_00
+            }
+          ],
+          company: %Conta.Event.Common.Company{
+            nif: "A55666777",
+            name: "Great Company SA",
+            address: "My Full Address",
+            postcode: "28000",
+            city: "Madrid",
+            state: "Madrid",
+            country: "ES"
+          },
+          template: "default"
+        }
+
+      assert :ok = Book.handle(event, metadata)
+
+      assert %Book.Invoice{
+               invoice_number: "CN-2026-00001",
+               is_credit_note: true,
+               origin_invoice_number: "2026-00001",
+               origin_invoice_date: ~D[2026-08-20]
+             } = Repo.get_by!(Book.Invoice, invoice_number: "CN-2026-00001")
+    end
   end
 
   describe "expense" do

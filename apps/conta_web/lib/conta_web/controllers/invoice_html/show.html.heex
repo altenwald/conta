@@ -17,19 +17,39 @@
     />
     <br />
     <h1 class="invoice-title text-4xl font-bold uppercase">
-      {gettext("INVOICE")}
+      <%= if @invoice.is_credit_note do %>
+        {gettext("CREDIT NOTE")}
+      <% else %>
+        {gettext("INVOICE")}
+      <% end %>
     </h1>
   </div>
   <div class="col-span-5">
     <table class="table table-xs [&_tr]:text-[13px] border border-base-200 w-full printable-table">
       <tr>
-        <th class="invoice-accent bg-base-200 font-bold">{gettext("Invoice Number")}</th>
+        <th class="invoice-accent bg-base-200 font-bold">
+          <%= if @invoice.is_credit_note do %>
+            {gettext("Credit Note Number")}
+          <% else %>
+            {gettext("Invoice Number")}
+          <% end %>
+        </th>
         <td>{@invoice.invoice_number}</td>
+      </tr>
+      <tr :if={@invoice.is_credit_note && @invoice.origin_invoice_number}>
+        <th class="invoice-accent bg-base-200 font-bold">{gettext("Original Invoice")}</th>
+        <td>
+          {@invoice.origin_invoice_number}
+          <span :if={@invoice.origin_invoice_date} class="text-xs opacity-70">
+            ({@invoice.origin_invoice_date})
+          </span>
+        </td>
       </tr>
       <tr>
         <th class="invoice-accent bg-base-200 font-bold">{gettext("Invoice Date")}</th>
         <td>{@invoice.invoice_date}</td>
       </tr>
+
       <tr>
         <th class="invoice-accent bg-base-200 font-bold">{gettext("Due Date")}</th>
         <td>{@invoice.due_date}</td>

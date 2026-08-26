@@ -32,6 +32,11 @@ defmodule Conta.Aggregate.Company do
           {year, Enum.to_list(invoice_numbers_set)}
         end)
       end)
+      |> Map.update!(:credit_note_numbers, fn credit_note_numbers ->
+        Map.new(credit_note_numbers, fn {year, credit_note_numbers_set} ->
+          {year, Enum.to_list(credit_note_numbers_set)}
+        end)
+      end)
       |> Map.update!(:expense_numbers, fn expense_numbers ->
         Map.new(expense_numbers, fn {year, expense_numbers_set} ->
           {year, Enum.map(expense_numbers_set, &Tuple.to_list/1)}
@@ -52,6 +57,7 @@ defmodule Conta.Aggregate.Company do
           country: nil | String.t(),
           details: nil | String.t(),
           invoice_numbers: %{pos_integer() => MapSet.t(pos_integer())},
+          credit_note_numbers: %{pos_integer() => MapSet.t(pos_integer())},
           expense_numbers: %{pos_integer() => MapSet.t({String.t(), String.t()})},
           contacts: %{String.t() => Contact.t()},
           payment_methods: %{String.t() => PaymentMethod.t()},
@@ -67,6 +73,7 @@ defmodule Conta.Aggregate.Company do
             country: nil,
             details: nil,
             invoice_numbers: %{},
+            credit_note_numbers: %{},
             expense_numbers: %{},
             contacts: %{},
             payment_methods: %{},
@@ -84,22 +91,26 @@ defmodule Conta.Aggregate.Company do
       country: params["country"],
       details: params["details"],
       invoice_numbers:
-        Map.new(params["invoice_numbers"], fn {year, invoice_numbers_list} ->
-          {String.to_integer(year), MapSet.new(invoice_numbers_list)}
+        Map.new(params["invoice_numbers"] || %{}, fn {year, invoice_numbers_list} ->
+          {String.to_integer(to_string(year)), MapSet.new(invoice_numbers_list)}
+        end),
+      credit_note_numbers:
+        Map.new(params["credit_note_numbers"] || %{}, fn {year, credit_note_numbers_list} ->
+          {String.to_integer(to_string(year)), MapSet.new(credit_note_numbers_list)}
         end),
       expense_numbers:
-        Map.new(params["expense_numbers"], fn {year, expense_numbers_list} ->
-          {String.to_integer(year), MapSet.new(expense_numbers_list, &List.to_tuple/1)}
+        Map.new(params["expense_numbers"] || %{}, fn {year, expense_numbers_list} ->
+          {String.to_integer(to_string(year)), MapSet.new(expense_numbers_list, &List.to_tuple/1)}
         end),
       contacts:
-        Map.new(params["contacts"], fn {key, data} ->
+        Map.new(params["contacts"] || %{}, fn {key, data} ->
           {key, Contact.changeset(data)}
         end),
       payment_methods:
-        Map.new(params["payment_methods"], fn {key, data} ->
+        Map.new(params["payment_methods"] || %{}, fn {key, data} ->
           {key, PaymentMethod.changeset(data)}
         end),
-      template_names: MapSet.new(params["template_names"])
+      template_names: MapSet.new(params["template_names"] || ["default"])
     }
   end
 
@@ -157,10 +168,18 @@ defmodule Conta.Aggregate.Company do
     {:error, %{invoice_number: ["can't be blank"]}}
   end
 
+  def execute(%__MODULE__{} = company, %SetInvoice{invoice_number: nil, is_credit_note: true} = command) do
+    invoice_year = command.invoice_date.year
+    credit_note_numbers = company.credit_note_numbers[invoice_year] || MapSet.new()
+    last_number = Enum.max(credit_note_numbers, &>=/2, fn -> 0 end)
+    credit_note_number = last_number + 1
+    execute(company, %SetInvoice{command | invoice_number: credit_note_number})
+  end
+
   def execute(%__MODULE__{} = company, %SetInvoice{invoice_number: nil} = command) do
     invoice_year = command.invoice_date.year
     invoice_numbers = company.invoice_numbers[invoice_year] || MapSet.new()
-    last_invoice_number = Enum.max(invoice_numbers) || 0
+    last_invoice_number = Enum.max(invoice_numbers, &>=/2, fn -> 0 end)
     invoice_number = last_invoice_number + 1
     execute(company, %SetInvoice{command | invoice_number: invoice_number})
   end
@@ -252,15 +271,21 @@ defmodule Conta.Aggregate.Company do
       when not is_integer(invoice_number),
       do: {:error, %{invoice_date: ["is invalid"]}}
 
-  def execute(%__MODULE__{invoice_numbers: invoice_numbers}, %RemoveInvoice{} = command) do
+  def execute(%__MODULE__{} = company, %RemoveInvoice{} = command) do
     year = command.invoice_date.year
+    invoices = company.invoice_numbers[year] || MapSet.new()
+    credit_notes = company.credit_note_numbers[year] || MapSet.new()
 
-    if MapSet.member?(invoice_numbers[year] || MapSet.new(), command.invoice_number) do
+    if MapSet.member?(invoices, command.invoice_number) or
+         MapSet.member?(credit_notes, command.invoice_number) do
       command
       |> Map.from_struct()
       |> InvoiceRemoved.changeset()
     else
-      Logger.debug("invoice_numbers for #{year} are #{inspect(invoice_numbers[year])}")
+      Logger.debug(
+        "invoice_numbers for #{year} are #{inspect(invoices)}, credit_note_numbers: #{inspect(credit_notes)}"
+      )
+
       {:error, %{invoice_number: ["not found"]}}
     end
   end
@@ -289,6 +314,19 @@ defmodule Conta.Aggregate.Company do
 
   defp valid_expense_number_insert(_company, _command), do: true
 
+  defp validate_duplicate_invoice_number(
+         nil,
+         %__MODULE__{} = company,
+         %SetInvoice{is_credit_note: true} = command
+       ) do
+    invoice_year = command.invoice_date.year
+    numbers = company.credit_note_numbers[invoice_year] || MapSet.new()
+
+    if MapSet.member?(numbers, command.invoice_number) and command.action == :insert do
+      {:error, %{invoice_number: ["can't be duplicated"]}}
+    end
+  end
+
   defp validate_duplicate_invoice_number(nil, %__MODULE__{} = company, %SetInvoice{} = command) do
     invoice_year = command.invoice_date.year
     invoice_numbers = company.invoice_numbers[invoice_year] || MapSet.new()
@@ -299,6 +337,19 @@ defmodule Conta.Aggregate.Company do
   end
 
   defp validate_exist_invoice_for_update({:error, _} = error, _company, _command), do: error
+
+  defp validate_exist_invoice_for_update(
+         nil,
+         %__MODULE__{} = company,
+         %SetInvoice{is_credit_note: true} = command
+       ) do
+    invoice_year = command.invoice_date.year
+    numbers = company.credit_note_numbers[invoice_year] || MapSet.new()
+
+    if not MapSet.member?(numbers, command.invoice_number) and command.action == :update do
+      {:error, %{invoice_number: ["can't be found for update"]}}
+    end
+  end
 
   defp validate_exist_invoice_for_update(nil, %__MODULE__{} = company, %SetInvoice{} = command) do
     invoice_year = command.invoice_date.year
@@ -367,6 +418,21 @@ defmodule Conta.Aggregate.Company do
     %__MODULE__{company | template_names: template_names}
   end
 
+  def apply(%__MODULE__{} = company, %InvoiceSet{action: :insert, is_credit_note: true} = event) do
+    year = to_date(event.invoice_date).year
+    invoice_number = event.invoice_number
+
+    credit_note_numbers =
+      Map.update(
+        company.credit_note_numbers,
+        year,
+        MapSet.new([invoice_number]),
+        &MapSet.put(&1, invoice_number)
+      )
+
+    %__MODULE__{company | credit_note_numbers: credit_note_numbers}
+  end
+
   def apply(%__MODULE__{} = company, %InvoiceSet{action: :insert} = event) do
     year = to_date(event.invoice_date).year
     invoice_number = event.invoice_number
@@ -379,10 +445,18 @@ defmodule Conta.Aggregate.Company do
 
   def apply(%__MODULE__{} = company, %InvoiceSet{action: :update}), do: company
 
-  def apply(%__MODULE__{invoice_numbers: invoice_numbers} = company, %InvoiceRemoved{} = invoice_removed) do
+  def apply(%__MODULE__{} = company, %InvoiceRemoved{} = invoice_removed) do
     year = invoice_removed.invoice_date.year
-    invoices = MapSet.delete(invoice_numbers[year], invoice_removed.invoice_number)
-    %__MODULE__{company | invoice_numbers: Map.put(invoice_numbers, year, invoices)}
+    invoices = MapSet.delete(company.invoice_numbers[year] || MapSet.new(), invoice_removed.invoice_number)
+
+    credit_notes =
+      MapSet.delete(company.credit_note_numbers[year] || MapSet.new(), invoice_removed.invoice_number)
+
+    %__MODULE__{
+      company
+      | invoice_numbers: Map.put(company.invoice_numbers, year, invoices),
+        credit_note_numbers: Map.put(company.credit_note_numbers, year, credit_notes)
+    }
   end
 
   def apply(%__MODULE__{} = company, %ExpenseSet{action: :insert} = event) do

@@ -14,7 +14,12 @@ defmodule ContaWeb.InvoiceLive.FormComponent do
       <h3 class="font-bold text-lg mb-4">{@title}</h3>
 
       <.simple_form for={@form} id="invoice-form" phx-target={@myself} phx-change="validate" phx-submit="save">
+        <.input field={@form[:is_credit_note]} type="hidden" />
+        <.input field={@form[:origin_invoice_number]} type="hidden" />
+        <.input field={@form[:origin_invoice_date]} type="hidden" />
+        <.input field={@form[:origin_invoice_id]} type="hidden" />
         <.input field={@form[:nif]} type="text" label={gettext("Company NIF")} disabled="true" />
+
         <.input field={@form[:name]} type="text" label={gettext("Name")} />
         <.input field={@form[:invoice_number]} type="number" label={gettext("Invoice Number")} />
         <.input field={@form[:invoice_date]} type="date" label={gettext("Invoice Date")} />

@@ -33,6 +33,12 @@ defmodule ContaWeb.InvoiceLive.Index do
 
   defp get_client(%_{client: client}), do: client.name
 
+  defp get_credit_note(%Invoice{is_credit_note: true}), do: nil
+
+  defp get_credit_note(%Invoice{id: id}) do
+    Book.get_credit_note_by_origin_invoice_id(id)
+  end
+
   defp invoice_statuses do
     [
       {gettext("Paid"), "paid"},
@@ -133,6 +139,20 @@ defmodule ContaWeb.InvoiceLive.Index do
        status: params["status"],
        filter: params["filter"]
      )}
+  end
+
+  def handle_event("create_credit_note", %{"id" => invoice_id}, socket) do
+    with %Invoice{} = invoice <- Book.get_invoice(invoice_id),
+         {:ok, _command} <- Book.create_credit_note_from_invoice(invoice) do
+      {:noreply, put_flash(socket, :info, gettext("Credit note created successfully"))}
+    else
+      {:error, reason} ->
+        Logger.error("cannot create credit note: #{inspect(reason)}")
+        {:noreply, put_flash(socket, :error, gettext("Cannot create credit note"))}
+
+      nil ->
+        {:noreply, put_flash(socket, :error, gettext("Invoice not found"))}
+    end
   end
 
   def handle_event("delete", %{"id" => invoice_id, "dom_id" => dom_id}, socket) do
