@@ -233,5 +233,26 @@ defmodule Conta.StatsTest do
       assert String.starts_with?(svg, "<svg")
       assert svg =~ "Diff:"
     end
+
+    test "chart_account/2 and graph_account/3 work for non-EUR accounts (e.g. USD)" do
+      account = insert(:account, %{name: ~w[Assets Wise USD], type: :assets, currency: :USD})
+      today = Date.utc_today()
+      this_month = Date.beginning_of_month(today)
+
+      insert(:entry, %{
+        account_name: ~w[Assets Wise USD],
+        on_date: this_month,
+        debit: 500_00,
+        credit: 100_00,
+        balance: 400_00
+      })
+
+      chart = Stats.chart_account(account, 1)
+      assert %Plotto.CandlestickChart{} = chart
+
+      svg = Stats.graph_account(account, 1)
+      assert is_binary(svg)
+      assert String.starts_with?(svg, "<svg")
+    end
   end
 end

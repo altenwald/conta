@@ -440,13 +440,13 @@ defmodule Conta.Stats do
   end
 
   defp compute_account_ohlc(%Account{} = account, month_dates, start_date, end_date) do
-    initial_balance = get_initial_account_balance(account, start_date)
+    initial_balance_cents = get_initial_account_balance(account, start_date)
     entries_by_month = get_account_entries_by_month(account, start_date, end_date)
 
     {ohlc_list, _final_balance} =
-      Enum.map_reduce(month_dates, initial_balance, fn month_date, running_bal ->
+      Enum.map_reduce(month_dates, initial_balance_cents, fn month_date, running_bal_cents ->
         month_entries = Map.get(entries_by_month, month_date, [])
-        compute_account_month_ohlc(account.type, month_date, month_entries, running_bal)
+        compute_account_month_ohlc(account.type, month_date, month_entries, running_bal_cents)
       end)
 
     ohlc_list
@@ -459,9 +459,8 @@ defmodule Conta.Stats do
       select: %{debit: e.debit, credit: e.credit}
     )
     |> Repo.all()
-    |> Enum.reduce(Money.new(0, account.currency), fn e, acc ->
-      delta = account_entry_delta(account.type, e.debit, e.credit)
-      Money.add(acc, delta)
+    |> Enum.reduce(0, fn e, acc_cents ->
+      acc_cents + account_entry_delta_cents(account.type, e.debit, e.credit)
     end)
   end
 
@@ -483,34 +482,37 @@ defmodule Conta.Stats do
     )
   end
 
-  defp compute_account_month_ohlc(type, month_date, month_entries, open_bal) do
-    {close_bal, high_bal, low_bal} =
-      Enum.reduce(month_entries, {open_bal, open_bal, open_bal}, fn entry, {curr, high, low} ->
-        delta = account_entry_delta(type, entry.debit, entry.credit)
-        next_curr = Money.add(curr, delta)
-        next_high = if Money.cmp(next_curr, high) == :gt, do: next_curr, else: high
-        next_low = if Money.cmp(next_curr, low) == :lt, do: next_curr, else: low
+  defp compute_account_month_ohlc(type, month_date, month_entries, open_cents) do
+    {close_cents, high_cents, low_cents} =
+      Enum.reduce(month_entries, {open_cents, open_cents, open_cents}, fn entry, {curr, high, low} ->
+        delta = account_entry_delta_cents(type, entry.debit, entry.credit)
+        next_curr = curr + delta
+        next_high = max(next_curr, high)
+        next_low = min(next_curr, low)
         {next_curr, next_high, next_low}
       end)
 
     item = %{
       label: to_date({month_date.month, month_date.year}),
-      open: to_float(open_bal),
-      high: to_float(high_bal),
-      low: to_float(low_bal),
-      close: to_float(close_bal),
-      diff: to_float(Money.subtract(close_bal, open_bal))
+      open: open_cents / 100,
+      high: high_cents / 100,
+      low: low_cents / 100,
+      close: close_cents / 100,
+      diff: (close_cents - open_cents) / 100
     }
 
-    {item, close_bal}
+    {item, close_cents}
   end
 
-  defp account_entry_delta(type, debit, credit) when type in [:assets, :expenses] do
-    Money.subtract(debit, credit)
+  defp to_cents(%Money{amount: amount}), do: amount
+  defp to_cents(val) when is_integer(val), do: val
+
+  defp account_entry_delta_cents(type, debit, credit) when type in [:assets, :expenses] do
+    to_cents(debit) - to_cents(credit)
   end
 
-  defp account_entry_delta(_type, debit, credit) do
-    Money.subtract(credit, debit)
+  defp account_entry_delta_cents(_type, debit, credit) do
+    to_cents(credit) - to_cents(debit)
   end
 
   defp candlestick_tooltip(item) do

@@ -4,7 +4,7 @@ defmodule ContaBot.MixProject do
   def project do
     [
       app: :conta_bot,
-      version: "0.4.1",
+      version: "0.4.2",
       build_path: "../../_build",
 
       config_path: "../../config/config.exs",
