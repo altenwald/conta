@@ -198,7 +198,10 @@ defmodule Conta.Projector.LedgerTest do
           breakdown: false,
           related_account_name: ["Assets", "Bank", "Account"]
         }
-      ] = Repo.all(Ledger.Entry) |> Enum.reject(&(&1.description == "initial"))
+      ] =
+        Repo.all(Ledger.Entry)
+        |> Enum.reject(&(&1.description == "initial"))
+        |> Enum.sort_by(& &1.account_name)
 
       assert %Ledger.Account{
                name: ~w[Assets],
@@ -422,6 +425,55 @@ defmodule Conta.Projector.LedgerTest do
                  }
                ]
              } = Repo.get!(Ledger.Account, account5.id) |> Repo.preload(:balances)
+    end
+
+    test "remove transaction with different subaccount currency updates parent in subaccount currency",
+         metadata do
+      account1 = insert(:account, %{name: ~w[Assets Wise], currency: :EUR})
+      account2 = insert(:account, %{name: ~w[Assets Wise USD], parent_id: account1.id, currency: :USD})
+      expense = insert(:account, %{name: ~w[Expenses Hosting], type: :expenses, currency: :USD})
+
+      _bal1 = insert(:balance, %{account_id: account1.id, currency: :USD, amount: 100_00})
+      _bal2 = insert(:balance, %{account_id: account2.id, currency: :USD, amount: 100_00})
+      _bal3 = insert(:balance, %{account_id: expense.id, currency: :USD, amount: 50_00})
+
+      entry1 =
+        insert(:entry, %{
+          on_date: ~D[2024-06-01],
+          transaction_id: "a1b2c3d4-0a55-4356-b925-831035a8bca9",
+          account_name: account2.name,
+          related_account_name: expense.name,
+          credit: 15_00,
+          debit: 0,
+          balance: 85_00
+        })
+
+      _entry2 =
+        insert(:entry, %{
+          on_date: ~D[2024-06-01],
+          transaction_id: "a1b2c3d4-0a55-4356-b925-831035a8bca9",
+          account_name: expense.name,
+          related_account_name: account2.name,
+          credit: 0,
+          debit: 15_00,
+          balance: 65_00
+        })
+
+      event = %Conta.Event.TransactionRemoved{
+        id: entry1.transaction_id,
+        on_date: ~D[2024-06-01],
+        entries: []
+      }
+
+      assert :ok == Ledger.handle(event, metadata)
+
+      parent_account = Repo.get!(Ledger.Account, account1.id) |> Repo.preload(:balances)
+      usd_balance = Enum.find(parent_account.balances, &(&1.currency == :USD))
+      eur_balance = Enum.find(parent_account.balances, &(&1.currency == :EUR))
+
+      assert usd_balance.currency == :USD
+      assert usd_balance.amount.amount == 115_00
+      assert eur_balance.amount.amount == 0
     end
   end
 end

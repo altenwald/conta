@@ -6,6 +6,7 @@ defmodule Conta.Stats do
 
   import Ecto.Query, only: [from: 2]
 
+  alias Conta.Projector.Ledger.Account
   alias Conta.Projector.Stats.Income
   alias Conta.Projector.Stats.Outcome
   alias Conta.Projector.Stats.Patrimony
@@ -317,7 +318,8 @@ defmodule Conta.Stats do
         open: 0.0,
         high: 0.0,
         low: 0.0,
-        close: 0.0
+        close: 0.0,
+        diff: 0.0
       }
     end)
   end
@@ -381,7 +383,8 @@ defmodule Conta.Stats do
       open: to_float(open_bal),
       high: to_float(high_bal),
       low: to_float(low_bal),
-      close: to_float(close_bal)
+      close: to_float(close_bal),
+      diff: to_float(Money.subtract(close_bal, open_bal))
     }
 
     {item, close_bal}
@@ -401,12 +404,149 @@ defmodule Conta.Stats do
 
   def chart_banks(currency \\ :EUR, months \\ 12) when is_atom(currency) do
     data = list_banks(currency, months)
-    Plotto.CandlestickChart.new!(data, width: 1200, height: 480)
+    Plotto.CandlestickChart.new!(data, width: 1200, height: 480, tooltip: &candlestick_tooltip/1)
   end
 
   def graph_banks(currency \\ :EUR, months \\ 12, theme \\ :system) when is_atom(currency) do
     currency
     |> chart_banks(months)
+    |> Plotto.to_svg!()
+    |> inject_theme_style(theme)
+  end
+
+  @doc """
+  Lists monthly OHLC balance data for a specific account or account ID over the given number of months.
+  """
+  def list_account(account, months \\ 12)
+
+  def list_account(%Account{} = account, months) when is_integer(months) do
+    today = Date.utc_today()
+
+    month_dates =
+      (months - 1)..0
+      |> Enum.map(fn offset ->
+        Date.beginning_of_month(Date.shift(today, month: -offset))
+      end)
+
+    start_date = List.first(month_dates)
+    end_date = Date.end_of_month(today)
+
+    compute_account_ohlc(account, month_dates, start_date, end_date)
+  end
+
+  def list_account(account_id, months) when is_binary(account_id) and is_integer(months) do
+    account = Conta.Ledger.get_account!(account_id)
+    list_account(account, months)
+  end
+
+  defp compute_account_ohlc(%Account{} = account, month_dates, start_date, end_date) do
+    initial_balance = get_initial_account_balance(account, start_date)
+    entries_by_month = get_account_entries_by_month(account, start_date, end_date)
+
+    {ohlc_list, _final_balance} =
+      Enum.map_reduce(month_dates, initial_balance, fn month_date, running_bal ->
+        month_entries = Map.get(entries_by_month, month_date, [])
+        compute_account_month_ohlc(account.type, month_date, month_entries, running_bal)
+      end)
+
+    ohlc_list
+  end
+
+  defp get_initial_account_balance(%Account{} = account, start_date) do
+    from(
+      e in account_entries_query(account),
+      where: e.on_date < ^start_date,
+      select: %{debit: e.debit, credit: e.credit}
+    )
+    |> Repo.all()
+    |> Enum.reduce(Money.new(0, account.currency), fn e, acc ->
+      delta = account_entry_delta(account.type, e.debit, e.credit)
+      Money.add(acc, delta)
+    end)
+  end
+
+  defp get_account_entries_by_month(%Account{} = account, start_date, end_date) do
+    from(
+      e in account_entries_query(account),
+      where: e.on_date >= ^start_date and e.on_date <= ^end_date,
+      order_by: [asc: e.on_date, asc: e.inserted_at],
+      select: %{on_date: e.on_date, debit: e.debit, credit: e.credit}
+    )
+    |> Repo.all()
+    |> Enum.group_by(fn e -> Date.beginning_of_month(e.on_date) end)
+  end
+
+  defp account_entries_query(%Account{name: name}) do
+    from(
+      e in Conta.Projector.Ledger.Entry,
+      where: fragment("?[:?]", e.account_name, ^length(name)) == ^name
+    )
+  end
+
+  defp compute_account_month_ohlc(type, month_date, month_entries, open_bal) do
+    {close_bal, high_bal, low_bal} =
+      Enum.reduce(month_entries, {open_bal, open_bal, open_bal}, fn entry, {curr, high, low} ->
+        delta = account_entry_delta(type, entry.debit, entry.credit)
+        next_curr = Money.add(curr, delta)
+        next_high = if Money.cmp(next_curr, high) == :gt, do: next_curr, else: high
+        next_low = if Money.cmp(next_curr, low) == :lt, do: next_curr, else: low
+        {next_curr, next_high, next_low}
+      end)
+
+    item = %{
+      label: to_date({month_date.month, month_date.year}),
+      open: to_float(open_bal),
+      high: to_float(high_bal),
+      low: to_float(low_bal),
+      close: to_float(close_bal),
+      diff: to_float(Money.subtract(close_bal, open_bal))
+    }
+
+    {item, close_bal}
+  end
+
+  defp account_entry_delta(type, debit, credit) when type in [:assets, :expenses] do
+    Money.subtract(debit, credit)
+  end
+
+  defp account_entry_delta(_type, debit, credit) do
+    Money.subtract(credit, debit)
+  end
+
+  defp candlestick_tooltip(item) do
+    diff = Map.get(item, :diff, item.close - item.open)
+    diff_str = format_diff(diff)
+
+    "#{item.label}\nOpen: #{format_num(item.open)}\nHigh: #{format_num(item.high)}\nLow: #{format_num(item.low)}\nClose: #{format_num(item.close)}\nDiff: #{diff_str}"
+  end
+
+  defp format_diff(diff) when diff > 0, do: "+#{format_num(diff)}"
+  defp format_diff(diff), do: format_num(diff)
+
+  defp format_num(v) when is_float(v) do
+    if v == Float.round(v, 0) do
+      to_string(trunc(v))
+    else
+      :erlang.float_to_binary(Float.round(v, 2), decimals: 2)
+    end
+  end
+
+  defp format_num(v), do: to_string(v)
+
+  @doc """
+  Builds a Plotto candlestick chart struct for a given account.
+  """
+  def chart_account(account, months \\ 12) do
+    data = list_account(account, months)
+    Plotto.CandlestickChart.new!(data, width: 640, height: 480, tooltip: &candlestick_tooltip/1)
+  end
+
+  @doc """
+  Generates an SVG chart for a given account.
+  """
+  def graph_account(account, months \\ 12, theme \\ :system) do
+    account
+    |> chart_account(months)
     |> Plotto.to_svg!()
     |> inject_theme_style(theme)
   end

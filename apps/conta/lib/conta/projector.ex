@@ -215,4 +215,9 @@ defmodule Conta.Projector do
       end
     end
   end
+
+  @doc """
+  Rebuilds read model projections by replaying events from the EventStore.
+  """
+  defdelegate rebuild(target \\ :all, opts \\ []), to: Conta.Projector.Rebuild
 end

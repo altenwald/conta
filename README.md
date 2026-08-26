@@ -48,3 +48,44 @@ It's a very ambitious project because it's something I'm using and I want to get
 - Keep the code beautiful. Keeping the code beautiful and simple.
 - Do the right things right. No workarounds, no temporal code, no dead code.
 - Discuss the features and open a discussion if needed. Communication is the key.
+
+## Troubleshooting
+
+### Rebuilding Read Model Projections
+
+Conta is built with CQRS and Event Sourcing (CQRS/ES). Domain events stored in the EventStore serve as the single source of truth, while PostgreSQL tables store the Ecto read-model projections (`ledger`, `book`, `directory`, `reconciliation`, `stats`, and `automator`).
+
+If projection tables ever need to be repaired, resynchronized, or completely rebuilt from historical events, use the rebuild mechanism:
+
+#### Using Mix (development and staging)
+
+```bash
+# Rebuild a specific projection
+mix conta.rebuild_projection ledger
+mix conta.rebuild_projection stats
+mix conta.rebuild_projection book
+mix conta.rebuild_projection directory
+mix conta.rebuild_projection reconciliation
+mix conta.rebuild_projection automator
+
+# Rebuild all projections at once
+mix conta.rebuild_projection all
+```
+
+#### Using Production Releases (Docker / CLI / eval)
+
+```bash
+# Rebuild a specific projection in production
+bin/conta eval "Conta.Release.rebuild_projection(:ledger)"
+
+# Rebuild all projections in production
+bin/conta eval "Conta.Release.rebuild_projection(:all)"
+```
+
+#### Programmatically in Elixir / IEx
+
+```elixir
+Conta.Projector.rebuild(:ledger)
+Conta.Projector.rebuild(:all)
+```
+

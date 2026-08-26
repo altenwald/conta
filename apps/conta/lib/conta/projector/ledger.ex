@@ -312,18 +312,26 @@ defmodule Conta.Projector.Ledger do
   end
 
   defp remove_account_balances(multi, accounts, entry) do
-    account = accounts[entry.account_name]
-    Logger.debug("searching for account #{inspect(account)} (from #{inspect(entry.account_name)})")
-    amount = get_amount(account.type, entry.credit, entry.debit)
+    leaf_account = accounts[entry.account_name]
+    Logger.debug("searching for account #{inspect(leaf_account)} (from #{inspect(entry.account_name)})")
+    amount = get_amount(leaf_account.type, entry.credit, entry.debit)
 
     entry.account_name
     |> account_names()
     |> Enum.reduce(multi, fn account_name, multi ->
-      account = accounts[account_name]
-      Logger.debug("reducing #{inspect(account_name)} #{account.id} reducing #{Money.neg(amount)}")
-      query = from(b in Balance, where: b.account_id == ^account.id and b.currency == ^account.currency)
-      updates = [inc: [amount: Money.neg(amount)]]
-      Ecto.Multi.update_all(multi, {:remove_account_balance, entry.id, account_name}, query, updates)
+      case accounts[account_name] do
+        nil ->
+          multi
+
+        account ->
+          Logger.debug("reducing #{inspect(account_name)} #{account.id} reducing #{Money.neg(amount)}")
+
+          query =
+            from(b in Balance, where: b.account_id == ^account.id and b.currency == ^leaf_account.currency)
+
+          updates = [inc: [amount: Money.neg(amount)]]
+          Ecto.Multi.update_all(multi, {:remove_account_balance, entry.id, account_name}, query, updates)
+      end
     end)
   end
 
@@ -348,22 +356,27 @@ defmodule Conta.Projector.Ledger do
     trans_entry.account_name
     |> account_names()
     |> Enum.reduce(multi, fn account_name, multi ->
-      account = accounts[account_name]
-      amount = get_amount(account.type, trans_entry.credit, trans_entry.debit)
+      case accounts[account_name] do
+        nil ->
+          multi
 
-      balance = %Balance{
-        account_id: account.id,
-        currency: currency,
-        amount: amount
-      }
+        account ->
+          amount = get_amount(account.type, trans_entry.credit, trans_entry.debit)
 
-      Ecto.Multi.insert(
-        multi,
-        {:upsert_account_balances, idx, account_name},
-        balance,
-        on_conflict: [inc: [amount: amount]],
-        conflict_target: ~w[account_id currency]
-      )
+          balance = %Balance{
+            account_id: account.id,
+            currency: currency,
+            amount: amount
+          }
+
+          Ecto.Multi.insert(
+            multi,
+            {:upsert_account_balances, idx, account_name},
+            balance,
+            on_conflict: [inc: [amount: amount]],
+            conflict_target: ~w[account_id currency]
+          )
+      end
     end)
   end
 

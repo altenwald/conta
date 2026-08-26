@@ -9,51 +9,99 @@
     />
   </.breadcrumbs>
 
-  <div class="card bg-base-100 shadow-xl border border-base-200 mt-6">
-    <div class="card-body">
-      <div class="flex flex-wrap gap-2 mb-6">
-        <.link
-          class="btn btn-outline"
-          patch={~p"/ledger/accounts/#{@account.id}/show/edit"}
-          phx-click={JS.push_focus()}
-        >
-          <.icon name="hero-pencil" class="w-4 h-4 mr-1" />
-          <span>{gettext("Edit account")}</span>
-        </.link>
-        <.link class="btn btn-info btn-outline" href={~p"/ledger/accounts/#{@account.id}/entries"}>
-          <.icon name="hero-folder-open" class="w-4 h-4 mr-1" />
-          <span>{gettext("Entries")}</span>
-        </.link>
-      </div>
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div class="space-y-4">
-          <.input type="static" label={gettext("Account name")} value={Enum.join(@account.name, ".")} />
-          <.input type="static" label={gettext("Ledger")} value={@account.ledger} />
-          <.input type="static" label={gettext("Type")} value={@account.type} />
-          <.input type="static" label={gettext("Currency")} value={get_currency(@account.currency)} />
-          <.input type="static" label={gettext("Notes")} value={@account.notes || gettext("No notes")} />
+  <div class="grid grid-cols-12 gap-6 mt-6">
+    <div class="col-span-12 lg:col-span-6">
+      <div
+        id="account-chart"
+        phx-hook="ChartTooltip"
+        class="card bg-base-100 shadow-xl border border-base-200 h-full"
+      >
+        <div class="bg-base-200 px-4 py-3 border-b border-base-300 rounded-t-2xl">
+          <h2 class="card-title text-base m-0">
+            {gettext("Evolution")}
+          </h2>
         </div>
+        <div class="card-body p-6 chart-container">
+          <% # sobelow_skip ["XSS.Raw"] %>
+          {raw(Conta.Stats.graph_account(@account))}
+        </div>
+      </div>
+    </div>
 
-        <div class="space-y-6">
-          <div :if={@account.balances != []}>
-            <h3 class="text-lg font-bold mb-2">{gettext("Balances")}</h3>
+    <div class="col-span-12 lg:col-span-6">
+      <div class="card bg-base-100 shadow-xl border border-base-200 h-full">
+        <div class="bg-base-200 px-4 py-3 border-b border-base-300 rounded-t-2xl flex items-center justify-between">
+          <h2 class="card-title text-base m-0">
+            {gettext("Account details")}
+          </h2>
+          <div class="flex items-center gap-2">
+            <.link
+              class="btn btn-sm btn-outline"
+              patch={~p"/ledger/accounts/#{@account.id}/show/edit"}
+              phx-click={JS.push_focus()}
+            >
+              <.icon name="hero-pencil" class="w-4 h-4 mr-1" />
+              <span>{gettext("Edit account")}</span>
+            </.link>
+            <.link class="btn btn-sm btn-info btn-outline" href={~p"/ledger/accounts/#{@account.id}/entries"}>
+              <.icon name="hero-folder-open" class="w-4 h-4 mr-1" />
+              <span>{gettext("Entries")}</span>
+            </.link>
+          </div>
+        </div>
+        <div class="card-body p-6">
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <.input type="static" label={gettext("Account name")} value={Enum.join(@account.name, ".")} />
+            <.input type="static" label={gettext("Ledger")} value={@account.ledger} />
+            <.input type="static" label={gettext("Type")} value={@account.type} />
+            <.input type="static" label={gettext("Currency")} value={get_currency(@account.currency)} />
+          </div>
+          <div class="mt-4">
+            <.input type="static" label={gettext("Notes")} value={@account.notes || gettext("No notes")} />
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class={[
+      "col-span-12",
+      if(@subaccounts != [], do: "lg:col-span-6", else: "lg:col-span-12")
+    ]}>
+      <div class="card bg-base-100 shadow-xl border border-base-200 h-full">
+        <div class="bg-base-200 px-4 py-3 border-b border-base-300 rounded-t-2xl">
+          <h2 class="card-title text-base m-0">
+            {gettext("Balances")}
+          </h2>
+        </div>
+        <div class="card-body p-6">
+          <%= if @account.balances != [] do %>
             <.simple_table id="balances" rows={@account.balances}>
               <:col :let={balance} class="text-right font-mono" label={gettext("Amount")}>
                 {%Money{balance.amount | currency: balance.currency}}
               </:col>
             </.simple_table>
-          </div>
+          <% else %>
+            <p class="text-sm text-base-content/60 italic">{gettext("No balances recorded yet.")}</p>
+          <% end %>
+        </div>
+      </div>
+    </div>
 
-          <div :if={@subaccounts != []}>
-            <h3 class="text-lg font-bold mb-2">{gettext("Subaccounts")}</h3>
-            <.simple_table id="subaccounts" rows={@subaccounts}>
-              <:col :let={account} label={gettext("Name")}>
-                <.link href={~p"/ledger/accounts/#{account}"} class="link link-primary">
-                  {Enum.join(account.name, ".")}
-                </.link>
-              </:col>
-            </.simple_table>
-          </div>
+    <div :if={@subaccounts != []} class="col-span-12 lg:col-span-6">
+      <div class="card bg-base-100 shadow-xl border border-base-200 h-full">
+        <div class="bg-base-200 px-4 py-3 border-b border-base-300 rounded-t-2xl">
+          <h2 class="card-title text-base m-0">
+            {gettext("Subaccounts")}
+          </h2>
+        </div>
+        <div class="card-body p-6">
+          <.simple_table id="subaccounts" rows={@subaccounts}>
+            <:col :let={account} label={gettext("Name")}>
+              <.link href={~p"/ledger/accounts/#{account}"} class="link link-primary">
+                {Enum.join(account.name, ".")}
+              </.link>
+            </:col>
+          </.simple_table>
         </div>
       </div>
     </div>

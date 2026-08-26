@@ -4,7 +4,7 @@ defmodule Conta.MixProject do
   def project do
     [
       app: :conta,
-      version: "0.4.0",
+      version: "0.4.1",
       build_path: "../../_build",
 
       config_path: "../../config/config.exs",
@@ -14,6 +14,7 @@ defmodule Conta.MixProject do
       elixirc_paths: elixirc_paths(Mix.env()),
       start_permanent: Mix.env() == :prod,
       test_coverage: coverage(),
+      dialyzer: [plt_add_apps: [:mix]],
       aliases: aliases(),
       deps: deps()
     ]

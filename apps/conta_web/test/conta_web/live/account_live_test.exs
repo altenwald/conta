@@ -128,9 +128,11 @@ defmodule ContaWeb.AccountLiveTest do
   describe "Show" do
     test "displays account", %{conn: conn} do
       account = create_account()
-      {:ok, _show_live, html} = live(conn, ~p"/ledger/accounts/#{account}")
+      {:ok, show_live, html} = live(conn, ~p"/ledger/accounts/#{account}")
 
       assert html =~ "Show Account"
+      assert has_element?(show_live, "#account-chart")
+      assert has_element?(show_live, "#account-chart .chart-container svg")
     end
 
     test "updates account within modal", %{conn: conn} do
