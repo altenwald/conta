@@ -207,18 +207,50 @@ tr.simple-invoice td {
   }
 }
 
-/* Responsive SVG chart containers and dark theme adjustments */
+/* Responsive SVG chart containers and theme adjustments */
 .chart-container svg {
   width: 100%;
   height: auto;
   display: block;
 }
 
+.chart-container svg text {
+  fill: #374151 !important;
+  font-family: ui-sans-serif, system-ui, sans-serif;
+}
+
+.chart-container svg line.plotto-axis,
+.chart-container svg .plotto-axis {
+  stroke: #9CA3AF !important;
+}
+
+:where([data-theme="light"]) .chart-container svg text {
+  fill: #374151 !important;
+}
+
+:where([data-theme="light"]) .chart-container svg line.plotto-axis,
+:where([data-theme="light"]) .chart-container svg .plotto-axis {
+  stroke: #9CA3AF !important;
+}
+
 :where([data-theme="dark"]) .chart-container svg text {
   fill: #E5E7EB !important;
 }
 
-:where([data-theme="dark"]) .chart-container svg line {
+:where([data-theme="dark"]) .chart-container svg line.plotto-axis,
+:where([data-theme="dark"]) .chart-container svg .plotto-axis {
   stroke: #4B5563 !important;
 }
+
+@media (prefers-color-scheme: dark) {
+  :where(:root:not([data-theme])) .chart-container svg text {
+    fill: #E5E7EB !important;
+  }
+
+  :where(:root:not([data-theme])) .chart-container svg line.plotto-axis,
+  :where(:root:not([data-theme])) .chart-container svg .plotto-axis {
+    stroke: #4B5563 !important;
+  }
+}
+
 

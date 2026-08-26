@@ -418,13 +418,13 @@ defmodule Conta.Stats do
     style =
       case theme do
         :dark ->
-          "<style>text{fill:#E5E7EB;font-family:ui-sans-serif,system-ui,sans-serif;}line{stroke:#4B5563;}</style>"
+          "<style>text{fill:#E5E7EB;font-family:ui-sans-serif,system-ui,sans-serif;}line.plotto-axis{stroke:#4B5563;}</style>"
 
         :light ->
-          "<style>text{fill:#374151;font-family:ui-sans-serif,system-ui,sans-serif;}line{stroke:#D1D5DB;}</style>"
+          "<style>text{fill:#374151;font-family:ui-sans-serif,system-ui,sans-serif;}line.plotto-axis{stroke:#9CA3AF;}</style>"
 
         _ ->
-          "<style>text{fill:#374151;font-family:ui-sans-serif,system-ui,sans-serif;}line{stroke:#D1D5DB;}@media(prefers-color-scheme:dark){text{fill:#E5E7EB!important;}line{stroke:#4B5563!important;}}</style>"
+          "<style>text{fill:#374151;font-family:ui-sans-serif,system-ui,sans-serif;}line.plotto-axis{stroke:#9CA3AF;}@media(prefers-color-scheme:dark){text{fill:#E5E7EB;}line.plotto-axis{stroke:#4B5563;}}</style>"
       end
 
     String.replace(svg, ~r/<svg([^>]*)>/, "<svg\\1>#{style}", global: false)
