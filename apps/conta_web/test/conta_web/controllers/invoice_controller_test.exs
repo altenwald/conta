@@ -92,4 +92,70 @@ defmodule ContaWeb.InvoiceControllerTest do
       assert String.ends_with?(pdf, "%%EOF")
     end
   end
+
+  describe "GET /books/invoices/:id" do
+    test "renders invoice show page with non-printable email delivery history", %{conn: conn, user: user} do
+      invoice =
+        Conta.BookFixtures.insert(:invoice, %{
+          invoice_number: "2026-00001",
+          company: %{Conta.BookFixtures.invoice_company_factory() | nif: "A55666777"},
+          template: "default"
+        })
+
+      Conta.Repo.insert!(%Conta.Projector.Book.Template{
+        id: Ecto.UUID.generate(),
+        nif: "A55666777",
+        name: "default",
+        css: "h1 { color: blue; }",
+        logo: nil,
+        logo_mime_type: nil
+      })
+
+      Conta.Repo.insert!(%Conta.Projector.Book.InvoiceEmail{
+        id: Ecto.UUID.generate(),
+        invoice_id: invoice.id,
+        to: "accountant@client.com",
+        subject: "Invoice 2026-00001",
+        body: "Attached invoice",
+        sent_at: ~U[2026-08-28 11:30:00.000000Z]
+      })
+
+      conn = log_in_user(conn, user)
+      conn = get(conn, ~p"/books/invoices/#{invoice.id}")
+
+      html = response(conn, 200)
+      assert html =~ "Email Delivery History"
+      assert html =~ "accountant@client.com"
+      assert html =~ "2026-08-28"
+      assert html =~ "11:30:00"
+      assert html =~ "Send by email"
+      assert html =~ "Download PDF"
+    end
+
+    test "renders invoice show page with no email deliveries yet", %{conn: conn, user: user} do
+      invoice =
+        Conta.BookFixtures.insert(:invoice, %{
+          invoice_number: "2026-00002",
+          company: %{Conta.BookFixtures.invoice_company_factory() | nif: "A55666777"},
+          template: "default"
+        })
+
+      Conta.Repo.insert!(%Conta.Projector.Book.Template{
+        id: Ecto.UUID.generate(),
+        nif: "A55666777",
+        name: "default",
+        css: "h1 { color: blue; }",
+        logo: nil,
+        logo_mime_type: nil
+      })
+
+      conn = log_in_user(conn, user)
+      conn = get(conn, ~p"/books/invoices/#{invoice.id}")
+
+      html = response(conn, 200)
+      assert html =~ "This invoice has not been sent by email yet."
+      assert html =~ "Send by email"
+      assert html =~ "Download PDF"
+    end
+  end
 end

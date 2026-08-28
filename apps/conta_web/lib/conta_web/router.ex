@@ -126,8 +126,10 @@ defmodule ContaWeb.Router do
       scope "/books/invoices/" do
         live "/", InvoiceLive.Index, :index
         live "/new", InvoiceLive.Index, :new
+        live "/send_batch_email", InvoiceLive.Index, :send_batch_email
         live "/:id/edit", InvoiceLive.Index, :edit
         live "/:id/duplicate", InvoiceLive.Index, :duplicate
+        live "/:id/send_email", InvoiceLive.Index, :send_email
 
         get "/run/:automator_id", InvoiceController, :run
 

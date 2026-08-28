@@ -9,6 +9,7 @@ defmodule Conta.Projector.Book do
 
   alias Conta.Event.ExpenseRemoved
   alias Conta.Event.ExpenseSet
+  alias Conta.Event.InvoiceEmailSent
   alias Conta.Event.InvoiceRemoved
   alias Conta.Event.InvoiceSet
   alias Conta.Event.PaymentMethodSet
@@ -16,6 +17,7 @@ defmodule Conta.Projector.Book do
 
   alias Conta.Projector.Book.Expense
   alias Conta.Projector.Book.Invoice
+  alias Conta.Projector.Book.InvoiceEmail
   alias Conta.Projector.Book.PaymentMethod
   alias Conta.Projector.Book.Template
 
@@ -202,6 +204,15 @@ defmodule Conta.Projector.Book do
     Ecto.Multi.insert(multi, :template, changeset, opts)
   end)
 
+  project(%InvoiceEmailSent{} = email_sent, _metadata, fn multi ->
+    changeset =
+      email_sent
+      |> Map.from_struct()
+      |> InvoiceEmail.changeset()
+
+    Ecto.Multi.insert(multi, :invoice_email, changeset)
+  end)
+
   @impl Conta.Projector
   def after_update(%InvoiceSet{}, _metadata, changes) do
     event_name = "event:invoice_set"
@@ -216,6 +227,11 @@ defmodule Conta.Projector.Book do
     expense = Map.put(expense, :num_attachments, length(expense.attachments))
     Logger.debug("sending broadcast for event #{inspect(event_name)}")
     Phoenix.PubSub.broadcast(Conta.PubSub, event_name, {:expense_set, expense})
+  end
+
+  def after_update(%InvoiceEmailSent{}, _metadata, changes) do
+    invoice_email = changes[:invoice_email]
+    Phoenix.PubSub.broadcast(Conta.PubSub, "event:invoice_email_sent", {:invoice_email_sent, invoice_email})
   end
 
   def after_update(_event, _metadata, _changes), do: :ok

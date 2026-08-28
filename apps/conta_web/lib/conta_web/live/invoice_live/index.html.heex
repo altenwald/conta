@@ -63,6 +63,47 @@
               <span>{gettext("Download")}</span>
             </.link>
           </div>
+          <%= case batch_send_status(@selected_invoice_ids) do %>
+            <% {:ok, count} -> %>
+              <div class="flex items-center gap-1">
+                <.link
+                  patch={~p"/books/invoices/send_batch_email"}
+                  class="btn btn-primary btn-sm"
+                >
+                  <.icon name="hero-envelope" class="w-4 h-4 mr-1" />
+                  <span>{gettext("Send %{count} by email", count: count)}</span>
+                </.link>
+                <button
+                  type="button"
+                  phx-click="clear_selection"
+                  class="btn btn-ghost btn-sm"
+                  title={gettext("Clear selection")}
+                >
+                  <.icon name="hero-x-mark" class="w-4 h-4" />
+                </button>
+              </div>
+            <% {:different_clients, count} -> %>
+              <div class="flex items-center gap-1">
+                <div
+                  class="tooltip tooltip-bottom"
+                  data-tip={gettext("All selected invoices must belong to the same client")}
+                >
+                  <button class="btn btn-disabled btn-sm" disabled="disabled">
+                    <.icon name="hero-envelope" class="w-4 h-4 mr-1" />
+                    <span>{gettext("Send %{count} by email", count: count)}</span>
+                  </button>
+                </div>
+                <button
+                  type="button"
+                  phx-click="clear_selection"
+                  class="btn btn-ghost btn-sm"
+                  title={gettext("Clear selection")}
+                >
+                  <.icon name="hero-x-mark" class="w-4 h-4" />
+                </button>
+              </div>
+            <% :none -> %>
+          <% end %>
         </div>
       </form>
       <div class="w-full">
@@ -72,6 +113,52 @@
             rows={@streams.books_invoices}
             row_click={fn {_id, invoice} -> JS.navigate(~p"/books/invoices/#{invoice}") end}
           >
+            <:col :let={{_id, invoice}}>
+              <input
+                type="checkbox"
+                checked={MapSet.member?(@selected_invoice_ids, invoice.id)}
+                phx-click={JS.push("toggle_select", value: %{id: invoice.id})}
+                phx-value-id={invoice.id}
+                class="checkbox checkbox-primary checkbox-sm"
+                title={gettext("Select invoice")}
+              />
+            </:col>
+            <:col :let={{_id, invoice}} label={gettext("Invoice Number")}>
+              {invoice.invoice_number}
+            </:col>
+
+            <:col :let={{_id, invoice}} label={gettext("Invoice Date")}>
+              {invoice.invoice_date}
+            </:col>
+            <:col :let={{_id, invoice}} label={gettext("Name / Client")}>
+              <%= if name = invoice.name do %>
+                <span class="font-bold text-base-content">{name}</span>
+                <br /><span class="text-xs opacity-70">{get_client(invoice)}</span>
+              <% else %>
+                {get_client(invoice)}
+              <% end %>
+            </:col>
+            <:col :let={{_id, invoice}} label={gettext("Paid?")} class="text-center">
+              <%= if invoice.paid_date do %>
+                <span class="text-success tooltip" data-tip={gettext("Paid")}>
+                  <.icon name="hero-check-circle" class="w-5 h-5" />
+                </span>
+              <% else %>
+                <span class="text-error tooltip" data-tip={gettext("Pending")}>
+                  <.icon name="hero-x-circle" class="w-5 h-5" />
+                </span>
+              <% end %>
+            </:col>
+            <:col :let={{_id, invoice}} label={gettext("Subtotal")} class="text-right font-mono">
+              {Money.new(invoice.subtotal_price, invoice.currency)}
+            </:col>
+            <:col :let={{_id, invoice}} label={gettext("Tax")} class="text-right font-mono">
+              {Money.new(invoice.tax_price, invoice.currency)}
+            </:col>
+            <:col :let={{_id, invoice}} label={gettext("Total")} class="text-right font-mono">
+              {Money.new(invoice.total_price, invoice.currency)}
+            </:col>
+
             <:action :let={{_id, invoice}}>
               <.link
                 class="btn btn-info btn-outline btn-sm"
@@ -110,6 +197,15 @@
             </:action>
             <:action :let={{_id, invoice}}>
               <.link
+                class="btn btn-ghost btn-sm text-info"
+                patch={~p"/books/invoices/#{invoice}/send_email"}
+                title={gettext("Send by email")}
+              >
+                <.icon name="hero-envelope" class="w-4 h-4" />
+              </.link>
+            </:action>
+            <:action :let={{_id, invoice}}>
+              <.link
                 class="btn btn-ghost btn-sm"
                 patch={~p"/books/invoices/#{invoice}/duplicate"}
                 title={gettext("Duplicate")}
@@ -136,41 +232,6 @@
                 <.icon name="hero-trash" class="w-4 h-4" />
               </.link>
             </:action>
-            <:col :let={{_id, invoice}} label={gettext("Invoice Number")}>
-              {invoice.invoice_number}
-            </:col>
-
-            <:col :let={{_id, invoice}} label={gettext("Invoice Date")}>
-              {invoice.invoice_date}
-            </:col>
-            <:col :let={{_id, invoice}} label={gettext("Name / Client")}>
-              <%= if name = invoice.name do %>
-                <span class="font-bold text-base-content">{name}</span>
-                <br /><span class="text-xs opacity-70">{get_client(invoice)}</span>
-              <% else %>
-                {get_client(invoice)}
-              <% end %>
-            </:col>
-            <:col :let={{_id, invoice}} label={gettext("Paid?")} class="text-center">
-              <%= if invoice.paid_date do %>
-                <span class="text-success tooltip" data-tip={gettext("Paid")}>
-                  <.icon name="hero-check-circle" class="w-5 h-5" />
-                </span>
-              <% else %>
-                <span class="text-error tooltip" data-tip={gettext("Pending")}>
-                  <.icon name="hero-x-circle" class="w-5 h-5" />
-                </span>
-              <% end %>
-            </:col>
-            <:col :let={{_id, invoice}} label={gettext("Subtotal")} class="text-right font-mono">
-              {Money.new(invoice.subtotal_price, invoice.currency)}
-            </:col>
-            <:col :let={{_id, invoice}} label={gettext("Tax")} class="text-right font-mono">
-              {Money.new(invoice.tax_price, invoice.currency)}
-            </:col>
-            <:col :let={{_id, invoice}} label={gettext("Total")} class="text-right font-mono">
-              {Money.new(invoice.total_price, invoice.currency)}
-            </:col>
           </.table>
         </div>
       </div>
@@ -191,6 +252,21 @@
     action={@live_action}
     set_invoice={@set_invoice}
     company_nif={@company_nif}
+    patch={~p"/books/invoices"}
+  />
+</.modal>
+
+<.modal
+  :if={@live_action in [:send_email, :send_batch_email] && @email_invoices != []}
+  id="send-email-modal"
+  show
+  on_cancel={JS.patch(~p"/books/invoices")}
+>
+  <.live_component
+    module={ContaWeb.InvoiceLive.SendEmailComponent}
+    id="send-email-modal-component"
+    title={@page_title}
+    invoices={@email_invoices}
     patch={~p"/books/invoices"}
   />
 </.modal>

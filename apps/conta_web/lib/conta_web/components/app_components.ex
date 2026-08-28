@@ -221,7 +221,15 @@ defmodule ContaWeb.AppComponents do
       data-cancel={JS.exec(@on_cancel, "phx-remove")}
       class="modal"
     >
-      <div class="modal-box" role="dialog" aria-modal="true" tabindex="0">
+      <div class="modal-box relative" role="dialog" aria-modal="true" tabindex="0">
+        <button
+          type="button"
+          phx-click={JS.exec("data-cancel", to: "##{@id}")}
+          class="btn btn-sm btn-circle btn-ghost absolute right-2 top-2 z-10"
+          aria-label={gettext("close")}
+        >
+          <.icon name="hero-x-mark" class="w-4 h-4" />
+        </button>
         <.focus_wrap
           id={"#{@id}-container"}
           phx-window-keydown={JS.exec("data-cancel", to: "##{@id}")}

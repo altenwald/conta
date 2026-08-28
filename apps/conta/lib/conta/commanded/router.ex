@@ -20,6 +20,7 @@ defmodule Conta.Commanded.Router do
   alias Conta.Command.RemoveShortcut
   alias Conta.Command.RematchMovements
   alias Conta.Command.ReorderMatchRules
+  alias Conta.Command.SendInvoiceEmail
   alias Conta.Command.SetAccount
   alias Conta.Command.SetAccountTransaction
   alias Conta.Command.SetCompany
@@ -53,6 +54,7 @@ defmodule Conta.Commanded.Router do
   dispatch(RemoveContact, to: Company, identity: :company_nif)
   dispatch(RemoveExpense, to: Company, identity: :nif)
   dispatch(RemoveInvoice, to: Company, identity: :nif)
+  dispatch(SendInvoiceEmail, to: Company, identity: :company_nif)
   dispatch(SetCompany, to: Company, identity: :nif)
   dispatch(SetContact, to: Company, identity: :company_nif)
   dispatch(SetExpense, to: Company, identity: :nif)

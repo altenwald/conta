@@ -14,10 +14,11 @@ defmodule Conta.Event.Common.Company do
     field :state, :string
     field :country, :string
     field :details, :string
+    field :email, :string
   end
 
   @required_fields ~w[nif name country]a
-  @optional_fields ~w[address postcode city state details]a
+  @optional_fields ~w[address postcode city state details email]a
 
   @doc false
   def changeset(model, params) do

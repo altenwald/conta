@@ -241,4 +241,80 @@ defmodule Conta.BookTest do
       assert nil == Book.get_template_by_name("A55666777", "nonexistent")
     end
   end
+
+  describe "invoice emails" do
+    test "send_invoices_email/4 delivers email and dispatches command" do
+      invoice = insert(:invoice)
+
+      params = %{
+        subject: "Invoice #{invoice.invoice_number}",
+        body: "Please find your invoice attached."
+      }
+
+      attachments = [{"#{invoice.invoice_number}.pdf", "application/pdf", "fake-pdf-content"}]
+
+      assert {:ok, email} =
+               Book.send_invoices_email(invoice, "client@example.com", params, attachments)
+
+      assert email.to == [{"", "client@example.com"}]
+      assert email.subject == "Invoice #{invoice.invoice_number}"
+      assert email.text_body == "Please find your invoice attached."
+      assert length(email.attachments) == 1
+    end
+
+    test "send_invoices_email/4 with multiple invoices attaches all PDFs" do
+      inv1 = insert(:invoice, %{invoice_number: "2026-00001"})
+      inv2 = insert(:invoice, %{invoice_number: "2026-00002"})
+
+      params = %{
+        subject: "Invoices 2026-00001, 2026-00002",
+        body: "Attached invoices."
+      }
+
+      attachments = [
+        {"2026-00001.pdf", "application/pdf", "pdf1"},
+        {"2026-00002.pdf", "application/pdf", "pdf2"}
+      ]
+
+      assert {:ok, email} =
+               Book.send_invoices_email([inv1, inv2], "client@example.com", params, attachments)
+
+      assert email.to == [{"", "client@example.com"}]
+      assert length(email.attachments) == 2
+    end
+
+    test "list_invoice_emails/1 returns empty list when no emails sent" do
+      invoice = insert(:invoice)
+      assert Book.list_invoice_emails(invoice.id) == []
+    end
+
+    test "list_invoice_emails/1 returns sent emails for an invoice ordered by sent_at desc" do
+      invoice = insert(:invoice)
+
+      _email1 =
+        Conta.Repo.insert!(%Conta.Projector.Book.InvoiceEmail{
+          id: Ecto.UUID.generate(),
+          invoice_id: invoice.id,
+          to: "first@example.com",
+          subject: "First send",
+          body: "Body 1",
+          sent_at: ~U[2026-08-28 09:00:00.000000Z]
+        })
+
+      _email2 =
+        Conta.Repo.insert!(%Conta.Projector.Book.InvoiceEmail{
+          id: Ecto.UUID.generate(),
+          invoice_id: invoice.id,
+          to: "second@example.com",
+          subject: "Second send",
+          body: "Body 2",
+          sent_at: ~U[2026-08-28 10:00:00.000000Z]
+        })
+
+      emails = Book.list_invoice_emails(invoice.id)
+      assert length(emails) == 2
+      # ordered desc by sent_at
+      assert hd(emails).to == "second@example.com"
+    end
+  end
 end

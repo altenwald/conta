@@ -11,12 +11,14 @@ defmodule ContaWeb.InvoiceController do
   def show(conn, %{"id" => id}) do
     invoice = Book.get_invoice!(id)
     template = Book.get_template_by_name!(invoice.company.nif, invoice.template)
+    emails_sent = Book.list_invoice_emails(invoice.id)
 
     conn
     |> put_layout(html: {ContaWeb.Layouts, :print})
     |> assign(:page_title, invoice.invoice_number)
     |> assign(:invoice, invoice)
     |> assign(:template, template)
+    |> assign(:emails_sent, emails_sent)
     |> render(:show)
   end
 

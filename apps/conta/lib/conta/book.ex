@@ -4,10 +4,12 @@ defmodule Conta.Book do
 
   alias Conta.Command.RemoveExpense
   alias Conta.Command.RemoveInvoice
+  alias Conta.Command.SendInvoiceEmail
   alias Conta.Command.SetExpense
   alias Conta.Command.SetInvoice
   alias Conta.Projector.Book.Expense
   alias Conta.Projector.Book.Invoice
+  alias Conta.Projector.Book.InvoiceEmail
   alias Conta.Projector.Book.PaymentMethod
   alias Conta.Projector.Book.Template
   alias Conta.Repo
@@ -179,6 +181,64 @@ defmodule Conta.Book do
   def get_invoice!(year, number) when is_integer(year) and is_integer(number) do
     invoice_number = "#{year}-#{String.pad_leading(to_string(number), 5, "0")}"
     Repo.get_by!(Invoice, invoice_number: invoice_number)
+  end
+
+  def list_invoice_emails(invoice_id) do
+    from(e in InvoiceEmail, where: e.invoice_id == ^invoice_id, order_by: [desc: e.sent_at])
+    |> Repo.all()
+  end
+
+  def send_invoices_email(invoices, to_email, params, attachments \\ [])
+
+  def send_invoices_email(%Invoice{} = invoice, to_email, params, attachments) do
+    send_invoices_email([invoice], to_email, params, attachments)
+  end
+
+  def send_invoices_email([first_invoice | _] = invoices, to_email, params, attachments) do
+    email = build_invoice_swoosh_email(first_invoice, to_email, params, attachments)
+
+    with {:ok, _} <- Conta.Mailer.deliver(email) do
+      dispatch_invoices_email_commands(invoices, to_email, params)
+      {:ok, email}
+    end
+  end
+
+  defp build_invoice_swoosh_email(invoice, to_email, params, attachments) do
+    from_name = invoice.company.name || "Conta"
+    default_from = Application.get_env(:conta, :mailer_from, "billing@altenwald.com")
+    from_email = params[:from] || invoice.company.email || default_from
+
+    Swoosh.Email.new()
+    |> Swoosh.Email.to(to_email)
+    |> Swoosh.Email.from({from_name, from_email})
+    |> Swoosh.Email.subject(params[:subject] || "")
+    |> Swoosh.Email.text_body(params[:body] || "")
+    |> attach_files(attachments)
+  end
+
+  defp attach_files(email, attachments) do
+    Enum.reduce(attachments, email, fn {filename, content_type, data}, acc ->
+      attachment = Swoosh.Attachment.new({:data, data}, filename: filename, content_type: content_type)
+      Swoosh.Email.attachment(acc, attachment)
+    end)
+  end
+
+  defp dispatch_invoices_email_commands(invoices, to_email, params) do
+    now = DateTime.utc_now()
+
+    Enum.each(invoices, fn invoice ->
+      command = %SendInvoiceEmail{
+        id: Ecto.UUID.generate(),
+        invoice_id: invoice.id,
+        company_nif: invoice.company.nif,
+        to: to_email,
+        subject: params[:subject],
+        body: params[:body],
+        sent_at: now
+      }
+
+      Conta.Commanded.Application.dispatch(command)
+    end)
   end
 
   def list_payment_methods(nif \\ nil)

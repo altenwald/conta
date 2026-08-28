@@ -7,6 +7,7 @@ defmodule Conta.Aggregate.Company do
   alias Conta.Command.RemoveContact
   alias Conta.Command.RemoveExpense
   alias Conta.Command.RemoveInvoice
+  alias Conta.Command.SendInvoiceEmail
   alias Conta.Command.SetCompany
   alias Conta.Command.SetContact
   alias Conta.Command.SetExpense
@@ -19,6 +20,7 @@ defmodule Conta.Aggregate.Company do
   alias Conta.Event.ContactSet
   alias Conta.Event.ExpenseRemoved
   alias Conta.Event.ExpenseSet
+  alias Conta.Event.InvoiceEmailSent
   alias Conta.Event.InvoiceRemoved
   alias Conta.Event.InvoiceSet
   alias Conta.Event.PaymentMethodSet
@@ -56,6 +58,7 @@ defmodule Conta.Aggregate.Company do
           state: nil | String.t(),
           country: nil | String.t(),
           details: nil | String.t(),
+          email: nil | String.t(),
           invoice_numbers: %{pos_integer() => MapSet.t(pos_integer())},
           credit_note_numbers: %{pos_integer() => MapSet.t(pos_integer())},
           expense_numbers: %{pos_integer() => MapSet.t({String.t(), String.t()})},
@@ -72,6 +75,7 @@ defmodule Conta.Aggregate.Company do
             state: nil,
             country: nil,
             details: nil,
+            email: nil,
             invoice_numbers: %{},
             credit_note_numbers: %{},
             expense_numbers: %{},
@@ -90,6 +94,7 @@ defmodule Conta.Aggregate.Company do
       state: params["state"],
       country: params["country"],
       details: params["details"],
+      email: params["email"],
       invoice_numbers:
         Map.new(params["invoice_numbers"] || %{}, fn {year, invoice_numbers_list} ->
           {String.to_integer(to_string(year)), MapSet.new(invoice_numbers_list)}
@@ -200,6 +205,12 @@ defmodule Conta.Aggregate.Company do
     {:error, %{payment_method: ["can't be blank"]}}
   end
 
+  def execute(%__MODULE__{}, %SendInvoiceEmail{} = command) do
+    command
+    |> Map.from_struct()
+    |> InvoiceEmailSent.changeset()
+  end
+
   def execute(%__MODULE__{} = company, %SetInvoice{} = command) do
     client_nif = command.client_nif
     payment_method = command.payment_method
@@ -223,7 +234,10 @@ defmodule Conta.Aggregate.Company do
         |> Map.put(:destination_country, country)
         |> Map.put(:details, process_details(command))
         |> Map.put(:payment_method, process_payment_method(company.payment_methods[payment_method]))
-        |> Map.put(:company, Map.take(company, ~w[nif name address postcode city state country details]a))
+        |> Map.put(
+          :company,
+          Map.take(company, ~w[nif name address postcode city state country details email]a)
+        )
         |> InvoiceSet.changeset()
     end
   end
@@ -254,7 +268,10 @@ defmodule Conta.Aggregate.Company do
         |> Map.put(:provider, provider)
         |> Map.put(:attachments, process_attachments(command))
         |> Map.put(:payment_method, process_payment_method(company.payment_methods[payment_method]))
-        |> Map.put(:company, Map.take(company, ~w[nif name address postcode city state country details]a))
+        |> Map.put(
+          :company,
+          Map.take(company, ~w[nif name address postcode city state country details email]a)
+        )
         |> ExpenseSet.changeset()
     end
   end
@@ -469,6 +486,8 @@ defmodule Conta.Aggregate.Company do
   def apply(%__MODULE__{} = company, %ExpenseSet{action: :update}), do: company
 
   def apply(%__MODULE__{} = company, %ExpenseRemoved{}), do: company
+
+  def apply(%__MODULE__{} = company, %InvoiceEmailSent{}), do: company
 
   def apply(%__MODULE__{contacts: contacts} = company, %ContactSet{nif: nif} = event) do
     event

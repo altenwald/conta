@@ -11,6 +11,7 @@ defmodule ContaWeb.ContactLive.Index do
   @impl true
   def mount(_params, _session, socket) do
     Phoenix.PubSub.subscribe(Conta.PubSub, "event:contact_set")
+    Phoenix.PubSub.subscribe(Conta.PubSub, "event:contact_removed")
     {:ok, stream(socket, :directory_contacts, Directory.list_contacts())}
   end
 
@@ -59,8 +60,11 @@ defmodule ContaWeb.ContactLive.Index do
   end
 
   @impl true
-  def handle_info({:contact_set, contact}, socket) do
-    Logger.debug("adding contact to the stream #{contact.name}")
-    {:noreply, stream_insert(socket, :directory_contacts, contact, at: 0)}
+  def handle_info({:contact_set, _contact}, socket) do
+    {:noreply, stream(socket, :directory_contacts, Directory.list_contacts(), reset: true)}
+  end
+
+  def handle_info({:contact_removed, _contact}, socket) do
+    {:noreply, stream(socket, :directory_contacts, Directory.list_contacts(), reset: true)}
   end
 end

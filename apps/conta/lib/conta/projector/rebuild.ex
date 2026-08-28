@@ -23,6 +23,7 @@ defmodule Conta.Projector.Rebuild do
       module: Conta.Projector.Book,
       handler_name: "Conta.Projector.Book",
       schemas: [
+        Conta.Projector.Book.InvoiceEmail,
         Conta.Projector.Book.Invoice,
         Conta.Projector.Book.Expense,
         Conta.Projector.Book.PaymentMethod,

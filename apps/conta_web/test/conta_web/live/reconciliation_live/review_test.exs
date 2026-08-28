@@ -16,6 +16,8 @@ defmodule ContaWeb.ReconciliationLive.ReviewTest do
   alias Conta.Repo
 
   setup do
+    Repo.delete_all("reconciliation_match_rules")
+    Repo.delete_all("reconciliation_movements")
     user = AccountsFixtures.insert(:user) |> AccountsFixtures.confirm_user()
     %{user: user}
   end

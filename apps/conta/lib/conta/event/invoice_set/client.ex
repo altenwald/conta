@@ -14,10 +14,11 @@ defmodule Conta.Event.InvoiceSet.Client do
     field :city, :string
     field :state, :string
     field :country, :string
+    field :emails, {:array, :string}, default: []
   end
 
   @required_fields ~w[name nif country]a
-  @optional_fields ~w[intracommunity address postcode city state]a
+  @optional_fields ~w[intracommunity address postcode city state emails]a
 
   @doc false
   def changeset(model, params) do

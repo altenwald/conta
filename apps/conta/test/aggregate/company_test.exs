@@ -1439,5 +1439,37 @@ defmodule Conta.Aggregate.CompanyTest do
       assert restored.credit_note_numbers == %{2026 => MapSet.new([1, 5, 8])}
       assert restored.invoice_numbers == %{2026 => MapSet.new([1, 2])}
     end
+
+    test "send invoice email successfully" do
+      company = %Conta.Aggregate.Company{
+        nif: "A55666777",
+        name: "Great Company SA",
+        email: "billing@greatcompany.com"
+      }
+
+      command = %Conta.Command.SendInvoiceEmail{
+        id: "a1b2c3d4-e5f6-4a5b-8c9d-0e1f2a3b4c5d",
+        invoice_id: "b2c3d4e5-f6a7-4b5c-9d0e-1f2a3b4c5d6e",
+        company_nif: "A55666777",
+        to: "client@example.com",
+        subject: "Invoice 2026-00001",
+        body: "Please find attached your invoice.",
+        sent_at: ~U[2026-08-28 10:00:00.000000Z]
+      }
+
+      event = Conta.Aggregate.Company.execute(company, command)
+
+      assert %Conta.Event.InvoiceEmailSent{
+               id: "a1b2c3d4-e5f6-4a5b-8c9d-0e1f2a3b4c5d",
+               invoice_id: "b2c3d4e5-f6a7-4b5c-9d0e-1f2a3b4c5d6e",
+               company_nif: "A55666777",
+               to: "client@example.com",
+               subject: "Invoice 2026-00001",
+               body: "Please find attached your invoice.",
+               sent_at: ~U[2026-08-28 10:00:00.000000Z]
+             } == event
+
+      assert Conta.Aggregate.Company.apply(company, event) == company
+    end
   end
 end

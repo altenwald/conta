@@ -14,10 +14,11 @@ defmodule Conta.Command.SetContact do
     field :city, :string
     field :state, :string
     field :country, :string
+    field :emails, {:array, :string}, default: []
   end
 
   @required_fields ~w[company_nif name nif address postcode city country]a
-  @optional_fields ~w[intracommunity state]a
+  @optional_fields ~w[intracommunity state emails]a
 
   @doc false
   def changeset(model \\ %__MODULE__{}, params) do

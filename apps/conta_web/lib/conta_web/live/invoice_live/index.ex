@@ -19,7 +19,9 @@ defmodule ContaWeb.InvoiceLive.Index do
      |> assign(:filter, "")
      |> assign(:filters, list_filters())
      |> assign(:term_and_year, "")
-     |> assign(:invoice_status, "")}
+     |> assign(:invoice_status, "")
+     |> assign(:selected_invoice_ids, MapSet.new())
+     |> assign(:email_invoices, [])}
   end
 
   defp list_filters do
@@ -47,13 +49,20 @@ defmodule ContaWeb.InvoiceLive.Index do
   end
 
   defp terms_and_years do
-    {max_date, min_date} = Book.get_invoice_date_range()
+    case Book.get_invoice_date_range() do
+      {%Date{} = max_date, %Date{} = min_date} ->
+        build_terms_and_years(min_date, max_date)
 
+      _ ->
+        []
+    end
+  end
+
+  defp build_terms_and_years(min_date, max_date) do
     Stream.unfold(min_date, fn date ->
       if Date.compare(date, max_date) != :gt do
-        year = date.year
         term = "Q#{div(date.month - 1, 3) + 1}"
-        {"#{year} #{term}", Date.add(date, 1)}
+        {"#{date.year} #{term}", Date.add(date, 1)}
       end
     end)
     |> Enum.uniq()
@@ -95,10 +104,39 @@ defmodule ContaWeb.InvoiceLive.Index do
     |> assign(:set_invoice, set_invoice)
   end
 
+  defp apply_action(socket, :send_email, %{"id" => id}) do
+    invoice = Book.get_invoice!(id)
+
+    socket
+    |> assign(:page_title, gettext("Send Invoice by Email"))
+    |> assign(:email_invoices, [invoice])
+  end
+
+  defp apply_action(socket, :send_batch_email, _params) do
+    selected_ids = socket.assigns.selected_invoice_ids
+
+    if MapSet.size(selected_ids) > 0 do
+      invoices = Enum.map(selected_ids, &Book.get_invoice!/1)
+
+      if same_client?(invoices) do
+        socket
+        |> assign(:page_title, gettext("Send Invoices by Email"))
+        |> assign(:email_invoices, invoices)
+      else
+        socket
+        |> put_flash(:error, gettext("All selected invoices must belong to the same client."))
+        |> push_patch(to: ~p"/books/invoices")
+      end
+    else
+      push_patch(socket, to: ~p"/books/invoices")
+    end
+  end
+
   defp apply_action(socket, :index, _params) do
     socket
     |> assign(:page_title, "Listing Books invoices")
     |> assign(:set_invoice, nil)
+    |> assign(:email_invoices, [])
   end
 
   defp filters(assigns) do
@@ -169,9 +207,68 @@ defmodule ContaWeb.InvoiceLive.Index do
     end
   end
 
+  def handle_event("toggle_select", %{"id" => id}, socket) do
+    selected = socket.assigns.selected_invoice_ids
+
+    new_selected =
+      if MapSet.member?(selected, id) do
+        MapSet.delete(selected, id)
+      else
+        MapSet.put(selected, id)
+      end
+
+    {:noreply, assign(socket, :selected_invoice_ids, new_selected)}
+  end
+
+  def handle_event("clear_selection", _params, socket) do
+    {:noreply, assign(socket, :selected_invoice_ids, MapSet.new())}
+  end
+
+  def same_client?([first | rest]) do
+    first_client = client_identifier(first)
+    Enum.all?(rest, fn inv -> client_identifier(inv) == first_client end)
+  end
+
+  def same_client?([]), do: false
+
+  defp client_identifier(%Invoice{client: %{nif: nif}}) when is_binary(nif) and nif != "", do: {:nif, nif}
+
+  defp client_identifier(%Invoice{client: %{name: name}}) when is_binary(name) and name != "",
+    do: {:name, name}
+
+  defp client_identifier(%Invoice{destination_country: country}), do: {:country, country}
+  defp client_identifier(_), do: :unknown
+
+  def batch_send_status(selected_ids) do
+    count = MapSet.size(selected_ids)
+
+    if count > 0 do
+      invoices =
+        selected_ids
+        |> Enum.map(&Book.get_invoice/1)
+        |> Enum.reject(&is_nil/1)
+
+      if length(invoices) == count and same_client?(invoices) do
+        {:ok, count}
+      else
+        {:different_clients, count}
+      end
+    else
+      :none
+    end
+  end
+
   @impl true
   def handle_info({:invoice_set, invoice}, socket) do
     Logger.debug("adding invoice to the stream #{invoice.invoice_number}")
     {:noreply, stream_insert(socket, :books_invoices, invoice, at: 0)}
+  end
+
+  def handle_info({:email, _email}, socket) do
+    {:noreply, socket}
+  end
+
+  def handle_info(_msg, socket) do
+    {:noreply, socket}
   end
 end

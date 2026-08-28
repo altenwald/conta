@@ -27,6 +27,13 @@ defmodule ContaWeb.ContactLive.FormComponent do
           label={gettext("Country")}
           phx-debounce={500}
         />
+        <.input
+          field={@form[:emails]}
+          type="text"
+          label={gettext("Emails")}
+          placeholder="billing@example.com, accounting@example.com"
+          value={format_emails(@form[:emails].value)}
+        />
 
         <:actions>
           <.button class="btn-primary" phx-disable-with={gettext("Saving...")}>
@@ -71,7 +78,10 @@ defmodule ContaWeb.ContactLive.FormComponent do
   end
 
   defp validate(socket, params) do
-    params = Map.put(params, "company_nif", socket.assigns.company_nif)
+    params =
+      params
+      |> Map.put("company_nif", socket.assigns.company_nif)
+      |> parse_emails()
 
     changeset =
       socket.assigns.set_contact
@@ -87,7 +97,11 @@ defmodule ContaWeb.ContactLive.FormComponent do
   end
 
   defp save_contact(socket, :edit, params) do
-    params = Map.put(params, "company_nif", socket.assigns.company_nif)
+    params =
+      params
+      |> Map.put("company_nif", socket.assigns.company_nif)
+      |> parse_emails()
+
     changeset = SetContact.changeset(socket.assigns.set_contact, params)
 
     if changeset.valid? and dispatch(SetContact.to_command(changeset)) == :ok do
@@ -103,7 +117,11 @@ defmodule ContaWeb.ContactLive.FormComponent do
   end
 
   defp save_contact(socket, :new, params) do
-    params = Map.put(params, "company_nif", socket.assigns.company_nif)
+    params =
+      params
+      |> Map.put("company_nif", socket.assigns.company_nif)
+      |> parse_emails()
+
     changeset = SetContact.changeset(socket.assigns.set_contact, params)
 
     if changeset.valid? and dispatch(SetContact.to_command(changeset)) == :ok do
@@ -117,6 +135,22 @@ defmodule ContaWeb.ContactLive.FormComponent do
       {:noreply, assign_form(socket, changeset)}
     end
   end
+
+  defp parse_emails(%{"emails" => emails} = params) when is_binary(emails) do
+    parsed =
+      emails
+      |> String.split(~r/[,\s]+/, trim: true)
+      |> Enum.map(&String.trim/1)
+      |> Enum.filter(&(&1 != ""))
+
+    Map.put(params, "emails", parsed)
+  end
+
+  defp parse_emails(params), do: params
+
+  defp format_emails(emails) when is_list(emails), do: Enum.join(emails, ", ")
+  defp format_emails(nil), do: ""
+  defp format_emails(other), do: to_string(other)
 
   defp assign_form(socket, %Ecto.Changeset{} = changeset) do
     assign(socket, :form, to_form(changeset))

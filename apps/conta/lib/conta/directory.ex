@@ -13,6 +13,7 @@ defmodule Conta.Directory do
   end
 
   def get_contact_by_nif(nif), do: Repo.get_by(Contact, nif: nif)
+  def get_contact_by_nif(company_nif, nif), do: Repo.get_by(Contact, company_nif: company_nif, nif: nif)
 
   def get_contact(id), do: Repo.get(Contact, id)
 
@@ -37,7 +38,8 @@ defmodule Conta.Directory do
       postcode: contact.postcode,
       city: contact.city,
       state: contact.state,
-      country: contact.country
+      country: contact.country,
+      emails: contact.emails || []
     }
   end
 

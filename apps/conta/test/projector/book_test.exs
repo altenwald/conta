@@ -462,4 +462,33 @@ defmodule Conta.Projector.BookTest do
              } = Repo.get_by!(Book.Template, name: "default")
     end
   end
+
+  describe "invoice_email" do
+    test "records invoice email sent successfully", metadata do
+      invoice = insert(:invoice)
+
+      event = %Conta.Event.InvoiceEmailSent{
+        id: Ecto.UUID.generate(),
+        invoice_id: invoice.id,
+        company_nif: invoice.company.nif,
+        to: "customer@example.com",
+        subject: "Invoice #{invoice.invoice_number}",
+        body: "Here is your invoice.",
+        sent_at: ~U[2026-08-28 12:00:00.000000Z]
+      }
+
+      assert :ok = Book.handle(event, metadata)
+
+      assert %Book.InvoiceEmail{
+               id: _,
+               invoice_id: invoice_id,
+               to: "customer@example.com",
+               subject: subject,
+               body: "Here is your invoice."
+             } = Repo.get_by!(Book.InvoiceEmail, invoice_id: invoice.id)
+
+      assert invoice_id == invoice.id
+      assert subject == "Invoice #{invoice.invoice_number}"
+    end
+  end
 end

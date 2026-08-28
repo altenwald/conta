@@ -43,6 +43,17 @@
             <:col :let={{_id, contact}} label={gettext("Name")}>
               {contact.name}
             </:col>
+            <:col :let={{_id, contact}} label={gettext("Emails")}>
+              <%= if contact.emails != nil and contact.emails != [] do %>
+                <div class="flex flex-wrap gap-1">
+                  <span :for={email <- contact.emails} class="badge badge-sm badge-ghost font-mono">
+                    {email}
+                  </span>
+                </div>
+              <% else %>
+                <span class="text-xs opacity-50">-</span>
+              <% end %>
+            </:col>
             <:col :let={{_id, contact}} label={gettext("Country")}>
               {Countries.get(contact.country).name}
             </:col>

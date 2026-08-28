@@ -100,6 +100,31 @@ defmodule ContaWeb.ContactLiveTest do
       assert html =~ "Contact created successfully"
     end
 
+    test "saves contact with multiple emails", %{conn: conn} do
+      {:ok, index_live, _html} = live(conn, ~p"/directories/contacts")
+
+      assert index_live |> element("a", "New Contact") |> render_click() =~ "New Contact"
+      assert_patch(index_live, ~p"/directories/contacts/new")
+
+      attrs =
+        Map.merge(@create_attrs, %{nif: "B55555555", emails: "billing@client.com, accounting@client.com"})
+
+      assert index_live
+             |> form("#contact-form", set_contact: attrs)
+             |> render_submit()
+
+      wait_for_event(Conta.Commanded.Application, Conta.Event.ContactSet)
+
+      assert_patch(index_live, ~p"/directories/contacts")
+
+      html = render(index_live)
+      assert html =~ "Contact created successfully"
+
+      contact = Conta.Directory.get_contact_by_nif(@company_nif, "B55555555")
+      assert contact != nil
+      assert contact.emails == ["billing@client.com", "accounting@client.com"]
+    end
+
     test "updates contact in listing", %{conn: conn} do
       contact = create_contact()
       update_attrs = %{@create_attrs | nif: contact.nif, name: "Jane Doe"}

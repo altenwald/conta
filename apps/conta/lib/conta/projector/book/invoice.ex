@@ -30,7 +30,7 @@ defmodule Conta.Projector.Book.Invoice do
     field :origin_invoice_id, :binary_id
 
     embeds_one :client, Client, on_replace: :delete do
-      @derive {Jason.Encoder, only: ~w[name nif intracommunity address postcode city state country]a}
+      @derive {Jason.Encoder, only: ~w[name nif intracommunity address postcode city state country emails]a}
 
       field :name, :string
       field :nif, :string
@@ -40,10 +40,11 @@ defmodule Conta.Projector.Book.Invoice do
       field :city, :string
       field :state, :string
       field :country, :string
+      field :emails, {:array, :string}, default: []
     end
 
     embeds_one :company, Company, on_replace: :delete do
-      @derive {Jason.Encoder, only: ~w[name nif address postcode city state country details]a}
+      @derive {Jason.Encoder, only: ~w[name nif address postcode city state country details email]a}
 
       field :name, :string
       field :nif, :string
@@ -53,7 +54,10 @@ defmodule Conta.Projector.Book.Invoice do
       field :state, :string
       field :country, :string
       field :details, :string
+      field :email, :string
     end
+
+    has_many :emails, Conta.Projector.Book.InvoiceEmail, foreign_key: :invoice_id
 
     embeds_one :payment_method, PaymentMethod, on_replace: :delete do
       @derive {Jason.Encoder, only: ~w[slug name method details holder]a}
@@ -106,7 +110,7 @@ defmodule Conta.Projector.Book.Invoice do
   end
 
   @required_fields ~w[name nif country]a
-  @optional_fields ~w[intracommunity address postcode city state]a
+  @optional_fields ~w[intracommunity address postcode city state emails]a
 
   @doc false
   def changeset_client(model, params) do
@@ -116,7 +120,7 @@ defmodule Conta.Projector.Book.Invoice do
   end
 
   @required_fields ~w[name nif country]a
-  @optional_fields ~w[address postcode city state details]a
+  @optional_fields ~w[address postcode city state details email]a
 
   @doc false
   def changeset_company(model, params) do
