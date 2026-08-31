@@ -19,6 +19,7 @@ business logic there and keeping `conta_web`/`conta_bot` as thin adapters.
   issues.
 - Use the already included `:req` (`Req`) library for HTTP requests (declared in `apps/conta`),
   **avoid** `:httpoison`, `:tesla`, and `:httpc`.
+- **Task & TODO Tracking**: Tasks and backlog items are managed via the Backlog MCP server (`http://127.0.0.1:8485/sse`, project `conta`) instead of local `TODO.md` files. Use MCP tools (`list_tasks`, `add_task`, `update_task`, `complete_task`, `get_top_priorities`) to query and update project tasks.
 
 ## Superpowers workflow
 
