@@ -89,7 +89,7 @@ defmodule Conta.Projector.Book.Invoice do
   end
 
   @required_fields ~w[invoice_number invoice_date type subtotal_price tax_price total_price destination_country]a
-  @optional_fields ~w[name paid_date due_date comments template currency is_credit_note origin_invoice_number origin_invoice_date origin_invoice_id]a
+  @optional_fields ~w[id name paid_date due_date comments template currency is_credit_note origin_invoice_number origin_invoice_date origin_invoice_id]a
 
   @doc false
   def changeset(model \\ %__MODULE__{}, params) do

@@ -172,6 +172,62 @@ defmodule Conta.Projector.BookTest do
              } = Repo.get_by!(Book.Invoice, invoice_number: "2023-00001")
     end
 
+    test "create successfully with explicit id", metadata do
+      custom_id = Ecto.UUID.generate()
+
+      event =
+        %Conta.Event.InvoiceSet{
+          id: custom_id,
+          action: :insert,
+          invoice_number: 99,
+          invoice_date: ~D"2023-12-30",
+          type: :service,
+          subtotal_price: 100_00,
+          tax_price: 21_00,
+          total_price: 121_00,
+          destination_country: "ES",
+          payment_method: %Conta.Event.Common.PaymentMethod{
+            slug: "paypal",
+            name: "PayPal",
+            method: :gateway,
+            details: "myaccount@paypal.com"
+          },
+          client: %Conta.Event.InvoiceSet.Client{
+            name: "My client",
+            nif: "B123456789",
+            address: "My client's address",
+            postcode: "14000",
+            city: "Cordoba",
+            state: "Cordoba",
+            country: "ES"
+          },
+          details: [
+            %Conta.Event.InvoiceSet.Detail{
+              description: "Consultancy",
+              tax: 21,
+              base_price: 100_00,
+              tax_price: 21_00,
+              total_price: 121_00
+            }
+          ],
+          company: %Conta.Event.Common.Company{
+            nif: "A55666777",
+            name: "Great Company SA",
+            address: "My Full Address",
+            postcode: "28000",
+            city: "Madrid",
+            state: "Madrid",
+            country: "ES"
+          },
+          template: "default"
+        }
+
+      assert :ok = Book.handle(event, metadata)
+
+      invoice = Repo.get_by!(Book.Invoice, invoice_number: "2023-00099")
+      assert invoice.id == custom_id
+    end
+
     test "update successfully", metadata do
       event =
         %Conta.Event.InvoiceSet{

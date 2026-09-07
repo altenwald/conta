@@ -6,6 +6,7 @@ defmodule Conta.Command.SetInvoice do
   @primary_key false
 
   typed_embedded_schema do
+    field :id, :binary_id
     field :nif, :string
     field :action, Ecto.Enum, values: ~w[insert update]a
     field :name, :string
@@ -40,7 +41,7 @@ defmodule Conta.Command.SetInvoice do
   end
 
   @required_fields ~w[nif action invoice_date currency type subtotal_price tax_price total_price payment_method]a
-  @optional_fields ~w[name destination_country invoice_number paid_date client_nif template due_date comments is_credit_note origin_invoice_number origin_invoice_date origin_invoice_id]a
+  @optional_fields ~w[id name destination_country invoice_number paid_date client_nif template due_date comments is_credit_note origin_invoice_number origin_invoice_date origin_invoice_id]a
 
   @doc false
   def changeset(model \\ %__MODULE__{}, params) do

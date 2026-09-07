@@ -172,14 +172,45 @@ defmodule Conta.Book do
 
   def get_expense!(id), do: Repo.get!(Expense, id)
 
+  def to_invoice_number(date, number, is_credit_note \\ false)
+
+  def to_invoice_number(date, number, is_credit_note) when is_binary(date),
+    do: to_invoice_number(Date.from_iso8601!(date), number, is_credit_note)
+
+  def to_invoice_number(%Date{} = date, number, is_credit_note),
+    do: to_invoice_number(date.year, number, is_credit_note)
+
+  def to_invoice_number(year, number, is_credit_note) when is_integer(number),
+    do: to_invoice_number(year, to_string(number), is_credit_note)
+
+  def to_invoice_number(year, number, true) when is_integer(year) and is_binary(number) do
+    prefix = Application.get_env(:conta, :credit_note_prefix, "CN")
+    "#{prefix}-#{year}-#{String.pad_leading(number, 5, "0")}"
+  end
+
+  def to_invoice_number(year, number, false) when is_integer(year) and is_binary(number),
+    do: "#{year}-#{String.pad_leading(number, 5, "0")}"
+
   def get_expense(id), do: Repo.get(Expense, id)
 
-  def get_invoice!(id), do: Repo.get!(Invoice, id)
+  def get_invoice(nil), do: nil
 
-  def get_invoice(id), do: Repo.get(Invoice, id)
+  def get_invoice(id) when is_binary(id) do
+    case Ecto.UUID.cast(id) do
+      {:ok, uuid} -> Repo.get(Invoice, uuid)
+      :error -> Repo.get_by(Invoice, invoice_number: id)
+    end
+  end
+
+  def get_invoice!(id) when is_binary(id) do
+    case Ecto.UUID.cast(id) do
+      {:ok, uuid} -> Repo.get!(Invoice, uuid)
+      :error -> Repo.get_by!(Invoice, invoice_number: id)
+    end
+  end
 
   def get_invoice!(year, number) when is_integer(year) and is_integer(number) do
-    invoice_number = "#{year}-#{String.pad_leading(to_string(number), 5, "0")}"
+    invoice_number = to_invoice_number(year, number, false)
     Repo.get_by!(Invoice, invoice_number: invoice_number)
   end
 

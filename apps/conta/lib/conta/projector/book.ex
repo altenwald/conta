@@ -38,22 +38,7 @@ defmodule Conta.Projector.Book do
     |> Decimal.to_integer()
   end
 
-  defp to_invoice_number(date, number, is_credit_note) when is_binary(date),
-    do: to_invoice_number(Date.from_iso8601!(date), number, is_credit_note)
-
-  defp to_invoice_number(date, number, is_credit_note) when is_struct(date, Date),
-    do: to_invoice_number(date.year, number, is_credit_note)
-
-  defp to_invoice_number(year, number, is_credit_note) when is_integer(number),
-    do: to_invoice_number(year, to_string(number), is_credit_note)
-
-  defp to_invoice_number(year, number, true) when is_integer(year) and is_binary(number) do
-    prefix = Application.get_env(:conta, :credit_note_prefix, "CN")
-    "#{prefix}-#{year}-#{String.pad_leading(number, 5, "0")}"
-  end
-
-  defp to_invoice_number(year, number, false) when is_integer(year) and is_binary(number),
-    do: "#{year}-#{String.pad_leading(number, 5, "0")}"
+  defdelegate to_invoice_number(date, number, is_credit_note), to: Conta.Book
 
   project(%ExpenseRemoved{} = expense_removed, _metadata, fn multi ->
     expense =
@@ -80,10 +65,12 @@ defmodule Conta.Projector.Book do
 
   project(%InvoiceSet{action: :insert} = invoice, _metadata, fn multi ->
     invoice_number = to_invoice_number(invoice.invoice_date, invoice.invoice_number, invoice.is_credit_note)
+    id = invoice.id || Ecto.UUID.generate()
 
     changeset =
       invoice
       |> Map.from_struct()
+      |> Map.put(:id, id)
       |> Map.put(:invoice_number, invoice_number)
       |> Map.update!(:subtotal_price, &to_integer/1)
       |> Map.update!(:tax_price, &to_integer/1)
@@ -127,6 +114,7 @@ defmodule Conta.Projector.Book do
     params =
       invoice
       |> Map.from_struct()
+      |> Map.delete(:id)
       |> Map.delete(:invoice_number)
       |> Map.update!(:subtotal_price, &to_integer/1)
       |> Map.update!(:tax_price, &to_integer/1)

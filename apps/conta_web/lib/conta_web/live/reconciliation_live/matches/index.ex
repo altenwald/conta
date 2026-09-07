@@ -72,7 +72,7 @@ defmodule ContaWeb.ReconciliationLive.Matches.Index do
     index = Enum.find_index(ids, &(&1 == id))
     new_index = index && index + delta
 
-    if index && new_index >= 0 and new_index < length(ids) do
+    if (index && new_index >= 0) and new_index < length(ids) do
       new_ids = ids |> List.delete_at(index) |> List.insert_at(new_index, id)
       apply_reorder(socket, new_ids)
     else

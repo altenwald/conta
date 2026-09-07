@@ -1,7 +1,7 @@
 defmodule ContaWeb.Api.Book.Invoice do
   use ContaWeb, :api
 
-  import Conta.Commanded.Application, only: [dispatch: 1]
+  import Conta.Commanded.Application, only: [dispatch: 1, dispatch: 2]
   import Conta.EctoHelpers
 
   alias Conta.Book
@@ -95,8 +95,58 @@ defmodule ContaWeb.Api.Book.Invoice do
   end
 
   def create(conn, params) do
-    params = Map.put(params, "action", "insert")
-    set_invoice(conn, %SetInvoice{}, params)
+    id =
+      case params["id"] || params[:id] do
+        id when is_binary(id) and id != "" -> id
+        _ -> Ecto.UUID.generate()
+      end
+
+    params =
+      params
+      |> Map.put("action", "insert")
+      |> Map.put("id", id)
+
+    changeset = SetInvoice.changeset(%SetInvoice{}, params)
+
+    with true <- changeset.valid?,
+         command = SetInvoice.to_command(changeset),
+         {:ok, %Commanded.Commands.ExecutionResult{events: events}} <-
+           dispatch(command, returning: :execution_result) do
+      invoice_set = Enum.find(events, &match?(%Conta.Event.InvoiceSet{}, &1))
+
+      invoice_number =
+        if invoice_set do
+          Book.to_invoice_number(
+            invoice_set.invoice_date,
+            invoice_set.invoice_number,
+            invoice_set.is_credit_note
+          )
+        end
+
+      conn
+      |> put_status(:created)
+      |> json(%{
+        "id" => (invoice_set && invoice_set.id) || command.id,
+        "invoice_number" => invoice_number
+      })
+    else
+      false ->
+        {:error, errors} = get_result(changeset)
+
+        conn
+        |> put_status(:bad_request)
+        |> json(%{"errors" => errors})
+
+      {:error, reason} when is_atom(reason) ->
+        conn
+        |> put_status(:bad_request)
+        |> json(%{"errors" => %{"dispatch" => [reason]}})
+
+      {:error, errors} when is_map(errors) ->
+        conn
+        |> put_status(:bad_request)
+        |> json(%{"errors" => errors})
+    end
   end
 
   def update(conn, %{"id" => id} = params) do

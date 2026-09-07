@@ -162,12 +162,48 @@ defmodule ContaWeb.Api.Book.InvoiceTest do
       assert String.starts_with?(pdf, "%PDF-1.4")
       assert String.ends_with?(pdf, "%%EOF")
     end
+
+    test "downloads invoice as PDF by invoice_number", %{authed_conn: conn} do
+      _invoice =
+        insert(:invoice, %{
+          invoice_number: "2026-00001",
+          company: %{invoice_company_factory() | nif: "A55666777"},
+          template: "default"
+        })
+
+      Conta.Repo.insert!(%Conta.Projector.Book.Template{
+        id: Ecto.UUID.generate(),
+        nif: "A55666777",
+        name: "default",
+        css: "h1 { color: blue; }",
+        logo: nil,
+        logo_mime_type: nil
+      })
+
+      conn = get(conn, ~p"/api/v1/books/invoices/2026-00001/download")
+
+      assert response_content_type(conn, :pdf)
+
+      assert get_resp_header(conn, "content-disposition") == [
+               "attachment; filename=2026-00001.pdf"
+             ]
+
+      pdf = response(conn, 200)
+      assert String.starts_with?(pdf, "%PDF-1.4")
+      assert String.ends_with?(pdf, "%%EOF")
+    end
   end
 
   describe "GET /api/v1/books/invoices/:id" do
     test "shows invoice when exists", %{authed_conn: conn} do
       invoice = insert(:invoice, %{invoice_number: "2026-00001"})
       conn = get(conn, ~p"/api/v1/books/invoices/#{invoice.id}")
+      assert %{"invoice_number" => "2026-00001"} = json_response(conn, 200)
+    end
+
+    test "shows invoice when queried by invoice_number", %{authed_conn: conn} do
+      insert(:invoice, %{invoice_number: "2026-00001"})
+      conn = get(conn, ~p"/api/v1/books/invoices/2026-00001")
       assert %{"invoice_number" => "2026-00001"} = json_response(conn, 200)
     end
 
@@ -181,6 +217,73 @@ defmodule ContaWeb.Api.Book.InvoiceTest do
     test "returns 400 when params are invalid", %{authed_conn: conn} do
       conn = post(conn, ~p"/api/v1/books/invoices", %{})
       assert %{"errors" => _} = json_response(conn, 400)
+    end
+
+    test "creates an invoice and returns 201 with generated id and formatted invoice_number", %{
+      authed_conn: conn
+    } do
+      Phoenix.PubSub.subscribe(Conta.PubSub, "event:invoice_set")
+
+      params = %{
+        "nif" => "A55666777",
+        "invoice_date" => "2026-09-07",
+        "type" => "service",
+        "subtotal_price" => "100.00",
+        "tax_price" => "21.00",
+        "total_price" => "121.00",
+        "currency" => "EUR",
+        "payment_method" => "paypal",
+        "destination_country" => "ES",
+        "details" => [
+          %{
+            "description" => "Development services",
+            "tax" => 21,
+            "base_price" => "100.00",
+            "tax_price" => "21.00",
+            "total_price" => "121.00"
+          }
+        ]
+      }
+
+      conn = post(conn, ~p"/api/v1/books/invoices", params)
+      assert %{"id" => id, "invoice_number" => invoice_number} = json_response(conn, 201)
+      assert {:ok, _} = Ecto.UUID.cast(id)
+      assert invoice_number == "2026-00001"
+
+      assert_receive {:invoice_set, _}, 1500
+    end
+
+    test "creates an invoice with client-provided custom id", %{authed_conn: conn} do
+      Phoenix.PubSub.subscribe(Conta.PubSub, "event:invoice_set")
+
+      custom_id = Ecto.UUID.generate()
+
+      params = %{
+        "id" => custom_id,
+        "nif" => "A55666777",
+        "invoice_date" => "2026-09-07",
+        "type" => "service",
+        "subtotal_price" => "100.00",
+        "tax_price" => "21.00",
+        "total_price" => "121.00",
+        "currency" => "EUR",
+        "payment_method" => "paypal",
+        "destination_country" => "ES",
+        "details" => [
+          %{
+            "description" => "Development services",
+            "tax" => 21,
+            "base_price" => "100.00",
+            "tax_price" => "21.00",
+            "total_price" => "121.00"
+          }
+        ]
+      }
+
+      conn = post(conn, ~p"/api/v1/books/invoices", params)
+      assert %{"id" => ^custom_id, "invoice_number" => "2026-00001"} = json_response(conn, 201)
+
+      assert_receive {:invoice_set, _}, 1500
     end
   end
 

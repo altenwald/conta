@@ -123,6 +123,37 @@ defmodule Conta.BookTest do
       assert %Invoice{invoice_number: "2023-00001"} = Book.get_invoice!(2023, 1)
     end
 
+    test "get_invoice/1 and get_invoice!/1 dual lookup by UUID and invoice_number" do
+      invoice = insert(:invoice, %{invoice_number: "2023-00001"})
+      credit_note = insert(:invoice, %{invoice_number: "CN-2023-00001", is_credit_note: true})
+
+      # By UUID
+      assert %Invoice{id: id} = Book.get_invoice(invoice.id)
+      assert id == invoice.id
+      assert %Invoice{id: ^id} = Book.get_invoice!(invoice.id)
+
+      # By invoice_number
+      assert %Invoice{id: ^id} = Book.get_invoice("2023-00001")
+      assert %Invoice{id: ^id} = Book.get_invoice!("2023-00001")
+
+      # Credit note by invoice_number
+      cn_id = credit_note.id
+      assert %Invoice{id: ^cn_id} = Book.get_invoice("CN-2023-00001")
+      assert %Invoice{id: ^cn_id} = Book.get_invoice!("CN-2023-00001")
+
+      # Non-existent
+      assert nil == Book.get_invoice("2099-99999")
+      assert nil == Book.get_invoice(nil)
+      assert_raise Ecto.NoResultsError, fn -> Book.get_invoice!("2099-99999") end
+    end
+
+    test "to_invoice_number/3 formats regular invoices and credit notes" do
+      assert "2026-00001" == Book.to_invoice_number(~D[2026-09-07], 1)
+      assert "2026-00042" == Book.to_invoice_number(2026, 42)
+      assert "2026-00005" == Book.to_invoice_number("2026-01-01", "5")
+      assert "CN-2026-00001" == Book.to_invoice_number(~D[2026-09-07], 1, true)
+    end
+
     test "get_last_invoice_number/0 returns 0 when no invoices" do
       assert 0 == Book.get_last_invoice_number()
     end
