@@ -85,7 +85,7 @@ defmodule Conta.Projector.Reconciliation do
       changeset =
         Movement.changeset(movement, %{
           on_date: event.on_date,
-          description: event.description,
+          description: event.description || "no description",
           amount: event.amount,
           currency: event.currency,
           account_name: event.account_name || movement.account_name
