@@ -108,6 +108,10 @@ defmodule ContaWeb.Router do
       get "/filters/:id/run", Filter, :run
       post "/filters/:id/run", Filter, :run
     end
+
+    scope "/directories/", Directory do
+      resources "/contacts", Contact, only: [:index, :show, :create, :update, :delete]
+    end
   end
 
   scope "/", ContaWeb do

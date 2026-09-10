@@ -14,10 +14,12 @@ defmodule Conta.Projector.Directory do
 
   project(%ContactSet{} = contact, _metadata, fn multi ->
     params = Map.from_struct(contact)
+    params = if is_nil(contact.id), do: Map.delete(params, :id), else: params
     changeset = Contact.changeset(params)
 
     update =
       params
+      |> Map.delete(:id)
       |> Map.delete(:nif)
       |> Map.delete(:company_nif)
       |> Enum.to_list()

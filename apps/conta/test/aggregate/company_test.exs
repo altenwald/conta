@@ -244,6 +244,45 @@ defmodule Conta.Aggregate.CompanyTest do
              } == Conta.Aggregate.Company.apply(company, event)
     end
 
+    test "setting contact with explicit id successfully" do
+      company = %Conta.Aggregate.Company{
+        nif: "A55666777",
+        name: "Great Company SA",
+        address: "My Full Address",
+        postcode: "28000",
+        city: "Madrid",
+        state: "Madrid",
+        country: "ES"
+      }
+
+      contact_id = Ecto.UUID.generate()
+
+      command = %Conta.Command.SetContact{
+        id: contact_id,
+        company_nif: "A55666777",
+        nif: "B123456789",
+        name: "Limited Company SL",
+        intracommunity: true,
+        address: "Full Address Here",
+        postcode: "08080",
+        city: "Barcelona",
+        state: "Catalunya",
+        country: "ES"
+      }
+
+      event = Conta.Aggregate.Company.execute(company, command)
+
+      assert %Conta.Event.ContactSet{
+               id: ^contact_id,
+               company_nif: "A55666777",
+               nif: "B123456789",
+               name: "Limited Company SL"
+             } = event
+
+      applied = Conta.Aggregate.Company.apply(company, event)
+      assert applied.contacts["B123456789"].id == contact_id
+    end
+
     test "updating contact successfully" do
       company = %Conta.Aggregate.Company{
         nif: "A55666777",

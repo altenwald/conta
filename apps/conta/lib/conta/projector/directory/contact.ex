@@ -19,7 +19,7 @@ defmodule Conta.Projector.Directory.Contact do
   end
 
   @required_fields ~w[company_nif name nif address postcode city country]a
-  @optional_fields ~w[intracommunity state emails]a
+  @optional_fields ~w[id intracommunity state emails]a
 
   @doc false
   def changeset(model \\ %__MODULE__{}, params) do

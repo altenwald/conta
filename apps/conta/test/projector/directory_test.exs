@@ -53,6 +53,33 @@ defmodule Conta.Projector.DirectoryTest do
              } = Repo.get_by!(Directory.Contact, clauses)
     end
 
+    test "create with explicit id successfully", metadata do
+      contact_id = Ecto.UUID.generate()
+
+      event = %Conta.Event.ContactSet{
+        id: contact_id,
+        company_nif: "A55666777",
+        name: "Jane Smith",
+        nif: "B99888777",
+        address: "Smith avenue",
+        postcode: "2222 BB",
+        city: "City",
+        state: "State",
+        country: "NL"
+      }
+
+      assert :ok = Directory.handle(event, metadata)
+
+      clauses = [company_nif: event.company_nif, nif: event.nif]
+
+      assert %Directory.Contact{
+               id: ^contact_id,
+               company_nif: "A55666777",
+               name: "Jane Smith",
+               nif: "B99888777"
+             } = Repo.get_by!(Directory.Contact, clauses)
+    end
+
     test "update successfully", metadata do
       %Directory.Contact{
         id: id,

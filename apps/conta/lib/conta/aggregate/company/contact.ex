@@ -8,6 +8,7 @@ defmodule Conta.Aggregate.Company.Contact do
   @derive Jason.Encoder
 
   typed_embedded_schema do
+    field :id, :binary_id
     field :name, :string
     field :nif, :string
     field :intracommunity, :boolean, default: false
@@ -20,7 +21,7 @@ defmodule Conta.Aggregate.Company.Contact do
   end
 
   @required_fields ~w[name nif address postcode city country]a
-  @optional_fields ~w[intracommunity state emails]a
+  @optional_fields ~w[id intracommunity state emails]a
 
   @doc false
   def changeset(model \\ %__MODULE__{}, params) do

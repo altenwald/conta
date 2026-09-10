@@ -30,6 +30,7 @@ defmodule Conta.Directory do
 
   def get_set_contact(%Contact{} = contact) do
     %SetContact{
+      id: contact.id,
       company_nif: contact.company_nif,
       name: contact.name,
       nif: contact.nif,
