@@ -4,7 +4,7 @@ defmodule ContaWeb.MixProject do
   def project do
     [
       app: :conta_web,
-      version: "0.4.5",
+      version: "0.4.6",
       build_path: "../../_build",
 
       config_path: "../../config/config.exs",
