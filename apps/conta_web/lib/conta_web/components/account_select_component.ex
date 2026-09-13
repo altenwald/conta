@@ -24,7 +24,8 @@ defmodule ContaWeb.AccountSelectComponent do
      |> assign_new(:open, fn -> false end)
      |> assign_new(:query, fn -> nil end)
      |> assign_new(:matches, fn -> [] end)
-     |> assign_new(:active_index, fn -> 0 end)}
+     |> assign_new(:active_index, fn -> 0 end)
+     |> assign_new(:ignore_focus, fn -> false end)}
   end
 
   @impl true
@@ -33,6 +34,7 @@ defmodule ContaWeb.AccountSelectComponent do
     <div
       id={@id}
       class={["relative w-full", @class]}
+      phx-hook=".AccountSelect"
       phx-click-away="close"
       phx-target={@myself}
     >
@@ -42,6 +44,7 @@ defmodule ContaWeb.AccountSelectComponent do
           phx-change="form_change"
           phx-submit="form_submit"
           phx-target={@myself}
+          onsubmit="return false;"
           class="relative w-full"
         >
           {render_input_and_dropdown(assigns)}
@@ -65,7 +68,9 @@ defmodule ContaWeb.AccountSelectComponent do
         value={if @open && !is_nil(@query), do: @query, else: @value}
         placeholder={@placeholder}
         autocomplete="off"
+        data-open={to_string(@open)}
         phx-focus="open"
+        phx-click="open"
         phx-keyup="search"
         phx-keydown="keydown"
         phx-target={@myself}
@@ -99,7 +104,6 @@ defmodule ContaWeb.AccountSelectComponent do
     <div
       :if={@open}
       id={"#{@id}-dropdown"}
-      phx-hook=".AccountDropdown"
       class="absolute left-0 right-0 top-full mt-1 z-50 max-h-60 overflow-y-auto rounded-md bg-base-100 p-1 shadow-lg ring-1 ring-base-content/10 border border-base-200"
     >
       <ul class="menu menu-xs p-0 gap-0.5" role="listbox">
@@ -127,13 +131,38 @@ defmodule ContaWeb.AccountSelectComponent do
         </li>
       </ul>
     </div>
-    <script :type={Phoenix.LiveView.ColocatedHook} name=".AccountDropdown">
+    <script :type={Phoenix.LiveView.ColocatedHook} name=".AccountSelect">
       export default {
+        mounted() {
+          this.handleKeydown = (e) => {
+            if (e.target.tagName === "INPUT" && (e.key === "Enter" || e.key === "Escape")) {
+              if (e.key === "Enter") {
+                e.preventDefault();
+              }
+              e.target.blur();
+            }
+          };
+          this.el.addEventListener("keydown", this.handleKeydown);
+
+          this.handleEvent("account-selected", (data) => {
+            const input = this.el.querySelector("input");
+            if (input && input.id === data.id) {
+              input.blur();
+            }
+          });
+        },
         updated() {
           const active = this.el.querySelector('[aria-current="true"]');
           if (active) {
             active.scrollIntoView({ block: "nearest" });
           }
+          const input = this.el.querySelector("input");
+          if (input && input.dataset.open === "false" && document.activeElement === input) {
+            input.blur();
+          }
+        },
+        destroyed() {
+          this.el.removeEventListener("keydown", this.handleKeydown);
         }
       }
     </script>
@@ -143,16 +172,29 @@ defmodule ContaWeb.AccountSelectComponent do
   @impl true
   def handle_event("toggle", _params, socket) do
     if socket.assigns.open do
-      {:noreply, assign(socket, open: false, query: nil, matches: [], active_index: 0)}
+      {:noreply, assign(socket, open: false, query: nil, matches: [], active_index: 0, ignore_focus: false)}
     else
       matches = filter_accounts(socket.assigns.accounts, "", @max_results)
-      {:noreply, assign(socket, open: true, query: "", matches: matches, active_index: 0)}
+
+      {:noreply,
+       assign(socket, open: true, query: "", matches: matches, active_index: 0, ignore_focus: false)}
     end
   end
 
   def handle_event("open", _params, socket) do
-    matches = filter_accounts(socket.assigns.accounts, "", @max_results)
-    {:noreply, assign(socket, open: true, query: "", matches: matches, active_index: 0)}
+    cond do
+      socket.assigns.open ->
+        {:noreply, socket}
+
+      socket.assigns[:ignore_focus] ->
+        {:noreply, assign(socket, ignore_focus: false)}
+
+      true ->
+        matches = filter_accounts(socket.assigns.accounts, "", @max_results)
+
+        {:noreply,
+         assign(socket, open: true, query: "", matches: matches, active_index: 0, ignore_focus: false)}
+    end
   end
 
   def handle_event("search", %{"key" => key}, socket)
@@ -175,7 +217,9 @@ defmodule ContaWeb.AccountSelectComponent do
   def handle_event("search", params, socket) do
     query = params["query"] || params["value"] || ""
     matches = filter_accounts(socket.assigns.accounts, query, @max_results)
-    {:noreply, assign(socket, open: true, query: query, matches: matches, active_index: 0)}
+
+    {:noreply,
+     assign(socket, open: true, query: query, matches: matches, active_index: 0, ignore_focus: false)}
   end
 
   def handle_event("form_change", %{"value" => value}, socket) do
@@ -183,7 +227,9 @@ defmodule ContaWeb.AccountSelectComponent do
       select_account(socket, value)
     else
       matches = filter_accounts(socket.assigns.accounts, value, @max_results)
-      {:noreply, assign(socket, open: true, query: value, matches: matches, active_index: 0)}
+
+      {:noreply,
+       assign(socket, open: true, query: value, matches: matches, active_index: 0, ignore_focus: false)}
     end
   end
 
@@ -201,11 +247,11 @@ defmodule ContaWeb.AccountSelectComponent do
   end
 
   def handle_event("close", _params, socket) do
-    {:noreply, assign(socket, open: false, query: nil, matches: [], active_index: 0)}
+    {:noreply, assign(socket, open: false, query: nil, matches: [], active_index: 0, ignore_focus: false)}
   end
 
   def handle_event("keydown", %{"key" => "Escape"}, socket) do
-    {:noreply, assign(socket, open: false, query: nil, matches: [], active_index: 0)}
+    {:noreply, assign(socket, open: false, query: nil, matches: [], active_index: 0, ignore_focus: false)}
   end
 
   def handle_event("keydown", %{"key" => "ArrowDown"}, socket) do
@@ -215,7 +261,9 @@ defmodule ContaWeb.AccountSelectComponent do
       {:noreply, assign(socket, active_index: next_idx)}
     else
       matches = filter_accounts(socket.assigns.accounts, socket.assigns.query || "", @max_results)
-      {:noreply, assign(socket, open: true, query: "", matches: matches, active_index: 0)}
+
+      {:noreply,
+       assign(socket, open: true, query: "", matches: matches, active_index: 0, ignore_focus: false)}
     end
   end
 
@@ -225,7 +273,9 @@ defmodule ContaWeb.AccountSelectComponent do
       {:noreply, assign(socket, active_index: prev_idx)}
     else
       matches = filter_accounts(socket.assigns.accounts, socket.assigns.query || "", @max_results)
-      {:noreply, assign(socket, open: true, query: "", matches: matches, active_index: 0)}
+
+      {:noreply,
+       assign(socket, open: true, query: "", matches: matches, active_index: 0, ignore_focus: false)}
     end
   end
 
@@ -247,13 +297,16 @@ defmodule ContaWeb.AccountSelectComponent do
     send(self(), {:account_selected, target_id, account})
 
     {:noreply,
-     assign(socket,
+     socket
+     |> assign(
        open: false,
        query: nil,
        matches: [],
        value: account,
-       active_index: 0
-     )}
+       active_index: 0,
+       ignore_focus: true
+     )
+     |> push_event("account-selected", %{id: "#{socket.assigns.id}-input"})}
   end
 
   @doc """

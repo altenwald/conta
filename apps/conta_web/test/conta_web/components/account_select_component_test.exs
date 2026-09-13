@@ -28,6 +28,7 @@ defmodule ContaWeb.AccountSelectComponentTest do
         <.live_component
           module={AccountSelectComponent}
           id="test-selector"
+          form_id="test-form"
           value={@selected}
           accounts={@accounts}
         />
@@ -232,6 +233,20 @@ defmodule ContaWeb.AccountSelectComponentTest do
 
       refute has_element?(view, "#test-selector [role=listbox]")
       assert has_element?(view, "#selected-result", "Assets.Bank.BBVA")
+
+      # Immediate spurious focus after Enter (e.g. from browser/morphdom restore) does not reopen dropdown
+      view
+      |> element("#test-selector-input")
+      |> render_focus()
+
+      refute has_element?(view, "#test-selector [role=listbox]")
+
+      # Deliberate toggle click can open it again
+      view
+      |> element("#test-selector-toggle")
+      |> render_click()
+
+      assert has_element?(view, "#test-selector [role=listbox]")
     end
   end
 end
