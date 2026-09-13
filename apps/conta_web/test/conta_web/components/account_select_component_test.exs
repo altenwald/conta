@@ -164,22 +164,74 @@ defmodule ContaWeb.AccountSelectComponentTest do
       refute has_element?(view, "#test-selector [role=listbox]")
     end
 
-    test "click-away event closes the dropdown", %{conn: conn} do
+    test "shows single chevron-down when closed and toggles open/close on click", %{conn: conn} do
       {:ok, view, _html} = live_isolated(conn, HostLive)
 
+      # Closed state: has chevron-down icon
+      assert has_element?(view, "#test-selector-toggle")
+      assert has_element?(view, "#test-selector-toggle .hero-chevron-down")
+      refute has_element?(view, "#test-selector-toggle .hero-chevron-up-down")
+      refute has_element?(view, "#test-selector [role=listbox]")
+
+      # Click toggle to open: switches to magnifying glass
       view
-      |> element("#test-selector-input")
-      |> render_focus()
+      |> element("#test-selector-toggle")
+      |> render_click()
 
       assert has_element?(view, "#test-selector [role=listbox]")
+      assert has_element?(view, "#test-selector-toggle .hero-magnifying-glass")
 
-      # Click backdrop to close
+      # Click toggle again to close
       view
-      |> element("#test-selector-backdrop")
+      |> element("#test-selector-toggle")
       |> render_click()
 
       refute has_element?(view, "#test-selector [role=listbox]")
-      refute has_element?(view, "#test-selector-backdrop")
+      assert has_element?(view, "#test-selector-toggle .hero-chevron-down")
+    end
+
+    test "ArrowDown opens dropdown when closed and navigates options without keyup reset", %{
+      conn: conn
+    } do
+      {:ok, view, _html} = live_isolated(conn, HostLive)
+
+      # ArrowDown on closed input opens dropdown
+      view
+      |> element("#test-selector-input")
+      |> render_keydown(%{"key" => "ArrowDown"})
+
+      assert has_element?(view, "#test-selector [role=listbox]")
+      # First item is active
+      assert has_element?(view, "#test-selector-opt-0 button[aria-current=true]")
+
+      # ArrowDown advances to second item
+      view
+      |> element("#test-selector-input")
+      |> render_keydown(%{"key" => "ArrowDown"})
+
+      assert has_element?(view, "#test-selector-opt-1 button[aria-current=true]")
+
+      # keyup on ArrowDown does not reset active index back to 0
+      view
+      |> element("#test-selector-input")
+      |> render_keyup(%{"key" => "ArrowDown"})
+
+      assert has_element?(view, "#test-selector-opt-1 button[aria-current=true]")
+
+      # ArrowUp moves back to first item
+      view
+      |> element("#test-selector-input")
+      |> render_keydown(%{"key" => "ArrowUp"})
+
+      assert has_element?(view, "#test-selector-opt-0 button[aria-current=true]")
+
+      # Enter selects the active item
+      view
+      |> element("#test-selector-input")
+      |> render_keydown(%{"key" => "Enter"})
+
+      refute has_element?(view, "#test-selector [role=listbox]")
+      assert has_element?(view, "#selected-result", "Assets.Bank.BBVA")
     end
   end
 end

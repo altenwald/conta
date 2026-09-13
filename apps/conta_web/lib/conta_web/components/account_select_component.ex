@@ -71,10 +71,18 @@ defmodule ContaWeb.AccountSelectComponent do
         phx-target={@myself}
         class="input input-sm w-full pr-8 text-ellipsis font-mono text-xs"
       />
-      <div class="absolute right-2 flex items-center pointer-events-none text-base-content/50">
-        <.icon :if={!@open} name="hero-chevron-up-down" class="w-4 h-4" />
+      <button
+        type="button"
+        id={"#{@id}-toggle"}
+        tabindex="-1"
+        phx-click="toggle"
+        phx-target={@myself}
+        class="absolute right-2 flex items-center text-base-content/50 hover:text-base-content cursor-pointer p-0.5 rounded transition-colors"
+        title={if @open, do: gettext("Close"), else: gettext("Open accounts")}
+      >
+        <.icon :if={!@open} name="hero-chevron-down" class="w-4 h-4" />
         <.icon :if={@open} name="hero-magnifying-glass" class="w-4 h-4" />
-      </div>
+      </button>
     </div>
 
     <button
@@ -91,6 +99,7 @@ defmodule ContaWeb.AccountSelectComponent do
     <div
       :if={@open}
       id={"#{@id}-dropdown"}
+      phx-hook=".AccountDropdown"
       class="absolute left-0 right-0 top-full mt-1 z-50 max-h-60 overflow-y-auto rounded-md bg-base-100 p-1 shadow-lg ring-1 ring-base-content/10 border border-base-200"
     >
       <ul class="menu menu-xs p-0 gap-0.5" role="listbox">
@@ -102,9 +111,10 @@ defmodule ContaWeb.AccountSelectComponent do
             type="button"
             role="option"
             aria-selected={@value == account}
+            aria-current={if index == @active_index, do: "true", else: "false"}
             class={[
               "w-full text-left px-2.5 py-1.5 rounded text-xs font-mono flex items-center justify-between",
-              index == @active_index && "bg-base-200",
+              index == @active_index && "bg-base-200 font-semibold",
               @value == account && "active font-bold"
             ]}
             phx-click="select"
@@ -117,13 +127,49 @@ defmodule ContaWeb.AccountSelectComponent do
         </li>
       </ul>
     </div>
+    <script :type={Phoenix.LiveView.ColocatedHook} name=".AccountDropdown">
+      export default {
+        updated() {
+          const active = this.el.querySelector('[aria-current="true"]');
+          if (active) {
+            active.scrollIntoView({ block: "nearest" });
+          }
+        }
+      }
+    </script>
     """
   end
 
   @impl true
+  def handle_event("toggle", _params, socket) do
+    if socket.assigns.open do
+      {:noreply, assign(socket, open: false, query: nil, matches: [], active_index: 0)}
+    else
+      matches = filter_accounts(socket.assigns.accounts, "", @max_results)
+      {:noreply, assign(socket, open: true, query: "", matches: matches, active_index: 0)}
+    end
+  end
+
   def handle_event("open", _params, socket) do
     matches = filter_accounts(socket.assigns.accounts, "", @max_results)
     {:noreply, assign(socket, open: true, query: "", matches: matches, active_index: 0)}
+  end
+
+  def handle_event("search", %{"key" => key}, socket)
+      when key in [
+             "ArrowDown",
+             "ArrowUp",
+             "ArrowLeft",
+             "ArrowRight",
+             "Enter",
+             "Escape",
+             "Tab",
+             "Shift",
+             "Control",
+             "Alt",
+             "Meta"
+           ] do
+    {:noreply, socket}
   end
 
   def handle_event("search", params, socket) do
@@ -134,17 +180,7 @@ defmodule ContaWeb.AccountSelectComponent do
 
   def handle_event("form_change", %{"value" => value}, socket) do
     if value in socket.assigns.accounts do
-      target_id = socket.assigns[:item_id] || socket.assigns.id
-      send(self(), {:account_selected, target_id, value})
-
-      {:noreply,
-       assign(socket,
-         open: false,
-         query: nil,
-         matches: [],
-         value: value,
-         active_index: 0
-       )}
+      select_account(socket, value)
     else
       matches = filter_accounts(socket.assigns.accounts, value, @max_results)
       {:noreply, assign(socket, open: true, query: value, matches: matches, active_index: 0)}
@@ -154,34 +190,14 @@ defmodule ContaWeb.AccountSelectComponent do
   def handle_event("form_submit", _params, socket) do
     if socket.assigns.open and socket.assigns.matches != [] do
       account = Enum.at(socket.assigns.matches, socket.assigns.active_index)
-      target_id = socket.assigns[:item_id] || socket.assigns.id
-      send(self(), {:account_selected, target_id, account})
-
-      {:noreply,
-       assign(socket,
-         open: false,
-         query: nil,
-         matches: [],
-         value: account,
-         active_index: 0
-       )}
+      select_account(socket, account)
     else
       {:noreply, socket}
     end
   end
 
   def handle_event("select", %{"account" => account}, socket) do
-    target_id = socket.assigns[:item_id] || socket.assigns.id
-    send(self(), {:account_selected, target_id, account})
-
-    {:noreply,
-     assign(socket,
-       open: false,
-       query: nil,
-       matches: [],
-       value: account,
-       active_index: 0
-     )}
+    select_account(socket, account)
   end
 
   def handle_event("close", _params, socket) do
@@ -193,30 +209,30 @@ defmodule ContaWeb.AccountSelectComponent do
   end
 
   def handle_event("keydown", %{"key" => "ArrowDown"}, socket) do
-    max_idx = max(length(socket.assigns.matches) - 1, 0)
-    next_idx = min(socket.assigns.active_index + 1, max_idx)
-    {:noreply, assign(socket, active_index: next_idx)}
+    if socket.assigns.open do
+      max_idx = max(length(socket.assigns.matches) - 1, 0)
+      next_idx = min(socket.assigns.active_index + 1, max_idx)
+      {:noreply, assign(socket, active_index: next_idx)}
+    else
+      matches = filter_accounts(socket.assigns.accounts, socket.assigns.query || "", @max_results)
+      {:noreply, assign(socket, open: true, query: "", matches: matches, active_index: 0)}
+    end
   end
 
   def handle_event("keydown", %{"key" => "ArrowUp"}, socket) do
-    prev_idx = max(socket.assigns.active_index - 1, 0)
-    {:noreply, assign(socket, active_index: prev_idx)}
+    if socket.assigns.open do
+      prev_idx = max(socket.assigns.active_index - 1, 0)
+      {:noreply, assign(socket, active_index: prev_idx)}
+    else
+      matches = filter_accounts(socket.assigns.accounts, socket.assigns.query || "", @max_results)
+      {:noreply, assign(socket, open: true, query: "", matches: matches, active_index: 0)}
+    end
   end
 
   def handle_event("keydown", %{"key" => "Enter"}, socket) do
     if socket.assigns.open and socket.assigns.matches != [] do
       account = Enum.at(socket.assigns.matches, socket.assigns.active_index)
-      target_id = socket.assigns[:item_id] || socket.assigns.id
-      send(self(), {:account_selected, target_id, account})
-
-      {:noreply,
-       assign(socket,
-         open: false,
-         query: nil,
-         matches: [],
-         value: account,
-         active_index: 0
-       )}
+      select_account(socket, account)
     else
       {:noreply, socket}
     end
@@ -224,6 +240,20 @@ defmodule ContaWeb.AccountSelectComponent do
 
   def handle_event("keydown", _params, socket) do
     {:noreply, socket}
+  end
+
+  defp select_account(socket, account) do
+    target_id = socket.assigns[:item_id] || socket.assigns.id
+    send(self(), {:account_selected, target_id, account})
+
+    {:noreply,
+     assign(socket,
+       open: false,
+       query: nil,
+       matches: [],
+       value: account,
+       active_index: 0
+     )}
   end
 
   @doc """
