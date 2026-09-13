@@ -35,10 +35,13 @@
 >
   <.live_component
     module={ContaWeb.EntryLive.FormComponent}
-    id={@entry.id}
+    id={@transaction_id || @entry.id}
     title={@page_title}
     action={@live_action}
-    entry={@entry}
+    account_transaction={@account_transaction}
+    account={@account}
+    transaction_id={@transaction_id}
+    breakdown={@breakdown}
     patch={~p"/ledger/accounts/#{@account}/entries/#{@entry}"}
   />
 </.modal>

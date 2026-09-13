@@ -12,13 +12,20 @@ defmodule ContaWeb.AccountSelectComponent do
   @max_results 15
 
   @impl true
+  @impl true
   def update(assigns, socket) do
+    field = assigns[:field]
+    socket = init_field_assigns(socket, field, assigns)
+    assigns_to_merge = if field, do: Map.drop(assigns, [:field]), else: assigns
+
     {:ok,
      socket
-     |> assign(assigns)
+     |> assign(assigns_to_merge)
      |> assign_new(:item_id, fn -> nil end)
      |> assign_new(:value, fn -> nil end)
      |> assign_new(:placeholder, fn -> gettext("Select an account") end)
+     |> assign_new(:label, fn -> nil end)
+     |> assign_new(:notify_to, fn -> nil end)
      |> assign_new(:class, fn -> nil end)
      |> assign_new(:form_id, fn -> nil end)
      |> assign_new(:open, fn -> false end)
@@ -33,11 +40,17 @@ defmodule ContaWeb.AccountSelectComponent do
     ~H"""
     <div
       id={@id}
-      class={["relative w-full", @class]}
+      class={["relative w-full", @label && "fieldset mb-2", @class]}
       phx-hook=".AccountSelect"
       phx-click-away="close"
       phx-target={@myself}
     >
+      <label :if={@label} for={"#{@id}-input"} class="label mb-1">
+        <span class="label-text font-semibold">{@label}</span>
+      </label>
+
+      <input :if={@name} type="hidden" name={@name} value={@value} />
+
       <%= if @form_id do %>
         <form
           id={@form_id}
@@ -54,6 +67,8 @@ defmodule ContaWeb.AccountSelectComponent do
           {render_input_and_dropdown(assigns)}
         </div>
       <% end %>
+
+      <.error :for={msg <- @errors}>{msg}</.error>
     </div>
     """
   end
@@ -64,7 +79,7 @@ defmodule ContaWeb.AccountSelectComponent do
       <input
         type="text"
         id={"#{@id}-input"}
-        name="value"
+        name={if @form_id, do: "value", else: nil}
         value={if @open && !is_nil(@query), do: @query, else: @value}
         placeholder={@placeholder}
         autocomplete="off"
@@ -74,7 +89,10 @@ defmodule ContaWeb.AccountSelectComponent do
         phx-keyup="search"
         phx-keydown="keydown"
         phx-target={@myself}
-        class="input input-sm w-full pr-8 text-ellipsis font-mono text-xs"
+        class={[
+          "input input-sm w-full pr-8 text-ellipsis font-mono text-xs",
+          @errors != [] && "input-error"
+        ]}
       />
       <button
         type="button"
@@ -144,8 +162,15 @@ defmodule ContaWeb.AccountSelectComponent do
           };
           this.el.addEventListener("keydown", this.handleKeydown);
 
+          this.handleInput = (e) => {
+            if (e.target.tagName === "INPUT" && !e.target.name) {
+              e.stopPropagation();
+            }
+          };
+          this.el.addEventListener("input", this.handleInput);
+
           this.handleEvent("account-selected", (data) => {
-            const input = this.el.querySelector("input");
+            const input = this.el.querySelector("input[type=text]");
             if (input && input.id === data.id) {
               input.blur();
             }
@@ -156,13 +181,14 @@ defmodule ContaWeb.AccountSelectComponent do
           if (active) {
             active.scrollIntoView({ block: "nearest" });
           }
-          const input = this.el.querySelector("input");
+          const input = this.el.querySelector("input[type=text]");
           if (input && input.dataset.open === "false" && document.activeElement === input) {
             input.blur();
           }
         },
         destroyed() {
           this.el.removeEventListener("keydown", this.handleKeydown);
+          this.el.removeEventListener("input", this.handleInput);
         }
       }
     </script>
@@ -294,7 +320,22 @@ defmodule ContaWeb.AccountSelectComponent do
 
   defp select_account(socket, account) do
     target_id = socket.assigns[:item_id] || socket.assigns.id
-    send(self(), {:account_selected, target_id, account})
+    target = socket.assigns[:notify_to] || socket.assigns[:target]
+
+    cond do
+      is_struct(target, Phoenix.LiveComponent.CID) ->
+        send_update(target, account_selected: {target_id, account})
+
+      is_tuple(target) ->
+        {mod, id} = target
+        send_update(mod, id: id, account_selected: {target_id, account})
+
+      is_pid(target) ->
+        send(target, {:account_selected, target_id, account})
+
+      true ->
+        send(self(), {:account_selected, target_id, account})
+    end
 
     {:noreply,
      socket
@@ -341,6 +382,37 @@ defmodule ContaWeb.AccountSelectComponent do
       String.starts_with?(lower, needle) -> {1, acc}
       String.contains?(lower, "." <> needle) -> {2, acc}
       true -> {3, acc}
+    end
+  end
+
+  defp init_field_assigns(socket, nil, _assigns) do
+    socket
+    |> assign_new(:errors, fn -> [] end)
+    |> assign_new(:name, fn -> nil end)
+  end
+
+  defp init_field_assigns(socket, %Phoenix.HTML.FormField{} = field, assigns) do
+    errors =
+      assigns[:errors] ||
+        Enum.map(field.errors, &ContaWeb.CoreComponents.translate_error/1)
+
+    socket
+    |> assign_new(:id, fn -> field.id end)
+    |> assign_new(:name, fn -> field.name end)
+    |> assign_new(:item_id, fn -> to_string(field.field) end)
+    |> assign(:errors, errors)
+    |> assign_field_value(field, assigns)
+  end
+
+  defp assign_field_value(socket, _field, %{value: value}) do
+    assign(socket, :value, value)
+  end
+
+  defp assign_field_value(socket, field, _assigns) do
+    if socket.assigns[:open] do
+      socket
+    else
+      assign(socket, :value, field.value)
     end
   end
 end

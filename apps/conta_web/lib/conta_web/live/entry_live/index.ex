@@ -186,6 +186,10 @@ defmodule ContaWeb.EntryLive.Index do
     {:noreply, reset_view(socket)}
   end
 
+  def handle_info({:account_selected, _id, _account}, socket) do
+    {:noreply, socket}
+  end
+
   defp description(text) when is_binary(text) and byte_size(text) < 15, do: text
   defp description(text), do: String.slice(text, 0..12) <> "..."
 

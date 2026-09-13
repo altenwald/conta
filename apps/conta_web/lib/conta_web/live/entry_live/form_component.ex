@@ -48,12 +48,15 @@ defmodule ContaWeb.EntryLive.FormComponent do
                   label={gettext("Description")}
                   phx-mounted={if(d.index == 0, do: JS.focus())}
                 />
-                <.input
+                <.live_component
+                  module={ContaWeb.AccountSelectComponent}
+                  id={"account-transaction-entry-#{d.index}-account-name"}
                   field={d[:account_name]}
+                  item_id={d.index}
                   label={gettext("Account")}
-                  type="select"
-                  options={list_accounts(@accounts)}
-                  prompt={gettext("Choose an account...")}
+                  placeholder={gettext("Choose an account...")}
+                  accounts={list_accounts(@accounts)}
+                  notify_to={@myself}
                 />
                 <%= if @different_currency? do %>
                   <.input field={d[:currency]} type="hidden" />
@@ -92,19 +95,23 @@ defmodule ContaWeb.EntryLive.FormComponent do
             type="text"
             phx-mounted={JS.focus()}
           />
-          <.input
+          <.live_component
+            module={ContaWeb.AccountSelectComponent}
+            id="account-transaction-account-name"
             field={@form[:account_name]}
             label={gettext("Account")}
-            type="select"
-            options={list_accounts(@accounts)}
-            prompt={gettext("Choose an account...")}
+            placeholder={gettext("Choose an account...")}
+            accounts={list_accounts(@accounts)}
+            notify_to={@myself}
           />
-          <.input
+          <.live_component
+            module={ContaWeb.AccountSelectComponent}
+            id="account-transaction-related-account-name"
             field={@form[:related_account_name]}
             label={gettext("Related Account")}
-            type="select"
-            options={list_accounts(@accounts)}
-            prompt={gettext("Choose an account...")}
+            placeholder={gettext("Choose an account...")}
+            accounts={list_accounts(@accounts)}
+            notify_to={@myself}
           />
           <%= if @different_currency? do %>
             <.input
@@ -122,6 +129,8 @@ defmodule ContaWeb.EntryLive.FormComponent do
             />
             <.input field={@form[:change_currency]} type="hidden" />
           <% else %>
+            <.input field={@form[:currency]} type="hidden" />
+            <.input field={@form[:change_currency]} type="hidden" />
             <.input field={@form[:amount]} label={gettext("Amount")} type="number" step=".01" />
             <.input field={@form[:change_amount]} type="hidden" value={@form[:amount].value} />
           <% end %>
@@ -191,6 +200,67 @@ defmodule ContaWeb.EntryLive.FormComponent do
   end
 
   @impl true
+  def update(%{account_selected: {target_id, account_name}}, socket) do
+    accounts = socket.assigns.accounts
+    params = update_account_params(socket.assigns.params || %{}, target_id, account_name, accounts)
+
+    changeset =
+      socket.assigns.account_transaction
+      |> FormAccountTransaction.changeset(params)
+      |> Map.put(:action, :validate)
+
+    different_currency? = different_currency?(accounts, changeset)
+
+    {:ok,
+     socket
+     |> assign(params: params, different_currency?: different_currency?)
+     |> assign_form(changeset)
+     |> assign_currencies()}
+  end
+
+  defp update_account_params(params, target_id, account_name, accounts)
+       when target_id in ["account_name", :account_name] do
+    params
+    |> Map.put("account_name", account_name)
+    |> Map.put("currency", get_currency(accounts, account_name))
+  end
+
+  defp update_account_params(params, target_id, account_name, accounts)
+       when target_id in ["related_account_name", :related_account_name] do
+    params
+    |> Map.put("related_account_name", account_name)
+    |> Map.put("change_currency", get_currency(accounts, account_name))
+  end
+
+  defp update_account_params(params, target_id, account_name, accounts) do
+    entries = params["entries"] || %{}
+    currency = get_currency(accounts, account_name)
+    updated_entries = update_breakdown_entries(entries, target_id, account_name, currency)
+    Map.put(params, "entries", updated_entries)
+  end
+
+  defp update_breakdown_entries(entries, target_id, account_name, currency) do
+    key = find_entry_key(entries, target_id)
+
+    entry =
+      (entries[key] || %{})
+      |> Map.put("account_name", account_name)
+      |> Map.put("currency", currency)
+
+    Map.put(entries, key, entry)
+  end
+
+  defp find_entry_key(entries, target_id) do
+    idx_str = to_string(target_id)
+    idx_int = if is_integer(target_id), do: target_id, else: String.to_integer(idx_str)
+
+    cond do
+      Map.has_key?(entries, idx_str) -> idx_str
+      Map.has_key?(entries, idx_int) -> idx_int
+      true -> idx_str
+    end
+  end
+
   def update(assigns, socket) do
     %{account_transaction: %FormAccountTransaction{} = account_transaction} = assigns
     accounts = list_accounts()
@@ -292,9 +362,11 @@ defmodule ContaWeb.EntryLive.FormComponent do
 
   def handle_event(
         "validate",
-        %{"_target" => ["account_transaction", "breakdown"], "account_transaction" => params},
+        %{"account_transaction" => %{"breakdown" => breakdown} = params},
         socket
-      ) do
+      )
+      when (breakdown in ["true", true] and not socket.assigns.breakdown) or
+             (breakdown in ["false", false] and socket.assigns.breakdown) do
     params =
       if socket.assigns.breakdown do
         FormAccountTransaction.disable_breakdown(params)
@@ -363,6 +435,19 @@ defmodule ContaWeb.EntryLive.FormComponent do
 
   defp save_account_transaction(socket, :edit, params) do
     account_transaction = socket.assigns.account_transaction
+    accounts = socket.assigns.accounts
+
+    params =
+      if params["breakdown"] in ["true", true] do
+        params
+        |> Map.put_new("entries", [])
+        |> Map.update!("entries", &set_currency_for_entries(&1, accounts))
+      else
+        params
+        |> Map.put_new("currency", get_currency(accounts, params["account_name"]))
+        |> Map.put_new("change_currency", get_currency(accounts, params["related_account_name"]))
+      end
+
     changeset = FormAccountTransaction.changeset(account_transaction, params)
 
     if changeset.valid? and dispatch(FormAccountTransaction.to_command(changeset)) == :ok do
@@ -384,6 +469,19 @@ defmodule ContaWeb.EntryLive.FormComponent do
   end
 
   defp save_account_transaction(socket, :new, params) do
+    accounts = socket.assigns.accounts
+
+    params =
+      if params["breakdown"] in ["true", true] do
+        params
+        |> Map.put_new("entries", [])
+        |> Map.update!("entries", &set_currency_for_entries(&1, accounts))
+      else
+        params
+        |> Map.put_new("currency", get_currency(accounts, params["account_name"]))
+        |> Map.put_new("change_currency", get_currency(accounts, params["related_account_name"]))
+      end
+
     changeset = FormAccountTransaction.changeset(socket.assigns.account_transaction, params)
 
     with %Ecto.Changeset{valid?: true} <- changeset,

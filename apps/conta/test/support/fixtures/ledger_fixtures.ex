@@ -34,6 +34,9 @@ defmodule Conta.LedgerFixtures do
       transaction_id: "f3093f1f-0a55-4356-b925-831035a8bca7",
       account_name: ~w[Assets Bank],
       related_account_name: ~w[Expenses Supermarket],
+      change_currency: :EUR,
+      change_credit: 10_00,
+      change_debit: 0,
       inserted_at: DateTime.utc_now(),
       updated_at: DateTime.utc_now()
     }

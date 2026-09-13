@@ -280,9 +280,11 @@ defmodule Conta.Aggregate.Ledger do
     end)
   end
 
+  defp add_change_data(account, %{change_currency: nil}), do: account
+
   defp add_change_data(account, entry) do
-    debit = to_money(entry.change_debit, entry.change_currency)
-    credit = to_money(entry.change_credit, entry.change_currency)
+    debit = to_money(entry.change_debit || 0, entry.change_currency)
+    credit = to_money(entry.change_credit || 0, entry.change_currency)
     balance = Money.subtract(debit, credit)
     Map.update(account, to_string(entry.change_currency), balance, &Money.add(&1, balance))
   end
