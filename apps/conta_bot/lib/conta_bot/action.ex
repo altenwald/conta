@@ -3,7 +3,6 @@ defmodule ContaBot.Action do
   require Logger
   alias ContaBot.Action.Users
 
-  command("candle", description: "Get candle chart for an account")
   command("graph", description: "Receive a graph for specific data")
   command("income", description: "Get income for last 6 months")
   command("invoice", description: "List invoices")
