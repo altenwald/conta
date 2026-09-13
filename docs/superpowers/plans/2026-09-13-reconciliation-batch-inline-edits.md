@@ -1,0 +1,25 @@
+# Plan: Batch Inline Edits in Reconciliation Review
+
+- [x] Task 1: Update LiveView Socket State and `update_field` buffering <!-- id: 0 -->
+  - [x] Add `:pending_changes` assign initialized to `%{}` in `mount/3` of `apps/conta_web/lib/conta_web/live/reconciliation_live/review.ex`
+  - [x] Update `handle_event("update_field", ...)` to buffer changes into `:pending_changes` without dispatching commands or modifying Repo
+  - [x] Add change comparison against original movement values (clear pending change if reverted back)
+- [x] Task 2: Implement `save_row` and `cancel_row` Handlers <!-- id: 1 -->
+  - [x] Implement `handle_event("save_row", %{"id" => id}, socket)` to parse buffered fields (`amount`, `on_date`, `description`), dispatch `Reconciliation.update_movement/2`, update local movement, and clear pending state
+  - [x] Implement `handle_event("cancel_row", %{"id" => id}, socket)` to discard buffered changes and reset errors
+  - [x] Clean up `:pending_changes` in `handle_event("remove", ...)` and `handle_event("remove_selected", ...)`
+- [x] Task 3: Update Template and Components in `review.html.heex` and `review.ex` <!-- id: 2 -->
+  - [x] Update `<.editable>` component to accept `phx-submit="save_row"` for Enter-to-save
+  - [x] Pass buffered values to `<.editable>` if present in `@pending_changes`
+  - [x] Highlight modified rows with visual styling (`bg-info/10 font-medium`)
+  - [x] Conditionally render Save and Cancel action buttons when row is modified, replacing standard action buttons
+- [x] Task 4: Write Tests and Verify Existing Tests <!-- id: 3 -->
+  - [x] Update existing tests in `review_test.exs` to reflect the batching workflow (explicit save required to persist to Repo)
+  - [x] Add new tests verifying buffering on keystrokes without Repo dispatch
+  - [x] Add tests for clicking Cancel (reverting values without Repo dispatch)
+  - [x] Add tests for multi-field edits buffered and saved in a single dispatch
+  - [x] Add tests for Enter key submit
+- [x] Task 5: Final Verification & Commit <!-- id: 4 -->
+  - [x] Run `mix test` and `mix check` (warnings-as-errors, Credo, Dialyzer, Doctor)
+  - [x] Git commit changes
+  - [x] Update Backlog task status and project spec

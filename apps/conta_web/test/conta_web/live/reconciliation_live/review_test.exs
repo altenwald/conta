@@ -246,25 +246,71 @@ defmodule ContaWeb.ReconciliationLive.ReviewTest do
       assert Repo.get(Movement, assigned.id)
     end
 
-    test "editing the description of a normal row dispatches update_movement and reflects the change locally",
+    test "editing a field buffers the change locally without dispatching to Repo, showing Save and Cancel buttons",
          %{conn: conn, user: user} do
       movement = import_movement()
+      initial_desc = movement.description
+
+      conn = log_in_user(conn, user)
+      {:ok, view, _html} = live(conn, ~p"/ledger/reconciliation")
+
+      refute has_element?(view, "#movement-#{movement.id} button[phx-click=save_row]")
+      refute has_element?(view, "#movement-#{movement.id} button[phx-click=cancel_row]")
+
+      view
+      |> form("#description-form-#{movement.id}", %{"value" => "buffered description"})
+      |> render_change()
+
+      # The input reflects the buffered change
+      assert view |> element("#description-form-#{movement.id} input") |> render() =~ "buffered description"
+
+      # Save and Cancel buttons appear on the modified row, replacing Delete
+      assert has_element?(view, "#movement-#{movement.id} button[phx-click=save_row]")
+      assert has_element?(view, "#movement-#{movement.id} button[phx-click=cancel_row]")
+      refute has_element?(view, "#movement-#{movement.id} button[phx-click=remove]")
+
+      # The database movement has NOT been updated (no premature dispatch)
+      assert Repo.get(Movement, movement.id).description == initial_desc
+
+      # Clicking Save dispatches and persists to Repo
+      view
+      |> element("#movement-#{movement.id} button[phx-click=save_row]")
+      |> render_click()
+
+      assert eventually(fn -> Repo.get(Movement, movement.id).description == "buffered description" end)
+      refute has_element?(view, "#movement-#{movement.id} button[phx-click=save_row]")
+      assert has_element?(view, "#movement-#{movement.id} button[phx-click=remove]")
+    end
+
+    test "cancelling an inline edit reverts the input to original value without dispatching to Repo",
+         %{conn: conn, user: user} do
+      movement = import_movement()
+      initial_desc = movement.description
 
       conn = log_in_user(conn, user)
       {:ok, view, _html} = live(conn, ~p"/ledger/reconciliation")
 
       view
-      |> form("#description-form-#{movement.id}", %{"value" => "corrected description"})
+      |> form("#description-form-#{movement.id}", %{"value" => "unsaved change"})
       |> render_change()
 
-      assert view |> element("#description-form-#{movement.id} input") |> render() =~ "corrected description"
+      assert view |> element("#description-form-#{movement.id} input") |> render() =~ "unsaved change"
+      assert has_element?(view, "#movement-#{movement.id} button[phx-click=cancel_row]")
 
-      assert eventually(fn -> Repo.get(Movement, movement.id).description == "corrected description" end)
+      view
+      |> element("#movement-#{movement.id} button[phx-click=cancel_row]")
+      |> render_click()
+
+      # Reverted to initial value and action buttons restored
+      assert view |> element("#description-form-#{movement.id} input") |> render() =~ initial_desc
+      refute has_element?(view, "#movement-#{movement.id} button[phx-click=save_row]")
+      refute has_element?(view, "#movement-#{movement.id} button[phx-click=cancel_row]")
+      assert has_element?(view, "#movement-#{movement.id} button[phx-click=remove]")
+      assert Repo.get(Movement, movement.id).description == initial_desc
     end
 
-    test "formats movement amount as 2-decimal currency and converts user decimal inputs to integer cents",
+    test "batch editing multiple fields (description and amount) saves all changes together",
          %{conn: conn, user: user} do
-      # amount: -1000
       movement = import_movement()
 
       conn = log_in_user(conn, user)
@@ -273,11 +319,108 @@ defmodule ContaWeb.ReconciliationLive.ReviewTest do
       assert view |> element("#amount-form-#{movement.id} input") |> render() =~ "value=\"-10.00\""
 
       view
+      |> form("#description-form-#{movement.id}", %{"value" => "new description"})
+      |> render_change()
+
+      view
       |> form("#amount-form-#{movement.id}", %{"value" => "-25.50"})
       |> render_change()
 
+      # Both inputs reflect buffered values
+      assert view |> element("#description-form-#{movement.id} input") |> render() =~ "new description"
       assert view |> element("#amount-form-#{movement.id} input") |> render() =~ "value=\"-25.50\""
-      assert eventually(fn -> Repo.get(Movement, movement.id).amount == -2550 end)
+
+      # DB has not changed yet
+      assert Repo.get(Movement, movement.id).amount == -1000
+
+      # Save row
+      view
+      |> element("#movement-#{movement.id} button[phx-click=save_row]")
+      |> render_click()
+
+      assert eventually(fn ->
+               m = Repo.get(Movement, movement.id)
+               m.description == "new description" and m.amount == -2550
+             end)
+    end
+
+    test "submitting an editable form via Enter key triggers save_row",
+         %{conn: conn, user: user} do
+      movement = import_movement()
+
+      conn = log_in_user(conn, user)
+      {:ok, view, _html} = live(conn, ~p"/ledger/reconciliation")
+
+      view
+      |> form("#description-form-#{movement.id}", %{"value" => "saved with enter"})
+      |> render_change()
+
+      view
+      |> form("#description-form-#{movement.id}")
+      |> render_submit(%{"id" => movement.id})
+
+      assert eventually(fn -> Repo.get(Movement, movement.id).description == "saved with enter" end)
+      refute has_element?(view, "#movement-#{movement.id} button[phx-click=save_row]")
+    end
+
+    test "typing back the original value clears pending state and restores normal buttons",
+         %{conn: conn, user: user} do
+      movement = import_movement()
+      initial_desc = movement.description
+
+      conn = log_in_user(conn, user)
+      {:ok, view, _html} = live(conn, ~p"/ledger/reconciliation")
+
+      view
+      |> form("#description-form-#{movement.id}", %{"value" => "changed"})
+      |> render_change()
+
+      assert has_element?(view, "#movement-#{movement.id} button[phx-click=save_row]")
+
+      view
+      |> form("#description-form-#{movement.id}", %{"value" => initial_desc})
+      |> render_change()
+
+      refute has_element?(view, "#movement-#{movement.id} button[phx-click=save_row]")
+      refute has_element?(view, "#movement-#{movement.id} button[phx-click=cancel_row]")
+      assert has_element?(view, "#movement-#{movement.id} button[phx-click=remove]")
+    end
+
+    test "editing a movement in the top block (with account) shows Save and Cancel and persists changes",
+         %{conn: conn, user: user} do
+      expense = create_expense_account()
+      movement = import_movement() |> assign_account(expense)
+
+      conn = log_in_user(conn, user)
+      {:ok, view, _html} = live(conn, ~p"/ledger/reconciliation")
+
+      assert has_element?(view, "#movements-with-account #movement-#{movement.id}")
+      refute has_element?(view, "#movement-#{movement.id} button[phx-click=save_row]")
+
+      view
+      |> form("#description-form-#{movement.id}", %{"value" => "edited top movement"})
+      |> render_change()
+
+      assert has_element?(view, "#movements-with-account #movement-#{movement.id} button[phx-click=save_row]")
+
+      assert has_element?(
+               view,
+               "#movements-with-account #movement-#{movement.id} button[phx-click=cancel_row]"
+             )
+
+      refute has_element?(view, "#movements-with-account #movement-#{movement.id} button[phx-click=remove]")
+
+      view
+      |> element("#movement-#{movement.id} button[phx-click=save_row]")
+      |> render_click()
+
+      assert eventually(fn ->
+               m = Repo.get(Movement, movement.id)
+               m.description == "edited top movement" and m.account_name == expense
+             end)
+
+      refute has_element?(view, "#movement-#{movement.id} button[phx-click=save_row]")
+      assert has_element?(view, "#movements-with-account #movement-#{movement.id} button[phx-click=remove]")
     end
 
     test "single-row rematch button re-evaluates match rules for that movement", %{conn: conn, user: user} do

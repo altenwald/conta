@@ -24,6 +24,7 @@ defmodule ContaWeb.ReconciliationLive.Review do
      |> assign(:movements, Reconciliation.list_movements())
      |> assign(:accounts, account_options())
      |> assign(:selected, MapSet.new())
+     |> assign(:pending_changes, %{})
      |> assign(:errors, %{})}
   end
 
@@ -75,6 +76,7 @@ defmodule ContaWeb.ReconciliationLive.Review do
       socket
       |> assign(:movements, Enum.reject(socket.assigns.movements, &(&1.id in succeeded)))
       |> assign(:selected, MapSet.difference(socket.assigns.selected, succeeded))
+      |> assign(:pending_changes, Map.drop(socket.assigns.pending_changes, MapSet.to_list(succeeded)))
       |> assign(:errors, socket.assigns.errors |> Map.drop(MapSet.to_list(succeeded)) |> Map.merge(failed))
       |> maybe_flash_remove_result(failed)
 
@@ -96,6 +98,7 @@ defmodule ContaWeb.ReconciliationLive.Review do
       socket
       |> assign(:movements, Enum.reject(socket.assigns.movements, &(&1.id in succeeded)))
       |> assign(:selected, MapSet.difference(socket.assigns.selected, succeeded))
+      |> assign(:pending_changes, Map.drop(socket.assigns.pending_changes, MapSet.to_list(succeeded)))
       |> assign(:errors, socket.assigns.errors |> Map.drop(MapSet.to_list(succeeded)) |> Map.merge(failed))
       |> mark_drifted_transacted(failed)
       |> maybe_flash_confirm_result(failed)
@@ -114,18 +117,70 @@ defmodule ContaWeb.ReconciliationLive.Review do
     {:noreply, socket}
   end
 
-  def handle_event("update_field", %{"id" => id, "field" => "amount", "value" => value}, socket) do
-    amount = parse_amount(value)
-    perform_update(socket, id, %{"amount" => amount})
-  end
-
   def handle_event("update_field", %{"id" => id, "field" => field, "value" => value}, socket)
       when field in @editable_fields do
-    perform_update(socket, id, %{field => value})
+    movement = Enum.find(socket.assigns.movements, &(&1.id == id))
+
+    if is_nil(movement) do
+      {:noreply, socket}
+    else
+      is_same = same_as_original?(movement, field, value)
+      current_row = Map.get(socket.assigns.pending_changes, id, %{})
+
+      new_row =
+        if is_same do
+          Map.delete(current_row, field)
+        else
+          Map.put(current_row, field, value)
+        end
+
+      pending_changes =
+        if map_size(new_row) == 0 do
+          Map.delete(socket.assigns.pending_changes, id)
+        else
+          Map.put(socket.assigns.pending_changes, id, new_row)
+        end
+
+      {:noreply, assign(socket, :pending_changes, pending_changes)}
+    end
   end
 
   def handle_event("update_field", _params, socket) do
     {:noreply, socket}
+  end
+
+  def handle_event("save_row", %{"id" => id} = params, socket) do
+    row_changes =
+      socket.assigns.pending_changes
+      |> Map.get(id, %{})
+      |> maybe_merge_submit_field(params)
+
+    if map_size(row_changes) == 0 do
+      {:noreply, socket}
+    else
+      parsed_changes = parse_row_changes(row_changes)
+
+      case Reconciliation.update_movement(id, parsed_changes) do
+        :ok ->
+          socket =
+            socket
+            |> apply_local_update(id, parsed_changes)
+            |> assign(:pending_changes, Map.delete(socket.assigns.pending_changes, id))
+
+          {:noreply, socket}
+
+        {:error, reason} ->
+          Logger.error("cannot update movement #{id}: #{inspect(reason)}")
+          {:noreply, put_error(socket, id, reason)}
+      end
+    end
+  end
+
+  def handle_event("cancel_row", %{"id" => id}, socket) do
+    {:noreply,
+     socket
+     |> assign(:pending_changes, Map.delete(socket.assigns.pending_changes, id))
+     |> assign(:errors, Map.delete(socket.assigns.errors, id))}
   end
 
   def handle_event("rematch", %{"id" => id}, socket) do
@@ -312,7 +367,70 @@ defmodule ContaWeb.ReconciliationLive.Review do
     socket
     |> assign(:movements, Enum.reject(socket.assigns.movements, &(&1.id == id)))
     |> assign(:selected, MapSet.delete(socket.assigns.selected, id))
+    |> assign(:pending_changes, Map.delete(socket.assigns.pending_changes, id))
     |> assign(:errors, Map.delete(socket.assigns.errors, id))
+  end
+
+  defp same_as_original?(movement, "description", value) do
+    (movement.description || "") == value
+  end
+
+  defp same_as_original?(movement, "on_date", value) do
+    if movement.on_date do
+      Date.to_iso8601(movement.on_date) == value
+    else
+      value in [nil, ""]
+    end
+  end
+
+  defp same_as_original?(movement, "amount", value) do
+    format_amount(movement.amount) == value or parse_amount(value) == movement.amount
+  end
+
+  defp same_as_original?(_movement, _field, _value), do: false
+
+  defp parse_row_changes(row_changes) do
+    Enum.reduce(row_changes, %{}, fn
+      {"amount", val}, acc ->
+        Map.put(acc, "amount", parse_amount(val))
+
+      {"on_date", val}, acc ->
+        Map.put(acc, "on_date", val)
+
+      {"description", val}, acc ->
+        Map.put(acc, "description", val)
+
+      {key, val}, acc ->
+        Map.put(acc, key, val)
+    end)
+  end
+
+  defp maybe_merge_submit_field(row_changes, %{"field" => field, "value" => value})
+       when field in @editable_fields and is_binary(value) do
+    Map.put(row_changes, field, value)
+  end
+
+  defp maybe_merge_submit_field(row_changes, _params), do: row_changes
+
+  defp movement_field_value(movement, "on_date", pending_changes) do
+    case get_in(pending_changes, [movement.id, "on_date"]) do
+      nil -> movement.on_date && Date.to_iso8601(movement.on_date)
+      val -> val
+    end
+  end
+
+  defp movement_field_value(movement, "description", pending_changes) do
+    case get_in(pending_changes, [movement.id, "description"]) do
+      nil -> movement.description
+      val -> val
+    end
+  end
+
+  defp movement_field_value(movement, "amount", pending_changes) do
+    case get_in(pending_changes, [movement.id, "amount"]) do
+      nil -> format_amount(movement.amount)
+      val -> val
+    end
   end
 
   defp put_error(socket, id, reason) do
@@ -362,7 +480,13 @@ defmodule ContaWeb.ReconciliationLive.Review do
 
   defp editable(assigns) do
     ~H"""
-    <form phx-change="update_field" phx-value-id={@id} phx-value-field={@field} id={"#{@field}-form-#{@id}"}>
+    <form
+      phx-change="update_field"
+      phx-submit="save_row"
+      phx-value-id={@id}
+      phx-value-field={@field}
+      id={"#{@field}-form-#{@id}"}
+    >
       <input type={@type} step={@step} name="value" value={@value} class="input input-sm w-full" />
     </form>
     """
