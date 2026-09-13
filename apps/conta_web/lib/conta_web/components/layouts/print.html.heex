@@ -1,7 +1,11 @@
 <.nav logo_url={~p{/images/conta_header.png}} class="no-print">
   <:actions>
     <.buttons>
-      <.link class="btn btn-primary" href={~p"/books/invoices/#{@invoice}/download"}>
+      <.link class="btn btn-primary" href={~p"/books/invoices/#{@invoice}/send_email"}>
+        <.icon name="hero-paper-airplane" class="w-5 h-5 mr-1" />
+        <strong>{gettext("Send by email")}</strong>
+      </.link>
+      <.link class="btn btn-outline" href={~p"/books/invoices/#{@invoice}/download"}>
         <.icon name="hero-arrow-down-tray" class="w-5 h-5 mr-1" />
         <strong>{gettext("Download")}</strong>
       </.link>

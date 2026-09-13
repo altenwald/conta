@@ -13,27 +13,11 @@
     <div class="col-span-12 print:hidden mb-2">
       <div class="card bg-base-100 border border-base-300 shadow-md">
         <div class="card-body p-4">
-          <div class="flex justify-between items-center mb-3">
+          <div class="mb-3">
             <h3 class="font-bold text-sm uppercase tracking-wider flex items-center gap-2">
               <.icon name="hero-envelope" class="w-5 h-5 text-primary" />
               {gettext("Email Delivery History")}
             </h3>
-            <div class="flex gap-2">
-              <.link
-                href={~p"/books/invoices/#{@invoice.id}/send_email"}
-                class="btn btn-primary btn-sm"
-              >
-                <.icon name="hero-paper-airplane" class="w-4 h-4 mr-1" />
-                {gettext("Send by email")}
-              </.link>
-              <.link
-                href={~p"/books/invoices/#{@invoice.id}/download"}
-                class="btn btn-outline btn-sm"
-              >
-                <.icon name="hero-arrow-down-tray" class="w-4 h-4 mr-1" />
-                {gettext("Download PDF")}
-              </.link>
-            </div>
           </div>
 
           <%= if assigns[:emails_sent] && @emails_sent != [] do %>

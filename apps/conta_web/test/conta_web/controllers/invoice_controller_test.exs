@@ -129,7 +129,10 @@ defmodule ContaWeb.InvoiceControllerTest do
       assert html =~ "2026-08-28"
       assert html =~ "11:30:00"
       assert html =~ "Send by email"
-      assert html =~ "Download PDF"
+      assert html =~ "Download"
+      refute html =~ "Download PDF"
+      assert html =~ ~s(href="/books/invoices/#{invoice.id}/send_email")
+      assert html =~ ~s(href="/books/invoices/#{invoice.id}/download")
     end
 
     test "renders invoice show page with no email deliveries yet", %{conn: conn, user: user} do
@@ -155,7 +158,10 @@ defmodule ContaWeb.InvoiceControllerTest do
       html = response(conn, 200)
       assert html =~ "This invoice has not been sent by email yet."
       assert html =~ "Send by email"
-      assert html =~ "Download PDF"
+      assert html =~ "Download"
+      refute html =~ "Download PDF"
+      assert html =~ ~s(href="/books/invoices/#{invoice.id}/send_email")
+      assert html =~ ~s(href="/books/invoices/#{invoice.id}/download")
     end
   end
 end
