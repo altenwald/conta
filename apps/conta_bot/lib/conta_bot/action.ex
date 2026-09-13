@@ -3,6 +3,7 @@ defmodule ContaBot.Action do
   require Logger
   alias ContaBot.Action.Users
 
+  command("candle", description: "Get candle chart for an account")
   command("graph", description: "Receive a graph for specific data")
   command("income", description: "Get income for last 6 months")
   command("invoice", description: "List invoices")
@@ -54,6 +55,7 @@ defmodule ContaBot.Action do
   def handle({:command, command, params}, context) do
     if Users.granted_user?(params.from.username) do
       command = to_string(command)
+      context = %{context | extra: Map.put(context.extra || %{}, :params, params)}
       handle({:init, command}, command, context)
     else
       answer(context, "You're not allowed to ask me anything. Sorry.")

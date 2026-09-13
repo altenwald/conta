@@ -46,11 +46,14 @@ defmodule ContaBot.Components do
 
   def get_chat_id(context) do
     cond do
-      context.update.message ->
+      context.update && context.update.message ->
         context.update.message.chat.id
 
-      context.update.callback_query ->
+      context.update && context.update.callback_query && context.update.callback_query.message ->
         context.update.callback_query.message.chat.id
+
+      true ->
+        nil
     end
   end
 
@@ -63,6 +66,8 @@ defmodule ContaBot.Components do
   defp get_buttons(options, processed \\ [])
 
   defp get_buttons([], processed), do: Enum.reverse(processed)
+
+  defp get_buttons([nil | options], processed), do: get_buttons(options, processed)
 
   defp get_buttons([{label, value} | options], processed) do
     get_buttons(options, [[%InlineKeyboardButton{text: label, callback_data: value}] | processed])
@@ -126,12 +131,14 @@ defmodule ContaBot.Components do
       |> Enum.map(&Enum.join(&1.name, "."))
       |> Enum.map(&{&1, "#{name} #{&1}"})
 
-    extra = [
-      {"Continue with #{Enum.join(parent, ".")}...", "event " <> next},
-      if(sticky !== false,
-        do: {"Stick with #{Enum.join(parent, ".")}...", "event sticky " <> next}
-      )
-    ]
+    extra =
+      [
+        {"Continue with #{Enum.join(parent, ".")}...", "event " <> next},
+        if(sticky !== false,
+          do: {"Stick with #{Enum.join(parent, ".")}...", "event sticky " <> next}
+        )
+      ]
+      |> Enum.reject(&is_nil/1)
 
     context
     |> delete_callback()

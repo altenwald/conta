@@ -439,6 +439,38 @@ defmodule Conta.Stats do
   end
 
   @doc """
+  Resolves an account struct from an `%Account{}`, an account UUID,
+  a dotted account string (e.g. `"Assets.Banks.Checking"`), or a list of path segments (`~w[Assets Banks Checking]`).
+  """
+  def get_account(%Account{} = account), do: {:ok, account}
+
+  def get_account(name) when is_list(name) do
+    Conta.Ledger.get_account_by_name(name)
+  end
+
+  def get_account(name_or_id) when is_binary(name_or_id) do
+    parts = String.split(name_or_id, ".")
+
+    case Conta.Ledger.get_account_by_name(parts) do
+      {:ok, account} -> {:ok, account}
+      {:error, _} -> get_account_by_id(name_or_id)
+    end
+  end
+
+  defp get_account_by_id(id) do
+    case Ecto.UUID.cast(id) do
+      {:ok, uuid} ->
+        case Conta.Ledger.get_account(uuid) do
+          nil -> {:error, :invalid_account}
+          account -> {:ok, account}
+        end
+
+      :error ->
+        {:error, :invalid_account}
+    end
+  end
+
+  @doc """
   Lists monthly OHLC balance data for a specific account or account ID over the given number of months.
   """
   def list_account(account, months \\ 12)
@@ -458,9 +490,14 @@ defmodule Conta.Stats do
     compute_account_ohlc(account, month_dates, start_date, end_date)
   end
 
-  def list_account(account_id, months) when is_binary(account_id) and is_integer(months) do
-    account = Conta.Ledger.get_account!(account_id)
-    list_account(account, months)
+  def list_account(account_param, months) when is_integer(months) do
+    case get_account(account_param) do
+      {:ok, %Account{} = account} ->
+        list_account(account, months)
+
+      {:error, reason} ->
+        raise "Account #{inspect(account_param)} not found: #{inspect(reason)}"
+    end
   end
 
   defp compute_account_ohlc(%Account{} = account, month_dates, start_date, end_date) do

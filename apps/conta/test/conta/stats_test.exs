@@ -282,6 +282,22 @@ defmodule Conta.StatsTest do
       assert String.starts_with?(svg, "<svg")
       assert svg =~ "plotto-guideline"
     end
+
+    test "chart_account/2 and list_account/2 accept dotted account string and list name" do
+      _account = insert(:account, %{name: ~w[Assets Checking], type: :assets, currency: :EUR})
+
+      chart1 = Stats.chart_account("Assets.Checking", 6)
+      assert %Plotto.CandlestickChart{} = chart1
+
+      chart2 = Stats.chart_account(~w[Assets Checking], 6)
+      assert %Plotto.CandlestickChart{} = chart2
+
+      list1 = Stats.list_account("Assets.Checking", 3)
+      assert length(list1) == 3
+
+      list2 = Stats.list_account(~w[Assets Checking], 3)
+      assert length(list2) == 3
+    end
   end
 
   describe "inject_theme_style/2" do
