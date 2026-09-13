@@ -5,34 +5,56 @@ defmodule Conta.StatsTest do
   alias Conta.Stats
 
   describe "patrimony graphs" do
-    test "graph_patrimony/1 generates SVG without error" do
+    test "chart_patrimony/1 configures y_guidelines and graph_patrimony/1 generates SVG" do
+      chart = Stats.chart_patrimony(:EUR)
+      assert match?({:dotted, _}, chart.opts.y_guidelines)
+
       svg = Stats.graph_patrimony(:EUR)
       assert is_binary(svg)
       assert String.starts_with?(svg, "<svg")
       assert svg =~ "<rect"
+      assert svg =~ "plotto-guideline"
     end
   end
 
   describe "pnl graphs" do
-    test "graph_pnl/2 generates SVG without error" do
+    test "chart_pnl/2 configures horizontal top legend and y_guidelines" do
+      chart = Stats.chart_pnl(:EUR, 6)
+      assert chart.opts.legend == :top
+      assert chart.opts.legend_orientation == :horizontal
+      assert match?({:dotted, _}, chart.opts.y_guidelines)
+
       svg = Stats.graph_pnl(:EUR, 6)
       assert is_binary(svg)
       assert String.starts_with?(svg, "<svg")
       assert svg =~ "<rect"
+      assert svg =~ "plotto-guideline"
     end
   end
 
   describe "income and outcome graphs" do
-    test "graph_income/3 generates SVG without error" do
+    test "chart_income/3 configures horizontal top legend and y_guidelines" do
+      chart = Stats.chart_income(:EUR, 4, 12)
+      assert chart.opts.legend == :top
+      assert chart.opts.legend_orientation == :horizontal
+      assert match?({:dotted, _}, chart.opts.y_guidelines)
+
       svg = Stats.graph_income(:EUR, 4, 12)
       assert is_binary(svg)
       assert String.starts_with?(svg, "<svg")
+      assert svg =~ "plotto-guideline"
     end
 
-    test "graph_outcome/3 generates SVG without error" do
+    test "chart_outcome/3 configures horizontal top legend and y_guidelines" do
+      chart = Stats.chart_outcome(:EUR, 4, 12)
+      assert chart.opts.legend == :top
+      assert chart.opts.legend_orientation == :horizontal
+      assert match?({:dotted, _}, chart.opts.y_guidelines)
+
       svg = Stats.graph_outcome(:EUR, 4, 12)
       assert is_binary(svg)
       assert String.starts_with?(svg, "<svg")
+      assert svg =~ "plotto-guideline"
     end
   end
 
@@ -97,15 +119,17 @@ defmodule Conta.StatsTest do
       assert this_data.close == 1300.0
     end
 
-    test "chart_banks/2 creates Plotto.CandlestickChart struct" do
+    test "chart_banks/2 creates Plotto.CandlestickChart struct with y_guidelines" do
       chart = Stats.chart_banks(:EUR, 12)
       assert %Plotto.CandlestickChart{} = chart
+      assert match?({:dotted, _}, chart.opts.y_guidelines)
     end
 
-    test "graph_banks/2 generates SVG binary" do
+    test "graph_banks/2 generates SVG binary with guidelines" do
       svg = Stats.graph_banks(:EUR, 12)
       assert is_binary(svg)
       assert String.starts_with?(svg, "<svg")
+      assert svg =~ "plotto-guideline"
     end
   end
 
@@ -223,15 +247,17 @@ defmodule Conta.StatsTest do
       assert data.diff == 150.0
     end
 
-    test "chart_account/2 and graph_account/3 create chart and SVG with tooltip diff" do
+    test "chart_account/2 and graph_account/3 create chart and SVG with tooltip diff and guidelines" do
       account = insert(:account, %{name: ~w[Assets Savings], type: :assets, currency: :EUR})
       chart = Stats.chart_account(account, 6)
       assert %Plotto.CandlestickChart{} = chart
+      assert match?({:dotted, _}, chart.opts.y_guidelines)
 
       svg = Stats.graph_account(account, 6)
       assert is_binary(svg)
       assert String.starts_with?(svg, "<svg")
       assert svg =~ "Diff:"
+      assert svg =~ "plotto-guideline"
     end
 
     test "chart_account/2 and graph_account/3 work for non-EUR accounts (e.g. USD)" do
@@ -249,10 +275,42 @@ defmodule Conta.StatsTest do
 
       chart = Stats.chart_account(account, 1)
       assert %Plotto.CandlestickChart{} = chart
+      assert match?({:dotted, _}, chart.opts.y_guidelines)
 
       svg = Stats.graph_account(account, 1)
       assert is_binary(svg)
       assert String.starts_with?(svg, "<svg")
+      assert svg =~ "plotto-guideline"
+    end
+  end
+
+  describe "inject_theme_style/2" do
+    test "injects subtle line.plotto-guideline styles for dark theme" do
+      svg = "<svg><rect width=\"10\" height=\"10\"/></svg>"
+      styled = Stats.inject_theme_style(svg, :dark)
+
+      assert styled =~ "line.plotto-guideline"
+      assert styled =~ "#374151"
+      assert styled =~ "line.plotto-axis"
+    end
+
+    test "injects subtle line.plotto-guideline styles for light theme" do
+      svg = "<svg><rect width=\"10\" height=\"10\"/></svg>"
+      styled = Stats.inject_theme_style(svg, :light)
+
+      assert styled =~ "line.plotto-guideline"
+      assert styled =~ "#E5E7EB"
+      assert styled =~ "line.plotto-axis"
+    end
+
+    test "injects subtle line.plotto-guideline styles for system theme with prefers-color-scheme" do
+      svg = "<svg><rect width=\"10\" height=\"10\"/></svg>"
+      styled = Stats.inject_theme_style(svg, :system)
+
+      assert styled =~ "line.plotto-guideline"
+      assert styled =~ "#E5E7EB"
+      assert styled =~ "@media(prefers-color-scheme:dark)"
+      assert styled =~ "#374151"
     end
   end
 end

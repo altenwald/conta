@@ -56,7 +56,11 @@ defmodule Conta.Stats do
           end)
       end
 
-    Plotto.BarChart.new!([%{name: "Patrimony", data: items}], width: 640, height: 480)
+    Plotto.BarChart.new!([%{name: "Patrimony", data: items}],
+      width: 640,
+      height: 480,
+      y_guidelines: true
+    )
   end
 
   def graph_patrimony(currency, theme \\ :system) when is_atom(currency) do
@@ -210,7 +214,14 @@ defmodule Conta.Stats do
       %{name: "Balance", data: balance_data}
     ]
 
-    Plotto.BarChart.new!(series, mode: :grouped, legend: :top_right, width: 640, height: 480)
+    Plotto.BarChart.new!(series,
+      mode: :grouped,
+      legend: :top,
+      legend_orientation: :horizontal,
+      y_guidelines: true,
+      width: 640,
+      height: 480
+    )
   end
 
   def graph_pnl(currency, months, theme \\ :system) when is_atom(currency) do
@@ -278,14 +289,21 @@ defmodule Conta.Stats do
         %{name: account_name, data: series_data}
       end)
 
-    Plotto.BarChart.new!(series, mode: :stacked, legend: :top_right, width: 640, height: 480)
+    Plotto.BarChart.new!(series,
+      mode: :stacked,
+      legend: :top,
+      legend_orientation: :horizontal,
+      y_guidelines: true,
+      width: 640,
+      height: 480
+    )
   end
 
   def list_banks(currency \\ :EUR, months \\ 12) when is_atom(currency) and is_integer(months) do
     today = Date.utc_today()
 
     month_dates =
-      (months - 1)..0
+      (months - 1)..0//-1
       |> Enum.map(fn offset ->
         Date.beginning_of_month(Date.shift(today, month: -offset))
       end)
@@ -404,7 +422,13 @@ defmodule Conta.Stats do
 
   def chart_banks(currency \\ :EUR, months \\ 12) when is_atom(currency) do
     data = list_banks(currency, months)
-    Plotto.CandlestickChart.new!(data, width: 1200, height: 480, tooltip: &candlestick_tooltip/1)
+
+    Plotto.CandlestickChart.new!(data,
+      width: 1200,
+      height: 480,
+      y_guidelines: true,
+      tooltip: &candlestick_tooltip/1
+    )
   end
 
   def graph_banks(currency \\ :EUR, months \\ 12, theme \\ :system) when is_atom(currency) do
@@ -423,7 +447,7 @@ defmodule Conta.Stats do
     today = Date.utc_today()
 
     month_dates =
-      (months - 1)..0
+      (months - 1)..0//-1
       |> Enum.map(fn offset ->
         Date.beginning_of_month(Date.shift(today, month: -offset))
       end)
@@ -540,7 +564,13 @@ defmodule Conta.Stats do
   """
   def chart_account(account, months \\ 12) do
     data = list_account(account, months)
-    Plotto.CandlestickChart.new!(data, width: 640, height: 480, tooltip: &candlestick_tooltip/1)
+
+    Plotto.CandlestickChart.new!(data,
+      width: 640,
+      height: 480,
+      y_guidelines: true,
+      tooltip: &candlestick_tooltip/1
+    )
   end
 
   @doc """
@@ -560,13 +590,13 @@ defmodule Conta.Stats do
     style =
       case theme do
         :dark ->
-          "<style>text{fill:#E5E7EB;font-family:ui-sans-serif,system-ui,sans-serif;}line.plotto-axis{stroke:#4B5563;}</style>"
+          "<style>text{fill:#E5E7EB;font-family:ui-sans-serif,system-ui,sans-serif;}line.plotto-axis{stroke:#4B5563;}line.plotto-guideline{stroke:#374151;stroke-opacity:0.6;}</style>"
 
         :light ->
-          "<style>text{fill:#374151;font-family:ui-sans-serif,system-ui,sans-serif;}line.plotto-axis{stroke:#9CA3AF;}</style>"
+          "<style>text{fill:#374151;font-family:ui-sans-serif,system-ui,sans-serif;}line.plotto-axis{stroke:#9CA3AF;}line.plotto-guideline{stroke:#E5E7EB;stroke-opacity:0.7;}</style>"
 
         _ ->
-          "<style>text{fill:#374151;font-family:ui-sans-serif,system-ui,sans-serif;}line.plotto-axis{stroke:#9CA3AF;}@media(prefers-color-scheme:dark){text{fill:#E5E7EB;}line.plotto-axis{stroke:#4B5563;}}</style>"
+          "<style>text{fill:#374151;font-family:ui-sans-serif,system-ui,sans-serif;}line.plotto-axis{stroke:#9CA3AF;}line.plotto-guideline{stroke:#E5E7EB;stroke-opacity:0.7;}@media(prefers-color-scheme:dark){text{fill:#E5E7EB;}line.plotto-axis{stroke:#4B5563;}line.plotto-guideline{stroke:#374151;stroke-opacity:0.6;}}</style>"
       end
 
     String.replace(svg, ~r/<svg([^>]*)>/, "<svg\\1>#{style}", global: false)
