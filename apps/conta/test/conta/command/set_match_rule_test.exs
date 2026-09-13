@@ -90,6 +90,25 @@ defmodule Conta.Command.SetMatchRuleTest do
       changeset = SetMatchRule.changeset(params)
       assert changeset.valid?
     end
+
+    test "supports multiple conditions without requiring :id or generating primary key collisions" do
+      params = %{
+        "name" => "Multiple Conditions",
+        "conditions" => [
+          %{"field" => "description", "comparator" => "contains", "value" => "APPLE"},
+          %{"field" => "amount", "comparator" => "greater_than", "value" => "1000"}
+        ],
+        "match_type" => "all",
+        "account_name" => ["Expenses", "Electronics"]
+      }
+
+      changeset = SetMatchRule.changeset(params)
+      assert changeset.valid?
+
+      command = SetMatchRule.to_command(changeset)
+      assert length(command.conditions) == 2
+      refute Map.has_key?(hd(command.conditions), :id)
+    end
   end
 
   defp errors_on(changeset) do

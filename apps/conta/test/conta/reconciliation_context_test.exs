@@ -32,6 +32,47 @@ defmodule Conta.ReconciliationContextTest do
       assert id == rule.id
     end
 
+    test "get_set_match_rule/1 converts a read-model rule with multiple conditions to a valid SetMatchRule command" do
+      rule =
+        insert(:match_rule, %{
+          name: "Multi-condition rule",
+          concept: "Multi",
+          match_type: :all,
+          account_name: ["Expenses", "Subscriptions"],
+          conditions: [
+            %MatchRule.Condition{field: :description, comparator: :contains, value: "SPOTIFY"},
+            %MatchRule.Condition{field: :amount, comparator: :less_than, value: "5000"}
+          ]
+        })
+
+      set_rule = Reconciliation.get_set_match_rule(rule.id)
+
+      assert %SetMatchRule{id: id, name: "Multi-condition rule", concept: "Multi"} = set_rule
+      assert id == rule.id
+      assert length(set_rule.conditions) == 2
+
+      [cond1, cond2] = set_rule.conditions
+      assert cond1.field == :description
+      assert cond1.comparator == :contains
+      assert cond1.value == "SPOTIFY"
+      assert cond2.field == :amount
+      assert cond2.comparator == :less_than
+      assert cond2.value == "5000"
+
+      # Verify creating a changeset and adding another condition works with no duplicate primary key error
+      changeset =
+        SetMatchRule.changeset(set_rule, %{
+          "conditions" => %{
+            "0" => %{"field" => "description", "comparator" => "contains", "value" => "SPOTIFY"},
+            "1" => %{"field" => "amount", "comparator" => "less_than", "value" => "5000"},
+            "2" => %{"field" => "on_date", "comparator" => "equals", "value" => "2026-01-01"}
+          }
+        })
+
+      assert changeset.valid?
+      assert length(Ecto.Changeset.get_field(changeset, :conditions)) == 3
+    end
+
     # Command dispatch in this app defaults to `consistency: :eventual` (see
     # `Conta.Commanded.Router`), so `ReconciliationLive.Matches.Index`
     # subscribes to this broadcast instead of only trusting its initial query
