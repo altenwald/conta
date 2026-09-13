@@ -156,6 +156,22 @@ defmodule Conta.ReconciliationContextTest do
       refute Repo.get(Movement, movement.id)
     end
 
+    test "update_movement with consistency: :strong immediately writes to read model without polling", %{
+      movement: movement,
+      expense_name: expense_name
+    } do
+      :ok =
+        Reconciliation.update_movement(
+          movement.id,
+          %{"account_name" => expense_name},
+          consistency: :strong
+        )
+
+      # Immediate read from read model without eventually/1,2 or sleep
+      updated_movement = Repo.get!(Movement, movement.id)
+      assert updated_movement.account_name == expense_name
+    end
+
     test "leaves the movement pending when the counterpart account doesn't exist", %{movement: movement} do
       bad_account_name = ["Expenses", "Does Not Exist #{System.unique_integer([:positive])}"]
       :ok = Reconciliation.update_movement(movement.id, %{"account_name" => bad_account_name})

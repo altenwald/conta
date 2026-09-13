@@ -5,7 +5,7 @@ defmodule Conta.Reconciliation do
   """
 
   import Ecto.Query, only: [from: 2]
-  import Conta.Commanded.Application, only: [dispatch: 1]
+  import Conta.Commanded.Application, only: [dispatch: 1, dispatch: 2]
 
   alias Conta.Command.MarkMovementTransacted
   alias Conta.Command.RematchMovements
@@ -92,8 +92,8 @@ defmodule Conta.Reconciliation do
     Repo.get!(Movement, id)
   end
 
-  def update_movement(id, changes) when is_map(changes) do
-    dispatch(%UpdateMovement{id: id, changes: changes})
+  def update_movement(id, changes, opts \\ []) when is_map(changes) and is_list(opts) do
+    dispatch(%UpdateMovement{id: id, changes: changes}, opts)
   end
 
   def confirm_movement(id) do

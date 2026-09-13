@@ -2,6 +2,7 @@ import Config
 
 config :conta,
   credit_note_prefix: "CN",
+  consistency: :strong,
   event_store: [
     adapter: Commanded.EventStore.Adapters.EventStore,
     event_store: Conta.EventStore

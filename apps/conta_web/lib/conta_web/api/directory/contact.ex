@@ -15,12 +15,14 @@ defmodule ContaWeb.Api.Directory.Contact do
   def show(conn, %{"id" => id}) do
     default_company_nif = Application.get_env(:conta, :default_company_nif)
 
-    if contact = Directory.get_contact(id) || Directory.get_contact_by_nif(default_company_nif, id) do
-      render(conn, contact: contact)
-    else
-      conn
-      |> put_status(:not_found)
-      |> json(%{"errors" => %{"id" => "contact not found"}})
+    case Directory.get_contact(id) || Directory.get_contact_by_nif(default_company_nif, id) do
+      nil ->
+        conn
+        |> put_status(:not_found)
+        |> json(%{"errors" => %{"id" => "contact not found"}})
+
+      contact ->
+        render(conn, contact: contact)
     end
   end
 
@@ -50,18 +52,8 @@ defmodule ContaWeb.Api.Directory.Contact do
   end
 
   def create(conn, params) do
-    company_nif =
-      params["company_nif"] || params[:company_nif] ||
-        Application.get_env(:conta, :default_company_nif)
-
-    nif = params["nif"] || params[:nif]
-    existing = if nif, do: Directory.get_contact_by_nif(company_nif, nif)
-
-    id =
-      case params["id"] || params[:id] do
-        id when is_binary(id) and id != "" -> id
-        _ -> if existing, do: existing.id, else: Ecto.UUID.generate()
-      end
+    company_nif = get_company_nif(params)
+    id = resolve_contact_id(params, company_nif)
 
     params =
       params
@@ -70,25 +62,30 @@ defmodule ContaWeb.Api.Directory.Contact do
 
     changeset = SetContact.changeset(%SetContact{}, params)
 
-    with true <- changeset.valid?,
-         command = SetContact.to_command(changeset),
-         {:ok, %Commanded.Commands.ExecutionResult{events: events}} <-
-           dispatch(command, returning: :execution_result) do
-      contact_set = Enum.find(events, &match?(%Conta.Event.ContactSet{}, &1))
+    if changeset.valid? do
+      dispatch_create(conn, changeset)
+    else
+      {:error, errors} = get_result(changeset)
 
       conn
-      |> put_status(:created)
-      |> json(%{
-        "id" => (contact_set && contact_set.id) || command.id,
-        "nif" => (contact_set && contact_set.nif) || command.nif
-      })
-    else
-      false ->
-        {:error, errors} = get_result(changeset)
+      |> put_status(:bad_request)
+      |> json(%{"errors" => errors})
+    end
+  end
+
+  defp dispatch_create(conn, changeset) do
+    command = SetContact.to_command(changeset)
+
+    case dispatch(command, returning: :execution_result) do
+      {:ok, %Commanded.Commands.ExecutionResult{events: events}} ->
+        contact_set = Enum.find(events, &match?(%Conta.Event.ContactSet{}, &1))
 
         conn
-        |> put_status(:bad_request)
-        |> json(%{"errors" => errors})
+        |> put_status(:created)
+        |> json(%{
+          "id" => (contact_set && contact_set.id) || command.id,
+          "nif" => (contact_set && contact_set.nif) || command.nif
+        })
 
       {:error, reason} when is_atom(reason) ->
         conn
@@ -99,6 +96,23 @@ defmodule ContaWeb.Api.Directory.Contact do
         conn
         |> put_status(:bad_request)
         |> json(%{"errors" => errors})
+    end
+  end
+
+  defp get_company_nif(params) do
+    params["company_nif"] || params[:company_nif] ||
+      Application.get_env(:conta, :default_company_nif)
+  end
+
+  defp resolve_contact_id(params, company_nif) do
+    case params["id"] || params[:id] do
+      id when is_binary(id) and id != "" ->
+        id
+
+      _ ->
+        nif = params["nif"] || params[:nif]
+        existing = if nif, do: Directory.get_contact_by_nif(company_nif, nif)
+        if existing, do: existing.id, else: Ecto.UUID.generate()
     end
   end
 

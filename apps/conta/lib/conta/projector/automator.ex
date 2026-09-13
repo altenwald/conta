@@ -3,9 +3,12 @@ defmodule Conta.Projector.Automator do
     application: Conta.Commanded.Application,
     repo: Conta.Repo,
     name: __MODULE__,
-    consistency: Application.compile_env(:conta, :consistency, :eventual)
-
-  require Logger
+    consistency:
+      Application.compile_env(
+        :conta,
+        [__MODULE__, :consistency],
+        Application.compile_env(:conta, :consistency, :strong)
+      )
 
   alias Conta.Event.FilterRemoved
   alias Conta.Event.FilterSet

@@ -22,7 +22,7 @@ defmodule Conta.Projector do
       @timeout @opts[:timeout] || :infinity
 
       # Pass through any other configuration to the event handler
-      @handler_opts Keyword.drop(@opts, [:repo, :timeout, :consistency])
+      @handler_opts Keyword.drop(@opts, [:repo, :timeout])
 
       unquote(__include_projection_version_schema__())
 

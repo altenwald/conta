@@ -3,7 +3,12 @@ defmodule Conta.Projector.Directory do
     application: Conta.Commanded.Application,
     repo: Conta.Repo,
     name: __MODULE__,
-    consistency: Application.compile_env(:conta, :consistency, :eventual)
+    consistency:
+      Application.compile_env(
+        :conta,
+        [__MODULE__, :consistency],
+        Application.compile_env(:conta, :consistency, :strong)
+      )
 
   require Logger
 
