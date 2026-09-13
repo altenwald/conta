@@ -1,0 +1,21 @@
+# Plan: Dynamic Searchable Account Selector Component
+
+- [x] Task 1: Write unit and integration tests for AccountSelectComponent <!-- id: 0 -->
+  - [x] Create `apps/conta_web/test/conta_web/components/account_select_component_test.exs` testing resting DOM, substring search, on-demand dropdown opening, selection & cleanup, and keyboard navigation
+  - [x] Add integration test in `apps/conta_web/test/conta_web/live/reconciliation_live/review_test.exs` verifying account selection via the component
+- [x] Task 2: Implement AccountSelectComponent <!-- id: 1 -->
+  - [x] Implement `ContaWeb.AccountSelectComponent` in `apps/conta_web/lib/conta_web/components/account_select_component.ex`
+  - [x] Add `filter_accounts/3` helper with substring matching and ranking
+  - [x] Support keyboard navigation and focus/search events
+  - [x] Support click-away dismissal and cleanup of `@matches`
+- [x] Task 3: Integrate into Reconciliation Review screen <!-- id: 2 -->
+  - [x] Update `account_select/1` in `apps/conta_web/lib/conta_web/live/reconciliation_live/review.ex` to delegate to `ContaWeb.AccountSelectComponent`
+  - [x] Handle `{:account_selected, id, value}` in `review.ex` `handle_info/2`
+  - [x] Ensure `account-form-#{id}` compatibility for form updates
+- [x] Task 4: Verification & Backlog Completion <!-- id: 3 -->
+  - [x] Run `mix test apps/conta_web/test/conta_web/components/account_select_component_test.exs`
+  - [x] Run `mix test apps/conta_web/test/conta_web/live/reconciliation_live/review_test.exs`
+  - [x] Run umbrella test suite (`mix test`)
+  - [x] Run format and credo checks (`mix format --check-formatted`, `mix credo --strict`)
+  - [x] Commit changes with clean commit message (no AI co-author attribution)
+  - [x] Complete Task #20 in Backlog

@@ -117,6 +117,15 @@ defmodule ContaWeb.ReconciliationLive.Review do
     {:noreply, socket}
   end
 
+  @impl true
+  def handle_info({:account_selected, id, value}, socket) when value != "" and not is_nil(value) do
+    handle_event("update_account", %{"id" => id, "value" => value}, socket)
+  end
+
+  def handle_info({:account_selected, _id, _value}, socket) do
+    {:noreply, socket}
+  end
+
   def handle_event("update_field", %{"id" => id, "field" => field, "value" => value}, socket)
       when field in @editable_fields do
     movement = Enum.find(socket.assigns.movements, &(&1.id == id))
@@ -498,12 +507,14 @@ defmodule ContaWeb.ReconciliationLive.Review do
 
   defp account_select(assigns) do
     ~H"""
-    <form phx-change="update_account" phx-value-id={@id} id={"account-form-#{@id}"}>
-      <select name="value" class="select select-sm w-full">
-        <option value="" selected={is_nil(@value)} disabled>{gettext("Select an account")}</option>
-        <option :for={name <- @accounts} value={name} selected={@value == name}>{name}</option>
-      </select>
-    </form>
+    <.live_component
+      module={ContaWeb.AccountSelectComponent}
+      id={"account-select-#{@id}"}
+      item_id={@id}
+      form_id={"account-form-#{@id}"}
+      value={@value}
+      accounts={@accounts}
+    />
     """
   end
 end

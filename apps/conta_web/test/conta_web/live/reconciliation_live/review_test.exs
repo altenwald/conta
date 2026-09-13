@@ -52,6 +52,45 @@ defmodule ContaWeb.ReconciliationLive.ReviewTest do
       assert eventually(fn -> Repo.get(Movement, movement.id).account_name == expense end)
     end
 
+    test "searching and selecting an account via AccountSelectComponent assigns it and clears the dropdown",
+         %{conn: conn, user: user} do
+      movement = import_movement()
+      expense = create_expense_account()
+      account_string = Enum.join(expense, ".")
+
+      conn = log_in_user(conn, user)
+      {:ok, view, _html} = live(conn, ~p"/ledger/reconciliation")
+
+      input_id = "#account-select-#{movement.id}-input"
+      assert has_element?(view, input_id)
+
+      # Dropdown is absent initially
+      refute has_element?(view, "#account-select-#{movement.id} [role=listbox]")
+
+      # Focus to open
+      view |> element(input_id) |> render_focus()
+      assert has_element?(view, "#account-select-#{movement.id} [role=listbox]")
+
+      # Substring of the expense account
+      sub = String.slice(account_string, 1, 4)
+      view |> element(input_id) |> render_keyup(%{"query" => sub})
+
+      # Option appears in dropdown
+      assert has_element?(view, "#account-select-#{movement.id} button[role=option]", account_string)
+
+      # Select the option
+      view
+      |> element("#account-select-#{movement.id} button[role=option]", account_string)
+      |> render_click()
+
+      # Dropdown is immediately gone from the DOM
+      refute has_element?(view, "#account-select-#{movement.id} [role=listbox]")
+
+      # Movement is updated and moves to top block with checkbox
+      assert has_element?(view, "#movement-#{movement.id} input[type=checkbox]")
+      assert eventually(fn -> Repo.get(Movement, movement.id).account_name == expense end)
+    end
+
     test "selecting checkboxes and confirming invokes confirm_movements/1: successful rows disappear, failed rows stay with a visible error",
          %{conn: conn, user: user} do
       good_expense = create_expense_account()
