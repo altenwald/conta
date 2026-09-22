@@ -1,0 +1,135 @@
+name: SuperPlane Conta task
+run-name: Conta pagination · ${{ github.run_number }}
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: superplane-conta-task
+  cancel-in-progress: false
+
+jobs:
+  implement-and-verify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    env:
+      MIX_ENV: test
+      GRANTED_USERS: ""
+      EXGRAM_TOKEN_TEST: "123456:synthetic-test-token"
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: erlef/setup-beam@0f75c29430f34bb5af4cce5e3b7f6a8860fca236 # v1
+        with:
+          otp-version: '27.3'
+          elixir-version: '1.18.4'
+      - name: Prepare test environment
+        run: |
+          mkdir -p .superplane-report
+          mix local.hex --force
+          mix local.rebar --force
+          mix deps.get
+          mix ecto.create
+          mix ecto.migrate
+      - name: Check baseline
+        run: |
+          set -o pipefail
+          mix test 2>&1 | tee .superplane-report/baseline.txt
+      - name: Implement the bounded task
+        uses: anthropics/claude-code-action@b949468893d8bba436c9c71ea860b1f5f344804e # v1
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          github_token: ${{ github.token }}
+          prompt: Read .github/prompts/conta-pagination.md and implement that task. Follow its scope and reporting requirements.
+          claude_args: >-
+            --max-turns 40
+            --max-budget-usd 3
+            --allowedTools "Read,Write,Edit,Glob,Grep,Bash(mix:*),Bash(git diff:*),Bash(git status:*),Bash(mkdir:*)"
+      - name: Run tests
+        id: tests
+        if: ${{ !cancelled() && success() }}
+        continue-on-error: true
+        run: |
+          set -o pipefail
+          mix test 2>&1 | tee .superplane-report/tests.txt
+      - name: Run project checks
+        id: checks
+        if: ${{ !cancelled() && contains(fromJSON('["success","failure"]'), steps.tests.outcome) }}
+        continue-on-error: true
+        run: |
+          set -o pipefail
+          mix check 2>&1 | tee .superplane-report/checks.txt
+      - name: Collect changes and enforce scope
+        if: ${{ !cancelled() && contains(fromJSON('["success","failure"]'), steps.tests.outcome) }}
+        run: |
+          git add apps docs/superpowers
+          git diff --cached --binary > .superplane-report/change.patch
+          git diff --cached --stat > .superplane-report/change-stat.txt
+          git diff --exit-code -- .github AGENTS.md mix.exs mix.lock config
+      - name: Review the change
+        if: ${{ !cancelled() && contains(fromJSON('["success","failure"]'), steps.tests.outcome) }}
+        uses: anthropics/claude-code-action@b949468893d8bba436c9c71ea860b1f5f344804e # v1
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          github_token: ${{ github.token }}
+          prompt: |
+            Review the working-tree changes against .github/prompts/conta-pagination.md and AGENTS.md.
+            Read .superplane-report for actual validation results. Distinguish correctness problems
+            from optional preferences, cite files and lines, and state limitations. Do not edit code,
+            commit, push, post comments or create a pull request. Write only
+            .superplane-report/review.md. This is advisory; the human reviewer decides what blocks.
+          claude_args: >-
+            --max-turns 12
+            --max-budget-usd 1
+            --allowedTools "Read,Glob,Grep,Write,Bash(git diff:*),Bash(git status:*)"
+      - name: Ensure review did not change the implementation
+        if: ${{ !cancelled() && contains(fromJSON('["success","failure"]'), steps.tests.outcome) }}
+        run: |
+          git diff --exit-code
+          test -z "$(git ls-files --others --exclude-standard apps docs .github)"
+      - name: Publish draft for human review
+        if: ${{ success() && steps.tests.outcome == 'success' && steps.checks.outcome == 'success' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if git diff --cached --quiet; then
+            echo "No implementation changes were produced." >&2
+            exit 1
+          fi
+          branch="superplane/conta-pagination-${GITHUB_RUN_ID}"
+          git switch -c "$branch"
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git commit -m 'add automatic loading to ledger entries'
+          gh auth setup-git
+          git remote set-url origin "https://github.com/${GITHUB_REPOSITORY}.git"
+          git push origin "$branch"
+          { printf 'Hello,\n\nThis adds automatic loading to the ledger entries list while keeping the manual control.\n\n'; cat .superplane-report/implementation.md; printf '\n\n'; cat .superplane-report/review.md; } > .superplane-report/pr.md
+          gh pr create --draft --base main --head "$branch" --title 'add automatic loading to ledger entries' --body-file .superplane-report/pr.md | tee .superplane-report/pr-url.txt
+      - name: Upload evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: conta-task-evidence
+          path: .superplane-report/
+          include-hidden-files: true
+          retention-days: 7
+      - name: Report validation failure
+        if: ${{ !cancelled() && (steps.tests.outcome == 'failure' || steps.checks.outcome == 'failure') }}
+        run: exit 1

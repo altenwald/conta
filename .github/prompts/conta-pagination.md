@@ -1,0 +1,7 @@
+Implement Conta Backlog task 12, "Implement infinite scroll for paginated listings", for the existing ledger entries view ContaWeb.EntryLive.Index.
+
+Read AGENTS.md. Reuse the existing next-page event and LiveView streams. Load the next page when the user reaches the bottom of loaded entries, retain a usable manual loading control and loading feedback, stop requesting pages when exhausted, and preserve search, ordering and account boundaries. Do not implement invoice or expense pagination (separate tasks 10 and 11). Avoid new dependencies and unnecessary abstractions.
+
+Follow the repository's design, plan and test-first workflow. Test multiple pages, exhaustion, search and repeated loading requests. Use synthetic fixtures only. Run targeted tests, the full test suite and mix check. Do not reduce test coverage or conceal pre-existing failures. Report commands and results accurately; server-side tests alone do not prove browser scrolling works.
+
+The operator manages the local Backlog, which is unavailable from GitHub Actions. Do not access it or change task status. Do not commit, push, create a pull request, merge, post comments, change .github or AGENTS.md, or read credentials. The workflow handles publishing after verification. Write an implementation report to .superplane-report/implementation.md describing scope, tests, limitations and any questions. Keep changes small enough to review.
