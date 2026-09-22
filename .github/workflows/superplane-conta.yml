@@ -47,6 +47,8 @@ jobs:
           mix deps.get
           mix ecto.create
           mix ecto.migrate
+          mix assets.setup
+          mix assets.build
       - name: Check baseline
         run: |
           set -o pipefail
