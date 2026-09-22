@@ -58,6 +58,7 @@ jobs:
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
           github_token: ${{ github.token }}
+          allowed_bots: superplane-manuel-local[bot]
           prompt: Read .github/prompts/conta-pagination.md and implement that task. Follow its scope and reporting requirements.
           claude_args: >-
             --max-turns 40
@@ -90,6 +91,7 @@ jobs:
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
           github_token: ${{ github.token }}
+          allowed_bots: superplane-manuel-local[bot]
           prompt: |
             Review the working-tree changes against .github/prompts/conta-pagination.md and AGENTS.md.
             Read .superplane-report for actual validation results. Distinguish correctness problems
