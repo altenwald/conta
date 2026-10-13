@@ -1,0 +1,63 @@
+# Build without deployment credentials; the service reads them at startup.
+version: 1
+build:
+  image:
+    dockerfile: ci/Dockerfile.build
+    context: ci
+  env:
+    MIX_ENV: prod
+    DOMAIN: conta.altenwald.com
+    MIX_HOME: /cache/mix
+    HEX_HOME: /cache/hex
+  cache:
+    - {name: mix, path: /cache/mix}
+    - {name: hex, path: /cache/hex}
+  limits: {cpus: 2, memory: 6g, timeout: 30m}
+  steps:
+    - name: release
+      run: |
+        mix local.hex --force
+        mix local.rebar --force
+        mix deps.get --only prod
+        mix deps.compile
+        mix compile
+        mix tailwind.install --if-missing
+        mix esbuild.install --if-missing
+        npm ci --prefix apps/conta_web/assets
+        mix assets.deploy
+        mix do release --overwrite
+artifact:
+  name: conta
+  paths: [_build/prod/rel/conta]
+deploy:
+  target: rowan-conta
+  timeout: 5m
+  secrets: true
+  steps:
+    - name: install release
+      run: |
+        new="$HOME/releases/$DYMPLOY_SHORT_COMMIT"
+        test ! -e "$new"
+        mkdir -p "$new"
+        tar -xzf "$DYMPLOY_ARTIFACT" -C "$new" --strip-components=1
+    - name: install environment
+      run: |
+        install -m 0640 -g conta "$DYMPLOY_SECRETS_FILE" "$HOME/conta.env.new"
+        mv -f "$HOME/conta.env.new" "$HOME/conta.env"
+    - name: activate and restart
+      run: |
+        before=$(systemctl show -p ActiveEnterTimestampMonotonic --value conta.service)
+        ln -sfn "$HOME/releases/$DYMPLOY_SHORT_COMMIT" "$HOME/current"
+        echo "$DYMPLOY_COMMIT" > "$HOME/.deployed"
+        for i in $(seq 1 30); do
+          now=$(systemctl show -p ActiveEnterTimestampMonotonic --value conta.service)
+          [ "$now" != "$before" ] && exit 0
+          sleep 1
+        done
+        echo "the service was not restarted" >&2
+        exit 1
+  check:
+    run: curl -fsS -o /dev/null http://127.0.0.1:4023/
+    attempts: 10
+    interval: 3s
+    timeout: 5s

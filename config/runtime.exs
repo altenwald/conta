@@ -7,6 +7,9 @@ import Config
 # any compile-time configuration in here, as it won't be applied.
 # The block below contains prod specific runtime configuration.
 if config_env() == :prod do
+  # Credentials belong to the running deployment, never to the build artifact.
+  config :ex_gram, token: System.fetch_env!("EXGRAM_TOKEN")
+
   database_url =
     System.get_env("DATABASE_URL") ||
       raise """
