@@ -37,6 +37,9 @@ defmodule ContaWeb.Endpoint do
     cookie_key: "request_logger"
 
   plug Plug.RequestId
+  # Maple tells who the visitor is in X-Forwarded-For; the logs of the request show it (backlog servers #46).
+  plug RemoteIp
+  plug ContaWeb.Plugs.LogRemoteIp
   plug Plug.Telemetry, event_prefix: [:phoenix, :endpoint]
 
   plug Plug.Parsers,

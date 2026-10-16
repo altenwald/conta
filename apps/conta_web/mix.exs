@@ -57,6 +57,7 @@ defmodule ContaWeb.MixProject do
       {:countries_i18n, "~> 0.0", only: :dev},
       {:countries, "~> 1.6"},
       {:bandit, "~> 1.7"},
+      {:remote_ip, "~> 1.2"},
       {:press, "~> 0.1.1"},
       {:doctor, ">= 0.0.0", only: [:dev, :test], runtime: false},
       {:sobelow, ">= 0.0.0", only: [:dev, :test], runtime: false}
