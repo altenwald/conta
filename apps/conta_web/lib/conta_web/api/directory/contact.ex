@@ -12,10 +12,8 @@ defmodule ContaWeb.Api.Directory.Contact do
     render(conn, contacts: contacts)
   end
 
-  def show(conn, %{"id" => id}) do
-    default_company_nif = Application.get_env(:conta, :default_company_nif)
-
-    case Directory.get_contact(id) || Directory.get_contact_by_nif(default_company_nif, id) do
+  def show(conn, %{"id" => id} = params) do
+    case find_contact(id, get_company_nif(params)) do
       nil ->
         conn
         |> put_status(:not_found)
@@ -26,11 +24,9 @@ defmodule ContaWeb.Api.Directory.Contact do
     end
   end
 
-  def delete(conn, %{"id" => id}) do
-    default_company_nif = Application.get_env(:conta, :default_company_nif)
-
+  def delete(conn, %{"id" => id} = params) do
     with contact when contact != nil <-
-           Directory.get_contact(id) || Directory.get_contact_by_nif(default_company_nif, id),
+           find_contact(id, get_company_nif(params)),
          :ok <- dispatch(Directory.get_remove_contact(contact)) do
       json(conn, "ok")
     else
@@ -99,6 +95,16 @@ defmodule ContaWeb.Api.Directory.Contact do
     end
   end
 
+  defp find_contact(id_or_nif, company_nif) do
+    contact =
+      case Ecto.UUID.cast(id_or_nif) do
+        {:ok, id} -> Directory.get_contact(id)
+        :error -> nil
+      end
+
+    contact || Directory.get_contact_by_nif(company_nif, id_or_nif)
+  end
+
   defp get_company_nif(params) do
     params["company_nif"] || params[:company_nif] ||
       Application.get_env(:conta, :default_company_nif)
@@ -117,9 +123,7 @@ defmodule ContaWeb.Api.Directory.Contact do
   end
 
   def update(conn, %{"id" => id} = params) do
-    default_company_nif = Application.get_env(:conta, :default_company_nif)
-
-    case Directory.get_contact(id) || Directory.get_contact_by_nif(default_company_nif, id) do
+    case find_contact(id, get_company_nif(params)) do
       nil ->
         conn
         |> put_status(:not_found)

@@ -52,6 +52,17 @@ defmodule ContaWeb.Api.Directory.ContactTest do
   end
 
   describe "GET /api/v1/directories/contacts/:id" do
+    test "finds a contact by NIF within the requested company", %{authed_conn: conn} do
+      contact = insert(:contact, company_nif: "A55666777", nif: "ESB12345678")
+      conn = get(conn, ~p"/api/v1/directories/contacts/#{contact.nif}", %{company_nif: "A55666777"})
+      assert json_response(conn, 200)["id"] == contact.id
+    end
+
+    test "returns 404 for an unknown NIF instead of casting it as UUID", %{authed_conn: conn} do
+      conn = get(conn, ~p"/api/v1/directories/contacts/ESB00000000", %{company_nif: "A55666777"})
+      assert json_response(conn, 404)["errors"]["id"] == "contact not found"
+    end
+
     test "returns contact by id", %{authed_conn: conn} do
       contact = insert(:contact, company_nif: "A55666777")
       conn = get(conn, ~p"/api/v1/directories/contacts/#{contact.id}")
