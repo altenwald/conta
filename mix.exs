@@ -10,11 +10,12 @@ defmodule Conta.Umbrella.MixProject do
       dialyzer: [plt_add_apps: [:mix]],
       deps: deps(),
       aliases: aliases(),
-      releases: releases(),
-      preferred_cli_env: [
-        release: :prod
-      ]
+      releases: releases()
     ]
+  end
+
+  def cli do
+    [preferred_envs: [release: :prod]]
   end
 
   defp deps do

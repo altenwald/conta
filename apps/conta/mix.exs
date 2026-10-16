@@ -194,6 +194,7 @@ defmodule Conta.MixProject do
       {:req, "~> 0.7.3"},
 
       {:swoosh, "~> 1.14"},
+      {:multipart, "~> 0.6"},
       {:finch, "~> 0.17"},
       {:plotto, "~> 0.3"},
       {:luerl, "~> 1.1"},
