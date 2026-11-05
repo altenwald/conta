@@ -184,6 +184,23 @@ defmodule Conta.Aggregate.CompanyTest do
   end
 
   describe "contact" do
+    test "changing NIF replaces the old key and preserves unrelated contacts" do
+      id = Ecto.UUID.generate()
+      original = %Conta.Event.ContactSet{id: id, nif: "OLD"}
+      other = %Conta.Event.ContactSet{nif: "OTHER"}
+
+      company =
+        %Conta.Aggregate.Company{}
+        |> Conta.Aggregate.Company.apply(original)
+        |> Conta.Aggregate.Company.apply(other)
+        |> Conta.Aggregate.Company.apply(%{original | nif: "NEW"})
+
+      refute Map.has_key?(company.contacts, "OLD")
+      assert company.contacts["NEW"].id == id
+      assert company.contacts["OTHER"].nif == "OTHER"
+      assert map_size(company.contacts) == 2
+    end
+
     test "adding contact successfully" do
       company = %Conta.Aggregate.Company{
         nif: "A55666777",

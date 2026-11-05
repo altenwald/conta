@@ -30,7 +30,16 @@ defmodule Conta.Projector.Directory do
       |> Enum.to_list()
 
     opts = [on_conflict: [set: update], conflict_target: [:nif, :company_nif]]
-    Ecto.Multi.insert(multi, :contact, changeset, opts)
+
+    Ecto.Multi.run(multi, :contact, fn repo, _changes ->
+      existing = contact.id && repo.get_by(Contact, id: contact.id, company_nif: contact.company_nif)
+
+      if existing do
+        existing |> Contact.changeset(params) |> repo.update()
+      else
+        repo.insert(changeset, opts)
+      end
+    end)
   end)
 
   project(%ContactRemoved{} = event, _metadata, fn multi ->

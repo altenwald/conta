@@ -116,6 +116,19 @@ defmodule Conta.Projector.DirectoryTest do
              } = Repo.get_by!(Directory.Contact, clauses)
     end
 
+    test "changing NIF preserves the contact ID and can be replayed", metadata do
+      contact = insert(:contact)
+      event = struct(Conta.Event.ContactSet, Map.from_struct(contact))
+      event = %{event | nif: "NEW-NIF"}
+
+      assert :ok = Directory.handle(event, metadata)
+      assert :ok = Directory.handle(event, metadata)
+      assert :ok = Directory.handle(event, %{metadata | event_number: metadata.event_number + 1})
+      assert Repo.get!(Directory.Contact, contact.id).nif == "NEW-NIF"
+      refute Repo.get_by(Directory.Contact, company_nif: contact.company_nif, nif: contact.nif)
+      assert Repo.aggregate(Directory.Contact, :count) == 1
+    end
+
     test "remove successfully", metadata do
       %Directory.Contact{
         company_nif: company_nif,

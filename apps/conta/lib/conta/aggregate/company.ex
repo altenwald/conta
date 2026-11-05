@@ -490,6 +490,11 @@ defmodule Conta.Aggregate.Company do
   def apply(%__MODULE__{} = company, %InvoiceEmailSent{}), do: company
 
   def apply(%__MODULE__{contacts: contacts} = company, %ContactSet{nif: nif} = event) do
+    contacts =
+      Map.reject(contacts, fn {_nif, contact} ->
+        not is_nil(event.id) and contact.id == event.id
+      end)
+
     event
     |> Map.from_struct()
     |> then(&struct(Contact, &1))
