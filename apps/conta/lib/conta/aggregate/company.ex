@@ -133,9 +133,15 @@ defmodule Conta.Aggregate.Company do
     TemplateSet.changeset(params)
   end
 
-  def execute(%__MODULE__{}, %SetContact{} = command) do
+  # Setting a contact is an upsert, and clients (Dymmer) set it every time they invoice: if the contact is already
+  # exactly like that there is nothing to record, so no event is emitted and the stream does not grow for nothing.
+  def execute(%__MODULE__{contacts: contacts}, %SetContact{} = command) do
     params = Map.from_struct(command)
-    ContactSet.changeset(params)
+
+    case ContactSet.changeset(params) do
+      %ContactSet{} = event -> if same_contact?(contacts[event.nif], event), do: [], else: event
+      error -> error
+    end
   end
 
   def execute(%__MODULE__{contacts: contacts}, %RemoveContact{nif: nif} = command)
@@ -173,7 +179,10 @@ defmodule Conta.Aggregate.Company do
     {:error, %{invoice_number: ["can't be blank"]}}
   end
 
-  def execute(%__MODULE__{} = company, %SetInvoice{invoice_number: nil, is_credit_note: true} = command) do
+  def execute(
+        %__MODULE__{} = company,
+        %SetInvoice{invoice_number: nil, is_credit_note: true} = command
+      ) do
     invoice_year = command.invoice_date.year
     credit_note_numbers = company.credit_note_numbers[invoice_year] || MapSet.new()
     last_number = Enum.max(credit_note_numbers, &>=/2, fn -> 0 end)
@@ -233,7 +242,10 @@ defmodule Conta.Aggregate.Company do
         |> Map.put(:client, client)
         |> Map.put(:destination_country, country)
         |> Map.put(:details, process_details(command))
-        |> Map.put(:payment_method, process_payment_method(company.payment_methods[payment_method]))
+        |> Map.put(
+          :payment_method,
+          process_payment_method(company.payment_methods[payment_method])
+        )
         |> Map.put(
           :company,
           Map.take(company, ~w[nif name address postcode city state country details email]a)
@@ -267,7 +279,10 @@ defmodule Conta.Aggregate.Company do
         |> Map.put(:category, to_string(command.category))
         |> Map.put(:provider, provider)
         |> Map.put(:attachments, process_attachments(command))
-        |> Map.put(:payment_method, process_payment_method(company.payment_methods[payment_method]))
+        |> Map.put(
+          :payment_method,
+          process_payment_method(company.payment_methods[payment_method])
+        )
         |> Map.put(
           :company,
           Map.take(company, ~w[nif name address postcode city state country details email]a)
@@ -313,7 +328,10 @@ defmodule Conta.Aggregate.Company do
     |> ExpenseRemoved.changeset()
   end
 
-  defp valid_expense_number_update(%__MODULE__{} = company, %SetExpense{action: :update} = command) do
+  defp valid_expense_number_update(
+         %__MODULE__{} = company,
+         %SetExpense{action: :update} = command
+       ) do
     member = {command.provider_nif, command.invoice_number}
     expense_year = command.invoice_date.year
     expense_numbers = company.expense_numbers[expense_year] || MapSet.new()
@@ -322,7 +340,10 @@ defmodule Conta.Aggregate.Company do
 
   defp valid_expense_number_update(_company, _command), do: true
 
-  defp valid_expense_number_insert(%__MODULE__{} = company, %SetExpense{action: :insert} = command) do
+  defp valid_expense_number_insert(
+         %__MODULE__{} = company,
+         %SetExpense{action: :insert} = command
+       ) do
     member = {command.provider_nif, command.invoice_number}
     expense_year = command.invoice_date.year
     expense_numbers = company.expense_numbers[expense_year] || MapSet.new()
@@ -398,6 +419,15 @@ defmodule Conta.Aggregate.Company do
     end
   end
 
+  @contact_fields ~w[name nif intracommunity address postcode city state country emails]a
+
+  defp same_contact?(nil, _event), do: false
+
+  defp same_contact?(%Contact{} = contact, %ContactSet{} = event) do
+    (is_nil(event.id) or event.id == contact.id) and
+      Map.take(contact, @contact_fields) == Map.take(event, @contact_fields)
+  end
+
   defp process_client(nil), do: nil
   defp process_client(client), do: Map.from_struct(client)
 
@@ -455,7 +485,12 @@ defmodule Conta.Aggregate.Company do
     invoice_number = event.invoice_number
 
     invoice_numbers =
-      Map.update(company.invoice_numbers, year, MapSet.new([invoice_number]), &MapSet.put(&1, invoice_number))
+      Map.update(
+        company.invoice_numbers,
+        year,
+        MapSet.new([invoice_number]),
+        &MapSet.put(&1, invoice_number)
+      )
 
     %__MODULE__{company | invoice_numbers: invoice_numbers}
   end
@@ -464,10 +499,15 @@ defmodule Conta.Aggregate.Company do
 
   def apply(%__MODULE__{} = company, %InvoiceRemoved{} = invoice_removed) do
     year = invoice_removed.invoice_date.year
-    invoices = MapSet.delete(company.invoice_numbers[year] || MapSet.new(), invoice_removed.invoice_number)
+
+    invoices =
+      MapSet.delete(company.invoice_numbers[year] || MapSet.new(), invoice_removed.invoice_number)
 
     credit_notes =
-      MapSet.delete(company.credit_note_numbers[year] || MapSet.new(), invoice_removed.invoice_number)
+      MapSet.delete(
+        company.credit_note_numbers[year] || MapSet.new(),
+        invoice_removed.invoice_number
+      )
 
     %__MODULE__{
       company
@@ -479,7 +519,10 @@ defmodule Conta.Aggregate.Company do
   def apply(%__MODULE__{} = company, %ExpenseSet{action: :insert} = event) do
     year = to_date(event.invoice_date).year
     member = {event.provider.nif, event.invoice_number}
-    expense_numbers = Map.update(company.expense_numbers, year, MapSet.new([member]), &MapSet.put(&1, member))
+
+    expense_numbers =
+      Map.update(company.expense_numbers, year, MapSet.new([member]), &MapSet.put(&1, member))
+
     %__MODULE__{company | expense_numbers: expense_numbers}
   end
 
@@ -505,7 +548,10 @@ defmodule Conta.Aggregate.Company do
     %__MODULE__{company | contacts: Map.delete(contacts, nif)}
   end
 
-  def apply(%__MODULE__{payment_methods: payment_methods} = company, %PaymentMethodSet{slug: slug} = event) do
+  def apply(
+        %__MODULE__{payment_methods: payment_methods} = company,
+        %PaymentMethodSet{slug: slug} = event
+      ) do
     event
     |> Map.from_struct()
     |> then(&struct(PaymentMethod, &1))

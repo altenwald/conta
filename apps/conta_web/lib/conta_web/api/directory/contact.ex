@@ -76,8 +76,11 @@ defmodule ContaWeb.Api.Directory.Contact do
       {:ok, %Commanded.Commands.ExecutionResult{events: events}} ->
         contact_set = Enum.find(events, &match?(%Conta.Event.ContactSet{}, &1))
 
+        # 201 when the contact was created or changed, 200 when it was already exactly like that (nothing was recorded)
+        status = if contact_set, do: :created, else: :ok
+
         conn
-        |> put_status(:created)
+        |> put_status(status)
         |> json(%{
           "id" => (contact_set && contact_set.id) || command.id,
           "nif" => (contact_set && contact_set.nif) || command.nif

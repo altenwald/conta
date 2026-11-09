@@ -95,6 +95,41 @@ defmodule ContaWeb.Api.Directory.ContactTest do
       assert response["nif"] == "B12345678"
     end
 
+    test "setting the same contact again is a 200 with the same id; a change is a 201", %{authed_conn: conn} do
+      params = %{
+        "company_nif" => "A55666777",
+        "name" => "Acme Corp",
+        "nif" => "B12345678",
+        "address" => "Gran Via 1",
+        "postcode" => "28013",
+        "city" => "Madrid",
+        "country" => "ES",
+        "emails" => ["billing@acme.com"]
+      }
+
+      created = conn |> post(~p"/api/v1/directories/contacts", params) |> json_response(201)
+      wait_projected(fn -> Conta.Directory.get_contact(created["id"]) end)
+      same = conn |> post(~p"/api/v1/directories/contacts", params) |> json_response(200)
+      assert same == created
+
+      changed =
+        conn
+        |> post(~p"/api/v1/directories/contacts", %{params | "address" => "Gran Via 2"})
+        |> json_response(201)
+
+      assert changed["id"] == created["id"]
+      wait_projected(fn -> Conta.Directory.get_contact(created["id"]).address == "Gran Via 2" end)
+    end
+
+    # The directory is a projection of the events: give it a moment, like a second request would have.
+    defp wait_projected(fun, attempts \\ 50) do
+      cond do
+        fun.() -> :ok
+        attempts == 0 -> flunk("the projection did not catch up")
+        true -> Process.sleep(20) && wait_projected(fun, attempts - 1)
+      end
+    end
+
     test "creates contact with client-specified id and returns it", %{authed_conn: conn} do
       custom_id = Ecto.UUID.generate()
 

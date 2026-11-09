@@ -261,6 +261,66 @@ defmodule Conta.Aggregate.CompanyTest do
              } == Conta.Aggregate.Company.apply(company, event)
     end
 
+    test "setting a contact that is already exactly like that emits no event" do
+      id = Ecto.UUID.generate()
+
+      contact = %Conta.Aggregate.Company.Contact{
+        id: id,
+        name: "Limited Company SL",
+        nif: "B123456789",
+        intracommunity: true,
+        address: "Full Address Here",
+        postcode: "08080",
+        city: "Barcelona",
+        state: "Catalunya",
+        country: "ES",
+        emails: ["a@example.com"]
+      }
+
+      company = %Conta.Aggregate.Company{nif: "A55666777", contacts: %{"B123456789" => contact}}
+
+      command = fn attrs ->
+        struct(
+          %Conta.Command.SetContact{
+            company_nif: "A55666777",
+            nif: "B123456789",
+            name: "Limited Company SL",
+            intracommunity: true,
+            address: "Full Address Here",
+            postcode: "08080",
+            city: "Barcelona",
+            state: "Catalunya",
+            country: "ES",
+            emails: ["a@example.com"]
+          },
+          attrs
+        )
+      end
+
+      # the same data, with or without the id of the contact: nothing to record
+      assert [] == Conta.Aggregate.Company.execute(company, command.(%{}))
+      assert [] == Conta.Aggregate.Company.execute(company, command.(%{id: id}))
+
+      # any change is an event, and so is another id or a contact that does not exist yet
+      for attrs <- [
+            %{address: "Another"},
+            %{name: "Other SL"},
+            %{emails: []},
+            %{intracommunity: false},
+            %{id: Ecto.UUID.generate()}
+          ] do
+        assert %Conta.Event.ContactSet{} =
+                 Conta.Aggregate.Company.execute(company, command.(attrs))
+      end
+
+      assert %Conta.Event.ContactSet{} =
+               Conta.Aggregate.Company.execute(%{company | contacts: %{}}, command.(%{}))
+
+      # an invalid command is still an error, not an empty list
+      assert {:error, %{address: _}} =
+               Conta.Aggregate.Company.execute(company, command.(%{address: nil}))
+    end
+
     test "setting contact with explicit id successfully" do
       company = %Conta.Aggregate.Company{
         nif: "A55666777",
@@ -635,7 +695,8 @@ defmodule Conta.Aggregate.CompanyTest do
         ]
       }
 
-      assert {:error, %{payment_method: ["is invalid"]}} = Conta.Aggregate.Company.execute(company, command)
+      assert {:error, %{payment_method: ["is invalid"]}} =
+               Conta.Aggregate.Company.execute(company, command)
     end
 
     test "create failed because missing contact" do
@@ -690,7 +751,8 @@ defmodule Conta.Aggregate.CompanyTest do
         ]
       }
 
-      assert {:error, %{client_nif: ["is invalid"]}} = Conta.Aggregate.Company.execute(company, command)
+      assert {:error, %{client_nif: ["is invalid"]}} =
+               Conta.Aggregate.Company.execute(company, command)
     end
 
     test "create successfully the first of the year" do
@@ -1137,7 +1199,8 @@ defmodule Conta.Aggregate.CompanyTest do
         payment_method: "stripe"
       }
 
-      assert {:error, %{payment_method: ["is invalid"]}} = Conta.Aggregate.Company.execute(company, command)
+      assert {:error, %{payment_method: ["is invalid"]}} =
+               Conta.Aggregate.Company.execute(company, command)
     end
 
     test "create failed because missing contact" do
@@ -1183,7 +1246,8 @@ defmodule Conta.Aggregate.CompanyTest do
         payment_method: "paypal"
       }
 
-      assert {:error, %{provider_nif: ["is invalid"]}} = Conta.Aggregate.Company.execute(company, command)
+      assert {:error, %{provider_nif: ["is invalid"]}} =
+               Conta.Aggregate.Company.execute(company, command)
     end
 
     test "create successfully the first of the year" do
