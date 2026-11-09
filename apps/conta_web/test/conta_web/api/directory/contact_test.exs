@@ -130,6 +130,39 @@ defmodule ContaWeb.Api.Directory.ContactTest do
       end
     end
 
+    test "a client that does not send intracommunity does not turn it off", %{authed_conn: conn} do
+      params = %{
+        "company_nif" => "A55666777",
+        "name" => "Acme Corp",
+        "nif" => "B12345678",
+        "address" => "Gran Via 1",
+        "postcode" => "28013",
+        "city" => "Madrid",
+        "country" => "ES",
+        "intracommunity" => true
+      }
+
+      created = conn |> post(~p"/api/v1/directories/contacts", params) |> json_response(201)
+      wait_projected(fn -> Conta.Directory.get_contact(created["id"]) end)
+
+      without = Map.delete(params, "intracommunity")
+      conn |> post(~p"/api/v1/directories/contacts", without) |> json_response(200)
+
+      conn
+      |> post(~p"/api/v1/directories/contacts", %{without | "address" => "Gran Via 2"})
+      |> json_response(201)
+
+      wait_projected(fn -> Conta.Directory.get_contact(created["id"]).address == "Gran Via 2" end)
+      assert Conta.Directory.get_contact(created["id"]).intracommunity
+
+      # saying it explicitly still works
+      conn
+      |> post(~p"/api/v1/directories/contacts", %{params | "intracommunity" => false})
+      |> json_response(201)
+
+      wait_projected(fn -> not Conta.Directory.get_contact(created["id"]).intracommunity end)
+    end
+
     test "creates contact with client-specified id and returns it", %{authed_conn: conn} do
       custom_id = Ecto.UUID.generate()
 

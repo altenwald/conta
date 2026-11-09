@@ -55,6 +55,7 @@ defmodule ContaWeb.Api.Directory.Contact do
       params
       |> Map.put("id", id)
       |> Map.put_new("company_nif", company_nif)
+      |> keep_intracommunity(company_nif)
 
     changeset = SetContact.changeset(%SetContact{}, params)
 
@@ -111,6 +112,16 @@ defmodule ContaWeb.Api.Directory.Contact do
   defp get_company_nif(params) do
     params["company_nif"] || params[:company_nif] ||
       Application.get_env(:conta, :default_company_nif)
+  end
+
+  # A client that does not say whether the contact is intracommunity (Dymmer does not know) must not turn it off.
+  defp keep_intracommunity(%{"intracommunity" => _} = params, _company_nif), do: params
+
+  defp keep_intracommunity(params, company_nif) do
+    case params["nif"] && Directory.get_contact_by_nif(company_nif, params["nif"]) do
+      %{intracommunity: intracommunity} -> Map.put(params, "intracommunity", intracommunity)
+      _ -> params
+    end
   end
 
   defp resolve_contact_id(params, company_nif) do
